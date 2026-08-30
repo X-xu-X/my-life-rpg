@@ -39,11 +39,11 @@ QUESTION_SYSTEM_PROMPT = """你是「游戏人生」的角色档案创建向导�
 - 当把握度 >= 95 时，questions 输出空数组 []，表示信息已足够、无需再问。
 
 ## 输出格式（严格 JSON，不要输出其他文字）
-{{
+{
   "questions": ["问题1", "问题2", ...],
   "hint": "给用户的一句简短引导语",
   "confidence": 0到100的整数
-}}
+}
 """
 
 
@@ -76,12 +76,12 @@ PANEL_SYSTEM_PROMPT = """你是「游戏人生」的角色档案评估员。根�
 - 保持客观，不迎合、不贬低。
 
 ## 输出格式（严格 JSON，不要输出其他文字）
-{{
+{
   "attributes": [
-    {{"name": "体能", "value": 62, "reason": "推导依据"}}
+    {"name": "体能", "value": 62, "reason": "推导依据"}
   ],
   "summary": "整体评估总结"
-}}
+}
 """
 
 
@@ -111,12 +111,12 @@ SUPPLEMENT_SYSTEM_PROMPT = """你是「游戏人生」的角色档案维护员�
 5. 绝不一味迎合用户。
 
 ## 输出格式（严格 JSON，不要输出其他文字）
-{{
+{
   "adjustments": [
-    {{"name": "属性名", "delta": 增减点数, "reason": "调整原因", "evidence": "依据"}}
+    {"name": "属性名", "delta": 增减点数, "reason": "调整原因", "evidence": "依据"}
   ],
   "explanation": "整体评估说明（若坚持不调，需说明矛盾依据）"
-}}
+}
 """
 
 
@@ -157,12 +157,12 @@ PANEL_DISPUTE_SYSTEM_PROMPT = """你是「游戏人生」的角色档案复核�
 - 输出完整的、调整后的属性面板（含所有 6 项，而非仅改动项）。
 
 ## 输出格式（严格 JSON，不要输出其他文字）
-{{
+{
   "attributes": [
-    {{"name": "体能", "value": 62, "reason": "推导依据"}}
+    {"name": "体能", "value": 62, "reason": "推导依据"}
   ],
   "explanation": "针对异议的复核说明"
-}}
+}
 """
 
 

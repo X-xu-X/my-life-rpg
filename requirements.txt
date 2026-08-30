@@ -1,0 +1,9 @@
+# 游戏人生（Game of Life）后端依赖
+# 安装：pip install -r requirements.txt
+fastapi>=0.110
+uvicorn[standard]>=0.29
+sqlalchemy>=2.0
+pydantic>=2.6
+pydantic-settings>=2.2
+python-dotenv>=1.0
+openai>=1.30

@@ -39,6 +39,7 @@ export const api = {
   listEvents: () => request('/events'),
   judgeEvent: (eventId) => request(`/events/${eventId}/judge`, { method: 'POST' }),
   deleteEvent: (eventId) => request(`/events/${eventId}`, { method: 'DELETE' }),
+  getHeatmap: () => request('/events/heatmap'),
 
   // 判定
   listJudgments: () => request('/judgments'),
@@ -70,4 +71,19 @@ export const api = {
 
   // 设置
   getSettings: () => request('/settings'),
+  updateSetting: (key, value) =>
+    request('/settings', { method: 'POST', body: JSON.stringify({ key, value }) }),
+
+  // 数据导出（文件下载）
+  exportData: async (format) => {
+    const resp = await fetch(`${BASE}/export?format=${format}`)
+    if (!resp.ok) throw new Error(`导出失败（${resp.status}）`)
+    const blob = await resp.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = format === 'csv' ? 'game_of_life_events.csv' : 'game_of_life_data.json'
+    a.click()
+    URL.revokeObjectURL(url)
+  },
 }

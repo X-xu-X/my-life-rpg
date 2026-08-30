@@ -7,6 +7,7 @@ import EventForm from './components/EventForm.vue'
 import JudgmentList from './components/JudgmentList.vue'
 import GoalsView from './components/GoalsView.vue'
 import AnchorsView from './components/AnchorsView.vue'
+import SettingsView from './components/SettingsView.vue'
 
 const tabs = [
   { key: 'panel', label: '属性面板' },
@@ -15,6 +16,7 @@ const tabs = [
   { key: 'goals', label: '目标' },
   { key: 'anchors', label: '锚点库' },
   { key: 'onboarding', label: '角色档案' },
+  { key: 'settings', label: '设置' },
 ]
 
 const activeTab = ref('panel')
@@ -96,4 +98,5 @@ onMounted(() => {
   <JudgmentList v-else-if="activeTab === 'judgments'" />
   <GoalsView v-else-if="activeTab === 'goals'" />
   <AnchorsView v-else-if="activeTab === 'anchors'" />
+  <SettingsView v-else-if="activeTab === 'settings'" />
 </template>

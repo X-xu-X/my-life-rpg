@@ -8,9 +8,9 @@ from pydantic import BaseModel, Field
 # ============ 事件 ============
 
 class EventCreate(BaseModel):
-    """录入事件。form 通道传 params，journal 通道传 content。"""
+    """录入事件。form 通道传 params，journal 通道传 content（event_type 由 AI 提取）。"""
 
-    event_type: Literal["positive", "negative", "goal"] = Field(..., description="事件类型")
+    event_type: Literal["positive", "negative", "goal"] | None = None
     category: str = Field("", description="类别：锻炼/学习/作息/社交/饮食/理财…")
     source: Literal["form", "journal"] = "form"
     title: str = ""

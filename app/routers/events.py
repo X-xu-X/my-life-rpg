@@ -1,4 +1,6 @@
 """事件路由：打卡录入（双通道）+ 触发判定。"""
+from datetime import datetime, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -66,6 +68,23 @@ def list_events(db: Session = Depends(get_db)):
         .order_by(Event.created_at.desc())
         .all()
     )
+
+
+@router.get("/events/heatmap")
+def get_heatmap(db: Session = Depends(get_db)):
+    """月度活动热力图数据：最近 365 天每天的事件数。"""
+    user = get_or_create_default_user(db)
+    start = datetime.now() - timedelta(days=365)
+    rows = (
+        db.query(Event.created_at)
+        .filter(Event.user_id == user.id, Event.created_at >= start)
+        .all()
+    )
+    counts: dict[str, int] = {}
+    for (created_at,) in rows:
+        day = created_at.strftime("%Y-%m-%d")
+        counts[day] = counts.get(day, 0) + 1
+    return [{"date": day, "count": cnt} for day, cnt in sorted(counts.items())]
 
 
 @router.post("/events/{event_id}/judge")

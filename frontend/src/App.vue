@@ -20,6 +20,8 @@ const tabs = [
 const activeTab = ref('panel')
 const hasProfile = ref(false)
 const attrCount = ref(0)
+const backendOk = ref(false) // v1.1：后端连接状态
+const backendChecked = ref(false)
 
 async function refreshProfile() {
   try {
@@ -31,12 +33,26 @@ async function refreshProfile() {
   }
 }
 
+async function checkHealth() {
+  try {
+    await api.health()
+    backendOk.value = true
+  } catch {
+    backendOk.value = false
+  } finally {
+    backendChecked.value = true
+  }
+}
+
 function onProfileCreated() {
   refreshProfile()
   activeTab.value = 'panel'
 }
 
-onMounted(refreshProfile)
+onMounted(() => {
+  refreshProfile()
+  checkHealth()
+})
 </script>
 
 <template>
@@ -44,6 +60,17 @@ onMounted(refreshProfile)
     <h1>游戏人生 <span class="muted">· Game of Life</span></h1>
     <p class="muted">记录真实生活事件，AI 依据科学标准判定属性点增减，把成长变成一场可量化的 RPG。</p>
   </header>
+
+  <!-- 后端连接状态提示（v1.1） -->
+  <div
+    v-if="backendChecked && !backendOk"
+    class="conn-banner conn-error"
+  >
+    ⚠️ 后端未连接（无法访问 /api/health）。请先运行 <code>start.bat</code> 启动后端，再刷新本页。
+  </div>
+  <div v-else-if="backendChecked && backendOk" class="conn-banner conn-ok">
+    ✓ 后端已连接
+  </div>
 
   <nav class="nav">
     <button

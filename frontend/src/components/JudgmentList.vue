@@ -40,6 +40,27 @@ async function dispute(id) {
   }
 }
 
+// v1.1：删除事件（误提交兜底，含点数回滚）
+async function removeEvent(eventId, confirmed) {
+  const ok = window.confirm(
+    confirmed
+      ? '该事件已确认入账，删除将回滚对应点数。确认删除？'
+      : '确认删除该事件及其判定记录？'
+  )
+  if (!ok) return
+  busy.value = true
+  error.value = ''
+  try {
+    await api.deleteEvent(eventId)
+    await load()
+    alert('已删除' + (confirmed ? '，相关点数已回滚' : ''))
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    busy.value = false
+  }
+}
+
 async function runAction(id, fn, okMsg) {
   busy.value = true
   error.value = ''
@@ -82,6 +103,12 @@ onMounted(load)
 
       <div v-if="j.summary" class="muted" style="margin-bottom: 6px">{{ j.summary }}</div>
 
+      <!-- AI 分析过程（v1.1） -->
+      <div v-if="j.analysis && j.analysis.length" class="analysis-box">
+        <div class="analysis-title">🤖 AI 分析过程</div>
+        <div v-for="(step, idx) in j.analysis" :key="idx" class="step">{{ step }}</div>
+      </div>
+
       <div v-for="a in j.suggested_changes" :key="a.name" class="judgment-item">
         <span class="attr-name">{{ a.name }}</span>
         <span :class="a.delta >= 0 ? 'positive' : 'negative'">{{ a.delta >= 0 ? '+' : '' }}{{ a.delta }}</span>
@@ -89,13 +116,19 @@ onMounted(load)
         <div class="evidence">依据：{{ a.evidence }}</div>
       </div>
 
-      <!-- 三选一操作 -->
-      <div v-if="j.status !== 'confirmed'" class="row" style="margin-top: 10px">
-        <button class="btn small primary" :disabled="busy" @click="confirm(j.id)">确认入账</button>
-        <button class="btn small" :disabled="busy" @click="openAction(j.id, 'supplement')">补充信息</button>
-        <button class="btn small danger" :disabled="busy" @click="openAction(j.id, 'dispute')">反驳</button>
+      <!-- 操作区 -->
+      <div class="row" style="margin-top: 10px; align-items: center">
+        <div v-if="j.status !== 'confirmed'" class="row" style="gap: 8px; flex: 1">
+          <button class="btn small primary" :disabled="busy" @click="confirm(j.id)">确认入账</button>
+          <button class="btn small" :disabled="busy" @click="openAction(j.id, 'supplement')">补充信息</button>
+          <button class="btn small danger" :disabled="busy" @click="openAction(j.id, 'dispute')">反驳</button>
+        </div>
+        <span v-else class="muted" style="flex: 1">✓ 已入账</span>
+        <!-- v1.1：误提交兜底，任何状态都可删除事件 -->
+        <button class="btn small danger" :disabled="busy" @click="removeEvent(j.event_id, j.status === 'confirmed')">
+          删除事件
+        </button>
       </div>
-      <div v-else class="muted" style="margin-top: 6px">✓ 已入账</div>
 
       <!-- 补充/反驳输入框 -->
       <div v-if="actionTarget === j.id" class="field" style="margin-top: 10px">

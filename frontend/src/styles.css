@@ -249,3 +249,58 @@ label {
   font-size: 13px;
   margin-top: 4px;
 }
+
+/* 后端连接状态提示（v1.1） */
+.conn-banner {
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+}
+
+.conn-banner code {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.conn-banner.conn-ok {
+  background: #eafaf1;
+  border-color: #b8e6cd;
+  color: #1f9e6a;
+}
+
+.conn-banner.conn-error {
+  background: #fdf0ef;
+  border-color: #f3c2c2;
+  color: #c0392b;
+}
+
+/* AI 分析过程（v1.1） */
+.analysis-box {
+  background: #f7f8fc;
+  border-left: 3px solid var(--primary);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.analysis-box .step {
+  font-size: 13px;
+  color: var(--text);
+  margin-bottom: 4px;
+  line-height: 1.5;
+}
+
+.analysis-box .step:last-child {
+  margin-bottom: 0;
+}
+
+.analysis-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 6px;
+}

@@ -117,6 +117,11 @@ function reset() {
     <div v-if="result" class="judgment-item" style="margin-top: 16px">
       <h3>AI 判定结果 <span class="tag">{{ result.status }}</span></h3>
       <p class="muted">置信度 {{ (result.confidence * 100).toFixed(0) }}%</p>
+      <!-- v1.1：AI 分析过程 -->
+      <div v-if="result.analysis && result.analysis.length" class="analysis-box">
+        <div class="analysis-title">🤖 AI 分析过程</div>
+        <div v-for="(step, idx) in result.analysis" :key="idx" class="step">{{ step }}</div>
+      </div>
       <div v-for="a in result.suggested_changes" :key="a.name" class="judgment-item">
         <span class="attr-name">{{ a.name }}</span>
         <span :class="a.delta >= 0 ? 'positive' : 'negative'">{{ a.delta >= 0 ? '+' : '' }}{{ a.delta }}</span>
@@ -124,7 +129,7 @@ function reset() {
         <div class="evidence">依据：{{ a.evidence }}</div>
       </div>
       <p v-if="result.summary" class="muted">{{ result.summary }}</p>
-      <p class="muted">请在「判定中心」确认入账 / 补充信息 / 反驳复核。</p>
+      <p class="muted">请在「判定中心」确认入账 / 补充信息 / 反驳复核；录错了可删除该事件。</p>
     </div>
   </div>
 </template>

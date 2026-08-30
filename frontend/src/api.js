@@ -16,6 +16,9 @@ async function request(path, options = {}) {
 }
 
 export const api = {
+  // 健康检查（前端启动时探测后端连接状态）
+  health: () => request('/health'),
+
   // Onboarding
   startOnboarding: () => request('/onboarding/questions', { method: 'POST' }),
   submitAnswers: (sessionId, answers, finish) =>
@@ -33,6 +36,7 @@ export const api = {
   createEvent: (payload) => request('/events', { method: 'POST', body: JSON.stringify(payload) }),
   listEvents: () => request('/events'),
   judgeEvent: (eventId) => request(`/events/${eventId}/judge`, { method: 'POST' }),
+  deleteEvent: (eventId) => request(`/events/${eventId}`, { method: 'DELETE' }),
 
   // 判定
   listJudgments: () => request('/judgments'),

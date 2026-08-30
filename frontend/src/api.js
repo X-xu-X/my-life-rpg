@@ -20,17 +20,19 @@ export const api = {
   health: () => request('/health'),
 
   // Onboarding
+  getOnboardingStatus: () => request('/onboarding/status'),
   startOnboarding: () => request('/onboarding/questions', { method: 'POST' }),
-  submitAnswers: (sessionId, answers, finish) =>
+  submitAnswers: (answers) =>
     request('/onboarding/answer', {
       method: 'POST',
-      body: JSON.stringify({ session_id: sessionId, answers, finish }),
+      body: JSON.stringify({ answers }),
     }),
-  disputePanel: (sessionId, detail) =>
-    request('/onboarding/dispute', {
+  supplementProfile: (detail) =>
+    request('/onboarding/supplement', {
       method: 'POST',
-      body: JSON.stringify({ session_id: sessionId, detail }),
+      body: JSON.stringify({ detail }),
     }),
+  confirmSupplement: () => request('/onboarding/supplement/confirm', { method: 'POST' }),
 
   // 事件
   createEvent: (payload) => request('/events', { method: 'POST', body: JSON.stringify(payload) }),

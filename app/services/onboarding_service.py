@@ -1,89 +1,135 @@
-"""Onboarding 问卷服务。
+"""Onboarding 问卷服务（v1.1 重设计）。
 
-流程（PRD 4.1 节）：
-开始问卷 → AI 出题 → 对话式作答（可追问）→ AI 生成初始属性面板（附推导依据）
-→ 用户可异议调整 → 存档初始快照。
+流程：
+- 首次引导（仅新用户第一次）：AI 出题 → 逐题作答，每轮 AI 自评把握度 →
+  把握度 >= 阈值自动生成初始属性面板并存快照 → 标记 onboarding_completed。
+- 一次性约束：完成后不可重新走引导，只能「补充长期信息」。
+- 补充信息：AI 客观评估（综合用户自述 + 客观记录），用户确认后生效。
 
-会话状态说明：V1 单用户本地自用，问答中间态存于进程内存（重启即清）；
-最终面板会持久化到 user_profiles 与 attributes 表。TODO：如需断点续答，可将
-会话落库（settings 表或独立 onboarding_sessions 表）。
+会话态持久化到 user_profiles.onboarding_state（离开 / 重启不丢）。
 """
-import uuid
-
 from sqlalchemy.orm import Session
 
 from app import prompts
-from app.models import Attribute, UserProfile
+from app.models import Attribute, AttributeHistory, UserProfile
+from app.prompts.onboarding import CONFIDENCE_THRESHOLD
 from app.services.llm_service import llm_service
 from app.services.user_service import get_or_create_default_user
 
-# 进程内会话存储：session_id -> {"conversation": [{question, answer}], "questions": [...]}
-_sessions: dict[str, dict] = {}
 
-
-def start_questions(db: Session) -> dict:
-    """开始问卷，AI 生成首轮问题。返回 {session_id, questions, hint}。"""
-    messages = prompts.build_question_messages(existing_context=None)
-    result = llm_service.chat_json(messages)
-    questions = result.get("questions", [])
-    hint = result.get("hint", "")
-
-    session_id = uuid.uuid4().hex
-    _sessions[session_id] = {"conversation": [], "questions": questions}
-    return {"session_id": session_id, "questions": questions, "hint": hint}
-
-
-def _get_session(session_id: str) -> dict:
-    """获取会话；不存在则报错。"""
-    if session_id not in _sessions:
-        raise ValueError("会话不存在或已过期，请重新开始问卷。")
-    return _sessions[session_id]
-
-
-def submit_answer(db: Session, session_id: str, answers: list[dict], finish: bool) -> dict:
-    """提交一轮回答。
-
-    :param finish: True 表示信息已足够，直接生成初始属性面板并存档。
-    :return: 若 finish 则返回 {panel, summary}；否则返回 {questions, hint} 继续追问。
-    """
-    session = _get_session(session_id)
-    # 追加本轮问答到会话
-    for item in answers:
-        session["conversation"].append(
-            {"question": item.get("question", ""), "answer": item.get("answer", "")}
-        )
-
-    if finish:
-        return _generate_panel(db, session)
-
-    # 继续追问：基于已有上下文，让 AI 补充未覆盖维度或追问关键细节
-    context = {"conversation": session["conversation"]}
-    messages = prompts.build_question_messages(existing_context=context)
-    result = llm_service.chat_json(messages)
-    questions = result.get("questions", [])
-    hint = result.get("hint", "")
-    session["questions"] = questions
-    return {"questions": questions, "hint": hint, "finish": False}
-
-
-def _generate_panel(db: Session, session: dict) -> dict:
-    """AI 生成初始属性面板，并持久化到画像快照与 attributes 表。"""
-    user = get_or_create_default_user(db)
-    conversation = session["conversation"]
-    messages = prompts.build_panel_messages(conversation)
-    result = llm_service.chat_json(messages)
-
-    panel = result.get("attributes", [])
-    summary = result.get("summary", "")
-
-    # 存档：画像快照 + 基础信息
+def _get_profile(db: Session, user) -> UserProfile:
+    """获取（或创建）用户画像记录。"""
     profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
     if profile is None:
         profile = UserProfile(user_id=user.id)
         db.add(profile)
+        db.flush()
+    return profile
+
+
+def get_status(db: Session) -> dict:
+    """查询首次引导状态（是否完成、是否有进行中会话）。"""
+    user = get_or_create_default_user(db)
+    profile = _get_profile(db, user)
+    state = profile.onboarding_state or {}
+    return {
+        "onboarding_completed": bool(profile.onboarding_completed),
+        "in_progress": bool(state.get("conversation")),
+        "question_count": len(state.get("conversation", [])),
+        "confidence": state.get("confidence", 0),
+    }
+
+
+def _evaluate(db: Session, profile: UserProfile, conversation: list[dict]) -> dict:
+    """让 AI 基于当前问答评估把握度并出题。返回 {questions, hint, confidence}。"""
+    result = llm_service.chat_json(prompts.build_question_messages(conversation))
+    questions = result.get("questions", [])
+    hint = result.get("hint", "")
+    confidence = int(result.get("confidence", 0))
+    profile.onboarding_state = {
+        "conversation": conversation,
+        "questions": questions,
+        "hint": hint,
+        "confidence": confidence,
+    }
+    db.commit()
+    return {"questions": questions, "hint": hint, "confidence": confidence}
+
+
+def start_questions(db: Session) -> dict:
+    """开始（或恢复）首次引导。已完成则返回锁定提示。"""
+    user = get_or_create_default_user(db)
+    profile = _get_profile(db, user)
+
+    if profile.onboarding_completed:
+        return {
+            "completed": True,
+            "message": "首次属性建档已完成。如需更新长期信息，请使用「补充信息」入口。",
+        }
+
+    state = profile.onboarding_state or {}
+    conversation = list(state.get("conversation", []))
+
+    if not conversation:
+        # 全新会话：AI 出第一轮题
+        return {
+            "completed": False,
+            **_evaluate(db, profile, conversation),
+        }
+
+    # 恢复进行中的会话：AI 基于已有问答重新评估，若已达标则直接生成面板
+    result = _evaluate(db, profile, conversation)
+    if result["confidence"] >= CONFIDENCE_THRESHOLD:
+        panel, summary = _generate_panel(db, profile, conversation)
+        return {
+            "completed": True,
+            "done": True,
+            "panel": panel,
+            "summary": summary,
+            "confidence": result["confidence"],
+        }
+    return {"completed": False, **result}
+
+
+def submit_answer(db: Session, answers: list[dict]) -> dict:
+    """提交一轮回答。AI 评估把握度，达到阈值则自动生成面板并归档。"""
+    user = get_or_create_default_user(db)
+    profile = _get_profile(db, user)
+
+    if profile.onboarding_completed:
+        return {"completed": True, "message": "首次建档已完成，只能补充长期信息。"}
+
+    state = profile.onboarding_state or {}
+    conversation = list(state.get("conversation", []))
+    for item in answers:
+        conversation.append(
+            {"question": item.get("question", ""), "answer": item.get("answer", "")}
+        )
+
+    result = _evaluate(db, profile, conversation)
+    if result["confidence"] >= CONFIDENCE_THRESHOLD:
+        panel, summary = _generate_panel(db, profile, conversation)
+        return {
+            "completed": True,
+            "done": True,
+            "panel": panel,
+            "summary": summary,
+            "confidence": result["confidence"],
+        }
+    return {"completed": False, "done": False, **result}
+
+
+def _generate_panel(db: Session, profile: UserProfile, conversation: list[dict]) -> tuple[list, str]:
+    """AI 生成初始属性面板，持久化到画像快照与 attributes 表。"""
+    result = llm_service.chat_json(prompts.build_panel_messages(conversation))
+    panel = result.get("attributes", [])
+    summary = result.get("summary", "")
+
     profile.initial_attributes_snapshot = {"attributes": panel, "summary": summary}
-    # 基础画像暂存原始问答记录（V1 保守，不额外 AI 提炼；TODO 可优化为结构化画像）
-    profile.basic_profile = {"conversation": conversation}
+    # 沉淀画像：原始问答 + 空的补充信息列表（后续补充长期信息追加到这里）
+    profile.basic_profile = {"conversation": conversation, "supplements": []}
+    profile.onboarding_completed = True
+    profile.onboarding_state = {}
 
     # 同步 attributes 表当前值
     for item in panel:
@@ -91,55 +137,117 @@ def _generate_panel(db: Session, session: dict) -> dict:
         value = float(item.get("value", 0.0))
         attr = (
             db.query(Attribute)
-            .filter(Attribute.user_id == user.id, Attribute.name == name)
+            .filter(Attribute.user_id == profile.user_id, Attribute.name == name)
             .first()
         )
         if attr is None:
-            attr = Attribute(user_id=user.id, name=name, description=item.get("reason", ""))
+            attr = Attribute(user_id=profile.user_id, name=name, description=item.get("reason", ""))
             db.add(attr)
         attr.current_value = value
         attr.description = item.get("reason", "")
 
     db.commit()
-    # 会话可保留以备后续异议调整
-    return {"panel": panel, "summary": summary, "finish": True}
+    return panel, summary
 
 
-def dispute_panel(db: Session, session_id: str, detail: str) -> dict:
-    """用户对初始面板提出异议，AI 客观复核并返回调整后的完整面板。"""
-    session = _get_session(session_id)
+def supplement_profile(db: Session, detail: str) -> dict:
+    """补充长期信息（首次引导后）。AI 客观评估，返回调整建议（待用户确认）。"""
     user = get_or_create_default_user(db)
-    profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
-    current_panel = []
-    if profile and profile.initial_attributes_snapshot:
-        current_panel = profile.initial_attributes_snapshot.get("attributes", [])
+    profile = _get_profile(db, user)
 
-    messages = prompts.build_panel_dispute_messages(
-        current_panel=current_panel,
-        conversation=session["conversation"],
-        dispute_reason=detail,
+    if not profile.onboarding_completed:
+        raise ValueError("尚未完成首次属性建档，请先完成引导问卷。")
+
+    # 收集客观记录：当前属性面板 + 历史事件判定流水
+    attrs = db.query(Attribute).filter(Attribute.user_id == user.id).all()
+    current_attributes = [
+        {"name": a.name, "value": a.current_value, "description": a.description} for a in attrs
+    ]
+    history_rows = (
+        db.query(AttributeHistory)
+        .filter(AttributeHistory.user_id == user.id)
+        .order_by(AttributeHistory.created_at.desc())
+        .limit(50)
+        .all()
     )
-    result = llm_service.chat_json(messages)
-    panel = result.get("attributes", [])
+    history = [
+        {
+            "delta": h.delta,
+            "reason": h.reason,
+            "evidence": h.evidence,
+            "created_at": str(h.created_at),
+        }
+        for h in history_rows
+    ]
+
+    result = llm_service.chat_json(
+        prompts.build_supplement_messages(
+            basic_profile=profile.basic_profile or {},
+            current_attributes=current_attributes,
+            history=history,
+            supplement_text=detail,
+        )
+    )
+    adjustments = result.get("adjustments", [])
     explanation = result.get("explanation", "")
 
-    # 更新快照与 attributes
-    if profile:
-        profile.initial_attributes_snapshot = {
-            "attributes": panel,
-            "summary": profile.initial_attributes_snapshot.get("summary", ""),
-        }
-    for item in panel:
+    # 沉淀补充信息到画像（无论是否调整属性，信息都要记住，供后续判定参考）
+    bp = dict(profile.basic_profile or {})
+    supplements = list(bp.get("supplements", []))
+    supplements.append(detail)
+    bp["supplements"] = supplements
+    profile.basic_profile = bp
+
+    # 暂存待确认的调整建议
+    profile.pending_adjustment = {"adjustments": adjustments, "explanation": explanation}
+    db.commit()
+
+    return {"adjustments": adjustments, "explanation": explanation}
+
+
+def confirm_adjustment(db: Session) -> dict:
+    """确认应用补充信息的调整建议（写属性流水 + 更新属性值）。"""
+    user = get_or_create_default_user(db)
+    profile = _get_profile(db, user)
+
+    pending = profile.pending_adjustment or {}
+    adjustments = pending.get("adjustments", [])
+    if not adjustments:
+        return {"applied": [], "message": "没有待确认的调整。"}
+
+    applied = []
+    for item in adjustments:
         name = item.get("name", "")
-        value = float(item.get("value", 0.0))
+        try:
+            delta = float(item.get("delta", 0.0))
+        except (TypeError, ValueError):
+            delta = 0.0
+        if delta == 0 or not name:
+            continue
         attr = (
             db.query(Attribute)
             .filter(Attribute.user_id == user.id, Attribute.name == name)
             .first()
         )
-        if attr:
-            attr.current_value = value
-            attr.description = item.get("reason", "")
-    db.commit()
+        if attr is None:
+            attr = Attribute(user_id=user.id, name=name, current_value=50.0)
+            db.add(attr)
+            db.flush()
+        attr.current_value = round(attr.current_value + delta, 2)
+        db.add(
+            AttributeHistory(
+                user_id=user.id,
+                attribute_id=attr.id,
+                event_id=None,
+                judgment_id=None,
+                delta=delta,
+                value_after=attr.current_value,
+                reason=item.get("reason", ""),
+                evidence=item.get("evidence", ""),
+            )
+        )
+        applied.append({"name": name, "delta": delta, "value_after": attr.current_value})
 
-    return {"panel": panel, "explanation": explanation}
+    profile.pending_adjustment = {}
+    db.commit()
+    return {"applied": applied, "message": "调整已生效。"}

@@ -55,6 +55,12 @@ class UserProfile(Base):
     basic_profile: Mapped[dict] = mapped_column(JSON, default=dict)
     # 初始属性面板快照（AI 生成，每项含分值 + 推导依据）
     initial_attributes_snapshot: Mapped[dict] = mapped_column(JSON, default=dict)
+    # 首次引导是否完成（一次性约束：完成后只能补充长期信息，不可重新走引导）
+    onboarding_completed: Mapped[bool] = mapped_column(Boolean, default=False)
+    # 进行中的首次引导会话态（对话历史/当前问题/把握度），持久化，离开或重启不丢
+    onboarding_state: Mapped[dict] = mapped_column(JSON, default=dict)
+    # 补充长期信息后、待用户确认的属性调整建议
+    pending_adjustment: Mapped[dict] = mapped_column(JSON, default=dict)
     # 游戏化字段（M3 实现曲线逻辑，此处预留）
     level: Mapped[int] = mapped_column(Integer, default=1)
     exp: Mapped[float] = mapped_column(Float, default=0.0)

@@ -1,18 +1,30 @@
-"""Onboarding 路由：初始属性设定（AI 问卷制）。"""
+"""Onboarding 路由：初始属性设定（AI 问卷制，v1.1 重设计）。
+
+流程：
+- 首次引导：POST /questions 开始/恢复 → POST /answer 逐轮作答，AI 自评把握度，
+  达到阈值自动生成初始面板并归档。
+- 首次后：只能 POST /supplement 补充长期信息，AI 客观评估后 POST /supplement/confirm 确认生效。
+"""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.schemas import OnboardingAnswerIn, OnboardingDisputeIn
+from app.schemas import OnboardingAnswerIn, SupplementProfileIn
 from app.services import onboarding_service
 from app.services.llm_service import LLMError
 
 router = APIRouter()
 
 
+@router.get("/onboarding/status")
+def status(db: Session = Depends(get_db)):
+    """查询首次引导状态（是否完成、是否有进行中会话）。"""
+    return onboarding_service.get_status(db)
+
+
 @router.post("/onboarding/questions")
 def create_questions(db: Session = Depends(get_db)):
-    """开始问卷，AI 生成首轮问题。"""
+    """开始（或恢复）首次引导，AI 生成/继续提问。已完成则返回锁定提示。"""
     try:
         return onboarding_service.start_questions(db)
     except LLMError as exc:
@@ -21,23 +33,27 @@ def create_questions(db: Session = Depends(get_db)):
 
 @router.post("/onboarding/answer")
 def answer(body: OnboardingAnswerIn, db: Session = Depends(get_db)):
-    """提交回答。finish=false 返回追问，finish=true 生成初始面板并存档。"""
-    if not body.session_id:
-        raise HTTPException(status_code=400, detail="缺少 session_id，请先调用 /onboarding/questions 开始问卷。")
+    """提交一轮回答。AI 评估把握度，达到阈值自动生成初始面板并归档。"""
     try:
-        return onboarding_service.submit_answer(db, body.session_id, body.answers, finish=body.finish)
+        return onboarding_service.submit_answer(db, body.answers)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except LLMError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
 
 
-@router.post("/onboarding/dispute")
-def dispute(body: OnboardingDisputeIn, db: Session = Depends(get_db)):
-    """对初始属性面板提出异议，AI 客观复核后返回调整后的面板。"""
+@router.post("/onboarding/supplement")
+def supplement(body: SupplementProfileIn, db: Session = Depends(get_db)):
+    """补充长期信息，AI 客观评估并返回调整建议（待用户确认）。"""
     try:
-        return onboarding_service.dispute_panel(db, body.session_id, body.detail)
+        return onboarding_service.supplement_profile(db, body.detail)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except LLMError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
+
+
+@router.post("/onboarding/supplement/confirm")
+def confirm_supplement(db: Session = Depends(get_db)):
+    """确认应用补充信息的属性调整建议。"""
+    return onboarding_service.confirm_adjustment(db)

@@ -82,24 +82,16 @@ class DisputeIn(BaseModel):
 
 # ============ Onboarding ============
 
-class OnboardingStartIn(BaseModel):
-    """开始问卷。可传已有基础信息（可选）。"""
-
-    notes: dict[str, Any] = Field(default_factory=dict)
-
-
 class OnboardingAnswerIn(BaseModel):
-    """提交一轮回答。"""
+    """提交一轮回答（首次引导）。"""
 
-    session_id: str | None = None
-    answers: list[dict[str, Any]] = Field(..., description="[{question, answer}] 或自由文本")
+    answers: list[dict[str, Any]] = Field(..., description="[{question, answer}]")
 
 
-class OnboardingDisputeIn(BaseModel):
-    """对初始属性面板的异议调整。"""
+class SupplementProfileIn(BaseModel):
+    """补充长期信息（首次引导完成后）。"""
 
-    session_id: str = Field(..., description="问卷会话 ID")
-    detail: str = Field(..., description="异议说明")
+    detail: str = Field(..., description="补充的长期信息（性格、习惯、能力自评等）")
 
 
 # ============ 目标 ============

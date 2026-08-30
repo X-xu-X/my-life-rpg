@@ -5,6 +5,7 @@ from app.prompts.onboarding import (
     build_panel_dispute_messages,
     build_panel_messages,
     build_question_messages,
+    build_supplement_messages,
 )
 
 __all__ = [
@@ -13,4 +14,5 @@ __all__ = [
     "build_question_messages",
     "build_panel_messages",
     "build_panel_dispute_messages",
+    "build_supplement_messages",
 ]

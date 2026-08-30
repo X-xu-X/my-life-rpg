@@ -1,9 +1,10 @@
-# Onboarding 问卷 Prompt 模板（onboarding.py）
+# Onboarding Prompt 模板（onboarding.py）
 
-"""Onboarding 流程的三段式 Prompt：
-1. 生成问卷（覆盖 5 大维度，可追加追问）
+"""Onboarding 流程的 Prompt：
+1. 生成问卷 + 把握度评估（覆盖 5 大维度；每轮回答后 AI 自评把握度，>阈值视为信息足够）
 2. 生成初始属性面板（每项附推导依据）
-3. 异议复核（复用 dispute.py 的客观口径）
+3. 补充长期信息（首次引导后，客观评估是否调整属性，用户确认生效）
+4. 异议复核（复用 dispute.py 的客观口径）
 
 初始属性为 100 分制，属性维度固定为 6 项（见 DECISIONS.md D5）。
 """
@@ -12,7 +13,10 @@ import json
 # 标准属性维度（与 judge.py 保持一致）
 ATTRIBUTE_DIMENSIONS = ["体能", "智力", "情商", "创造力", "规划力", "健康"]
 
-# ---- 1. 生成问卷 ----
+# 把握度阈值：AI 对用户画像把握度达到该值时视为「信息够了」，停止提问、生成面板
+CONFIDENCE_THRESHOLD = 95
+
+# ---- 1. 生成问卷 + 把握度评估 ----
 
 QUESTION_SYSTEM_PROMPT = """你是「游戏人生」的角色档案创建向导。你需要通过对话式问卷，了解用户的真实情况，以便后续生成初始属性面板。
 
@@ -25,23 +29,30 @@ QUESTION_SYSTEM_PROMPT = """你是「游戏人生」的角色档案创建向导�
 
 ## 出题规则
 - 每题聚焦一个具体点，措辞口语化、自然，避免生硬的问卷感。
-- 一次给出 3~5 题（JSON 数组），不要一次问完所有维度，留出后续追问空间。
-- 对回答中信息不足或矛盾的关键点，要追加追问（如"你每周跑步几次？大概多远？"）。
+- 一次给出 3~5 题，不要一次问完所有维度，留出后续追问空间。
+- 对回答中信息不足或矛盾的关键点，追加追问（如"你每周跑步几次？大概多远？"）。
+
+## 把握度评估（confidence）
+- 每轮回答后，评估你对「用户整体画像」的把握程度，输出 0~100 的整数。
+- 仅当 5 大维度都获得足够具体、无明显矛盾的信息时，把握度才可达到或超过 95。
+- 信息缺失或含糊时，把握度应明显偏低（如 50~85），并继续追问缺失维度。
+- 当把握度 >= 95 时，questions 输出空数组 []，表示信息已足够、无需再问。
 
 ## 输出格式（严格 JSON，不要输出其他文字）
 {{
   "questions": ["问题1", "问题2", ...],
-  "hint": "给用户的一句简短引导语"
+  "hint": "给用户的一句简短引导语",
+  "confidence": 0到100的整数
 }}
 """
 
 
-def build_question_messages(existing_context: dict | None = None) -> list[dict[str, str]]:
-    """构建生成问卷的消息。existing_context 为已收集的画像信息。"""
-    if existing_context:
+def build_question_messages(conversation: list[dict] | None = None) -> list[dict[str, str]]:
+    """构建生成问卷 + 把握度评估的消息。conversation 为已累积的问答记录。"""
+    if conversation:
         user = (
-            "已了解到的用户信息如下，请基于此继续提问（补充未覆盖的维度，或追问关键细节）：\n"
-            + json.dumps(existing_context, ensure_ascii=False, indent=2)
+            "已完成的问答记录如下，请评估当前把握度并决定是否继续追问：\n"
+            + json.dumps(conversation, ensure_ascii=False, indent=2)
         )
     else:
         user = "请开始第一轮提问，了解用户的基本情况。"
@@ -86,7 +97,56 @@ def build_panel_messages(conversation: list[dict[str, str]]) -> list[dict[str, s
     ]
 
 
-# ---- 3. 初始面板异议调整（复用 dispute 的客观口径，此处提供专用消息构建） ----
+# ---- 3. 补充长期信息（首次引导后） ----
+
+SUPPLEMENT_SYSTEM_PROMPT = """你是「游戏人生」的角色档案维护员。用户已完成首次属性建档，现在补充一些长期信息（性格、习惯、能力自评等）。请客观评估：这些补充信息是否足以调整用户的属性值。
+
+## 评估原则（务必严格遵守）
+1. 综合两份证据：
+   - 【用户自述】：本次补充的信息（用户主观描述）
+   - 【客观记录】：用户已有的属性面板 + 历史事件判定流水（客观行为记录）
+2. **客观记录优先**：当用户自述与客观记录矛盾时（例如自述"执行力很强"、但客观记录显示多次目标未达成），必须保守处理——小幅调整或不调整，并在 explanation 中说明矛盾依据。不得因用户主观描述大幅改动属性值。
+3. 仅当补充信息有充分事实依据、且与客观记录一致或客观记录缺失时，才可给出较明显的调整。
+4. 单属性调整 delta 落在 [-5, +5] 区间；无依据则不调整（不出现在 adjustments）。
+5. 绝不一味迎合用户。
+
+## 输出格式（严格 JSON，不要输出其他文字）
+{{
+  "adjustments": [
+    {{"name": "属性名", "delta": 增减点数, "reason": "调整原因", "evidence": "依据"}}
+  ],
+  "explanation": "整体评估说明（若坚持不调，需说明矛盾依据）"
+}}
+"""
+
+
+def build_supplement_messages(
+    basic_profile: dict,
+    current_attributes: list[dict],
+    history: list[dict],
+    supplement_text: str,
+) -> list[dict[str, str]]:
+    """构建补充长期信息的评估消息。
+
+    :param basic_profile: 已沉淀的用户画像（首次引导的问答）
+    :param current_attributes: 当前属性面板（含分值/依据）
+    :param history: 属性变更流水（客观记录，供矛盾判断）
+    :param supplement_text: 用户本次补充的长期信息
+    """
+    user = (
+        f"【用户已有画像】\n{json.dumps(basic_profile, ensure_ascii=False, indent=2)}\n\n"
+        f"【当前属性面板】\n{json.dumps(current_attributes, ensure_ascii=False, indent=2)}\n\n"
+        f"【历史事件判定流水（客观记录）】\n{json.dumps(history, ensure_ascii=False, indent=2)}\n\n"
+        f"【用户本次补充信息】\n{supplement_text}\n\n"
+        "请客观评估是否需要调整属性。"
+    )
+    return [
+        {"role": "system", "content": SUPPLEMENT_SYSTEM_PROMPT},
+        {"role": "user", "content": user},
+    ]
+
+
+# ---- 4. 初始面板异议调整（复用 dispute 的客观口径，此处提供专用消息构建） ----
 
 PANEL_DISPUTE_SYSTEM_PROMPT = """你是「游戏人生」的角色档案复核员。用户对初始属性面板中的某项分值提出异议，请依据其问卷回答与客观标准复核。
 

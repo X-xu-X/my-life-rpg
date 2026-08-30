@@ -6,7 +6,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.database import Base, engine
+from app.database import Base, engine, migrate_schema
 from app import models  # noqa: F401  导入以注册所有 ORM 模型到 Base.metadata
 from app.routers import (
     onboarding,
@@ -45,8 +45,9 @@ app.include_router(settings_router.router, prefix="/api", tags=["settings"])
 
 @app.on_event("startup")
 def init_db():
-    """启动时初始化：建表 + 写入内置锚点 + 创建默认用户（均幂等）。"""
+    """启动时初始化：建表 + 轻量迁移 + 写入内置锚点 + 创建默认用户（均幂等）。"""
     Base.metadata.create_all(bind=engine)
+    migrate_schema(engine)  # 为已有表补充模型新增的缺失列（如 ai_judgments.analysis）
     from app.database import SessionLocal
     from app.services.anchor_service import seed_anchors
     from app.services.user_service import get_or_create_default_user

@@ -1,0 +1,60 @@
+"""属性路由：当前属性面板 + 属性流水（可视化数据源）。"""
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.models import Attribute, AttributeHistory, UserProfile
+from app.services.user_service import get_or_create_default_user
+
+router = APIRouter()
+
+
+@router.get("/attributes")
+def get_attributes(db: Session = Depends(get_db)):
+    """当前属性面板（含等级/经验，游戏化字段 M3 启用）。"""
+    user = get_or_create_default_user(db)
+    attrs = (
+        db.query(Attribute)
+        .filter(Attribute.user_id == user.id)
+        .order_by(Attribute.id)
+        .all()
+    )
+    profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
+    return {
+        "attributes": [
+            {
+                "name": a.name,
+                "value": a.current_value,
+                "max_value": a.max_value,
+                "description": a.description,
+            }
+            for a in attrs
+        ],
+        "level": profile.level if profile else 1,
+        "exp": profile.exp if profile else 0.0,
+    }
+
+
+@router.get("/attributes/history")
+def get_history(db: Session = Depends(get_db)):
+    """属性变更流水（支撑趋势折线/雷达图）。"""
+    user = get_or_create_default_user(db)
+    rows = (
+        db.query(AttributeHistory)
+        .filter(AttributeHistory.user_id == user.id)
+        .order_by(AttributeHistory.created_at.asc())
+        .all()
+    )
+    return [
+        {
+            "attribute_id": r.attribute_id,
+            "delta": r.delta,
+            "value_after": r.value_after,
+            "reason": r.reason,
+            "evidence": r.evidence,
+            "event_id": r.event_id,
+            "judgment_id": r.judgment_id,
+            "created_at": r.created_at,
+        }
+        for r in rows
+    ]

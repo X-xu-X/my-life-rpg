@@ -139,6 +139,7 @@ def judge_event(db: Session, event: Event) -> AIJudgment:
         event_id=event.id,
         user_id=user.id,
         suggested_changes=changes,
+        analysis=result.get("analysis", []),  # v1.1：AI 分析过程（推理链路）
         summary=str(result.get("summary", "")),
         confidence=float(result.get("confidence", 0.0)),
         status="pending",
@@ -149,7 +150,7 @@ def judge_event(db: Session, event: Event) -> AIJudgment:
     _log(
         db, judgment.id, user.id, "create",
         detail="AI 判定生成",
-        payload={"suggested_changes": changes, "summary": judgment.summary},
+        payload={"suggested_changes": changes, "analysis": judgment.analysis, "summary": judgment.summary},
     )
     db.commit()
     db.refresh(judgment)
@@ -212,13 +213,14 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
     changes = _parse_changes(result.get("affected_attributes", []))
 
     judgment.suggested_changes = changes
+    judgment.analysis = result.get("analysis", [])  # v1.1：补充重判同样记录分析过程
     judgment.summary = str(result.get("summary", ""))
     judgment.confidence = float(result.get("confidence", 0.0))
     judgment.status = "adjusted"
     _log(
         db, judgment.id, user.id, "rejudge",
         detail="补充信息后重新判定",
-        payload={"suggested_changes": changes},
+        payload={"suggested_changes": changes, "analysis": judgment.analysis},
     )
     db.commit()
     db.refresh(judgment)
@@ -278,3 +280,62 @@ def dispute(db: Session, judgment: AIJudgment, detail: str) -> dict:
         "conclusion": conclusion,
         "explanation": str(result.get("explanation", "")),
     }
+
+
+# ============ 事件删除（误提交兜底，v1.1） ============
+
+def delete_event(db: Session, event: Event) -> None:
+    """删除事件及其关联判定；已确认入账的点数同步回滚，全程留痕。
+
+    规则（PRD 4.3 节「误提交兜底」）：
+    - confirmed 判定：按 final_changes 反向回滚属性值，并写 AttributeHistory 流水
+      （delta 取反，reason 注明「事件删除回滚」，保证点数账目可追溯）
+    - 物理删除关联 ai_judgments 与 judgment_logs，再删除事件本身
+    - 历史入账流水（attribute_history）保留，与回滚流水形成完整账目
+    """
+    user = get_or_create_default_user(db)
+    judgments = (
+        db.query(AIJudgment)
+        .filter(AIJudgment.event_id == event.id, AIJudgment.user_id == user.id)
+        .all()
+    )
+
+    for judgment in judgments:
+        if judgment.status == "confirmed":
+            for item in judgment.final_changes or judgment.suggested_changes:
+                name = item.get("name", "")
+                try:
+                    delta = float(item.get("delta", 0.0))
+                except (TypeError, ValueError):
+                    delta = 0.0
+                if delta == 0 or not name:
+                    continue
+                attr = _ensure_attribute(db, user.id, name)
+                attr.current_value = round(attr.current_value - delta, 2)
+                db.add(
+                    AttributeHistory(
+                        user_id=user.id,
+                        attribute_id=attr.id,
+                        event_id=None,
+                        judgment_id=None,
+                        delta=-delta,
+                        value_after=attr.current_value,
+                        reason=f"事件删除回滚（原判定：{item.get('reason', '')}）",
+                        evidence="误提交兜底，删除事件",
+                    )
+                )
+        # 审计留痕后清理判定及其日志
+        _log(
+            db, judgment.id, user.id, "delete",
+            detail=f"删除事件（event_id={event.id}）",
+            payload={
+                "event_title": event.title or event.content[:40],
+                "confirmed_rollback": judgment.status == "confirmed",
+            },
+        )
+        db.flush()
+        db.query(JudgmentLog).filter(JudgmentLog.judgment_id == judgment.id).delete()
+        db.delete(judgment)
+
+    db.delete(event)
+    db.commit()

@@ -58,6 +58,17 @@ def judge(event_id: int, db: Session = Depends(get_db)):
         "judgment_id": judgment.id,
         "status": judgment.status,
         "suggested_changes": judgment.suggested_changes,
+        "analysis": judgment.analysis,
         "summary": judgment.summary,
         "confidence": judgment.confidence,
     }
+
+
+@router.delete("/events/{event_id}")
+def delete_event(event_id: int, db: Session = Depends(get_db)):
+    """删除事件（误提交兜底）：含已入账点数回滚与审计留痕（PRD 4.3）。"""
+    event = db.get(Event, event_id)
+    if event is None:
+        raise HTTPException(status_code=404, detail="事件不存在")
+    judge_service.delete_event(db, event)
+    return {"status": "deleted", "event_id": event_id}

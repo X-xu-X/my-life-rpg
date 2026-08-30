@@ -125,6 +125,8 @@ class AIJudgment(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     # AI 原始建议增减：[{name, delta, reason, evidence}]
     suggested_changes: Mapped[list] = mapped_column(JSON, default=list)
+    # AI 分析过程（推理链路：要素解析 → 锚点比对 → 加权推导），v1.1 新增
+    analysis: Mapped[list] = mapped_column(JSON, default=list)
     summary: Mapped[str] = mapped_column(Text, default="")  # AI 判定总结
     confidence: Mapped[float] = mapped_column(Float, default=0.0)  # 置信度 0~1
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending/confirmed/adjusted/rejected

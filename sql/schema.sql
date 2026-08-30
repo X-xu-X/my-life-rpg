@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS ai_judgments (
     event_id         INT NOT NULL,
     user_id          INT NOT NULL,
     suggested_changes JSON,                    -- AI 原始建议增减
+    analysis         JSON,                     -- AI 分析过程（推理链路），v1.1 新增
     summary          TEXT,
     confidence       DOUBLE NOT NULL DEFAULT 0.0,
     status           VARCHAR(20) NOT NULL DEFAULT 'pending',  -- pending/confirmed/adjusted/rejected

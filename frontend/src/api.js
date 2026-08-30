@@ -36,7 +36,7 @@ export const api = {
 
   // 事件
   createEvent: (payload) => request('/events', { method: 'POST', body: JSON.stringify(payload) }),
-  listEvents: () => request('/events'),
+  listEvents: (pure) => request(pure !== undefined ? `/events?pure=${pure}` : '/events'),
   judgeEvent: (eventId) => request(`/events/${eventId}/judge`, { method: 'POST' }),
   deleteEvent: (eventId) => request(`/events/${eventId}`, { method: 'DELETE' }),
   getHeatmap: () => request('/events/heatmap'),

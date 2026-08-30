@@ -17,7 +17,10 @@ router = APIRouter()
 
 @router.post("/events", response_model=EventOut)
 def create_event(body: EventCreate, db: Session = Depends(get_db)):
-    """录入事件。source=form 走结构化参数，source=journal 走日记原文（AI 提取要素）。"""
+    """录入事件。source=form 走结构化参数，source=journal 走日记原文（AI 提取要素）。
+
+    is_pure=True 时为「纯享记录」：跳过 AI 要素提取与判定，仅保留原始记录。
+    """
     user = get_or_create_default_user(db)
 
     event_type = body.event_type
@@ -25,8 +28,8 @@ def create_event(body: EventCreate, db: Session = Depends(get_db)):
     title = body.title
     params = body.params
 
-    # 自由日记：AI 从原文提取结构化要素，填充事件字段
-    if body.source == "journal" and body.content:
+    # 自由日记：AI 从原文提取结构化要素（纯享记录跳过提取）
+    if not body.is_pure and body.source == "journal" and body.content:
         try:
             result = llm_service.chat_json(prompts.build_extract_messages(body.content))
         except LLMError as exc:
@@ -35,6 +38,12 @@ def create_event(body: EventCreate, db: Session = Depends(get_db)):
         category = result.get("category") or body.category or "其他"
         title = result.get("title") or body.title or "自由日记"
         params = result.get("params") or {}
+
+    # 纯享记录：直接以正文为内容，类型用默认值，不强制分类
+    if body.is_pure:
+        event_type = event_type or "positive"
+        title = title or "纯享记录"
+        category = category or "生活"
 
     # 兜底：结构化打卡未指定类型时报错；日记提取失败给默认值
     if not event_type:
@@ -50,6 +59,7 @@ def create_event(body: EventCreate, db: Session = Depends(get_db)):
         title=title,
         params=params,
         content=body.content,
+        is_pure=body.is_pure,
         occurred_at=body.occurred_at,
     )
     db.add(event)
@@ -59,15 +69,13 @@ def create_event(body: EventCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/events", response_model=list[EventOut])
-def list_events(db: Session = Depends(get_db)):
-    """事件列表（按创建时间倒序）。"""
+def list_events(db: Session = Depends(get_db), pure: bool | None = None):
+    """事件列表（按创建时间倒序）。pure=True 只看纯享记录，pure=False 只看判定记录，缺省全量。"""
     user = get_or_create_default_user(db)
-    return (
-        db.query(Event)
-        .filter(Event.user_id == user.id)
-        .order_by(Event.created_at.desc())
-        .all()
-    )
+    query = db.query(Event).filter(Event.user_id == user.id)
+    if pure is not None:
+        query = query.filter(Event.is_pure == pure)
+    return query.order_by(Event.created_at.desc()).all()
 
 
 @router.get("/events/heatmap")

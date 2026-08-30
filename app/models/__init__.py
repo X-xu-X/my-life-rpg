@@ -117,6 +117,8 @@ class Event(Base):
     title: Mapped[str] = mapped_column(String(200), default="")
     params: Mapped[dict] = mapped_column(JSON, default=dict)  # 结构化参数（时长/距离/配速/强度...）
     content: Mapped[str] = mapped_column(Text, default="")  # 自由日记原文
+    # 纯享版记录：True 表示只记录不加点、不走 AI 判定（生活手账）
+    is_pure: Mapped[bool] = mapped_column(Boolean, default=False)
     occurred_at: Mapped[datetime] = mapped_column(DateTime, default=_now)  # 事件发生时间
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 

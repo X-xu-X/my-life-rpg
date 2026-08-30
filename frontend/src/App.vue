@@ -4,6 +4,7 @@ import { api } from './api'
 import Onboarding from './components/Onboarding.vue'
 import AttributePanel from './components/AttributePanel.vue'
 import EventForm from './components/EventForm.vue'
+import JournalView from './components/JournalView.vue'
 import JudgmentList from './components/JudgmentList.vue'
 import GoalsView from './components/GoalsView.vue'
 import AnchorsView from './components/AnchorsView.vue'
@@ -12,6 +13,7 @@ import SettingsView from './components/SettingsView.vue'
 const tabs = [
   { key: 'panel', label: '属性面板' },
   { key: 'event', label: '记录事件' },
+  { key: 'journal', label: '纯享手账' },
   { key: 'judgments', label: '判定中心' },
   { key: 'goals', label: '目标' },
   { key: 'anchors', label: '锚点库' },
@@ -95,6 +97,7 @@ onMounted(() => {
   <Onboarding v-if="activeTab === 'onboarding'" @created="onProfileCreated" />
   <AttributePanel v-else-if="activeTab === 'panel'" />
   <EventForm v-else-if="activeTab === 'event'" />
+  <JournalView v-else-if="activeTab === 'journal'" />
   <JudgmentList v-else-if="activeTab === 'judgments'" />
   <GoalsView v-else-if="activeTab === 'goals'" />
   <AnchorsView v-else-if="activeTab === 'anchors'" />

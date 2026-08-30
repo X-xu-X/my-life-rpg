@@ -16,6 +16,7 @@ class EventCreate(BaseModel):
     title: str = ""
     params: dict[str, Any] = Field(default_factory=dict, description="结构化参数（时长/距离/配速/强度…）")
     content: str = Field("", description="自由日记原文")
+    is_pure: bool = Field(False, description="纯享记录：只记录不加点、不走 AI 判定")
     occurred_at: datetime | None = None
 
 
@@ -27,6 +28,7 @@ class EventOut(BaseModel):
     title: str
     params: dict
     content: str
+    is_pure: bool
     occurred_at: datetime | None
     created_at: datetime
 

@@ -18,6 +18,7 @@ const form = ref({
 })
 
 const journalContent = ref('')
+const isPure = ref(false) // 纯享记录：只记录不加点、不走 AI 判定
 
 const categories = ['锻炼', '学习', '作息', '社交', '饮食', '理财', '其他']
 const intensities = ['低', '中低', '中等', '中高', '高']
@@ -40,7 +41,12 @@ async function submitForm() {
     source: 'form',
     title: form.value.title || `${form.value.category}打卡`,
     params,
+    is_pure: isPure.value,
   })
+  if (isPure.value) {
+    result.value = { status: 'pure', summary: '已作为纯享记录保存，不参与 AI 判定。' }
+    return
+  }
   result.value = await api.judgeEvent(event.id)
   emit('judged')
 }
@@ -54,7 +60,12 @@ async function submitJournal() {
     source: 'journal',
     content: journalContent.value.trim(),
     event_type: 'positive', // 占位，后端 AI 会重新提取
+    is_pure: isPure.value,
   })
+  if (isPure.value) {
+    result.value = { status: 'pure', summary: '已作为纯享记录保存，不参与 AI 判定。' }
+    return
+  }
   result.value = await api.judgeEvent(event.id)
   emit('judged')
 }
@@ -147,30 +158,41 @@ function reset() {
       <p class="muted">AI 会自动解析事件类型、类别和关键参数，然后进入判定流程。</p>
     </template>
 
+    <label class="field" style="margin-top: 12px; display: flex; align-items: center; gap: 8px">
+      <input type="checkbox" v-model="isPure" style="width: auto" />
+      <span>纯享记录（只记录，不做 AI 分析、不加点）</span>
+    </label>
+
     <div class="row">
-      <button class="btn primary" :disabled="busy" @click="submit">{{ busy ? 'AI 处理中…' : '提交并判定' }}</button>
+      <button class="btn primary" :disabled="busy" @click="submit">{{ busy ? '处理中…' : (isPure ? '保存纯享记录' : '提交并判定') }}</button>
       <button class="btn" @click="reset">清空</button>
     </div>
 
     <p v-if="error" class="muted" style="color: #d33">{{ error }}</p>
 
-    <!-- 判定结果预览 -->
+    <!-- 结果预览：纯享 / 判定 两种 -->
     <div v-if="result" class="judgment-item" style="margin-top: 16px">
-      <h3>AI 判定结果 <span class="tag">{{ result.status }}</span></h3>
-      <p class="muted">置信度 {{ (result.confidence * 100).toFixed(0) }}%</p>
-      <!-- AI 分析过程 -->
-      <div v-if="result.analysis && result.analysis.length" class="analysis-box">
-        <div class="analysis-title">🤖 AI 分析过程</div>
-        <div v-for="(step, idx) in result.analysis" :key="idx" class="step">{{ step }}</div>
-      </div>
-      <div v-for="a in result.suggested_changes" :key="a.name" class="judgment-item">
-        <span class="attr-name">{{ a.name }}</span>
-        <span :class="a.delta >= 0 ? 'positive' : 'negative'">{{ a.delta >= 0 ? '+' : '' }}{{ a.delta }}</span>
-        <div class="muted">{{ a.reason }}</div>
-        <div class="evidence">依据：{{ a.evidence }}</div>
-      </div>
-      <p v-if="result.summary" class="muted">{{ result.summary }}</p>
-      <p class="muted">请在「判定中心」确认入账 / 补充信息 / 反驳复核；录错了可删除该事件。</p>
+      <template v-if="result.status === 'pure'">
+        <h3>已保存 <span class="tag">纯享记录</span></h3>
+        <p class="muted">{{ result.summary }}</p>
+      </template>
+      <template v-else>
+        <h3>AI 判定结果 <span class="tag">{{ result.status }}</span></h3>
+        <p class="muted">置信度 {{ (result.confidence * 100).toFixed(0) }}%</p>
+        <!-- AI 分析过程 -->
+        <div v-if="result.analysis && result.analysis.length" class="analysis-box">
+          <div class="analysis-title">🤖 AI 分析过程</div>
+          <div v-for="(step, idx) in result.analysis" :key="idx" class="step">{{ step }}</div>
+        </div>
+        <div v-for="a in result.suggested_changes" :key="a.name" class="judgment-item">
+          <span class="attr-name">{{ a.name }}</span>
+          <span :class="a.delta >= 0 ? 'positive' : 'negative'">{{ a.delta >= 0 ? '+' : '' }}{{ a.delta }}</span>
+          <div class="muted">{{ a.reason }}</div>
+          <div class="evidence">依据：{{ a.evidence }}</div>
+        </div>
+        <p v-if="result.summary" class="muted">{{ result.summary }}</p>
+        <p class="muted">请在「判定中心」确认入账 / 补充信息 / 反驳复核；录错了可删除该事件。</p>
+      </template>
     </div>
   </div>
 </template>

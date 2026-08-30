@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { api } from '../api'
 
@@ -7,8 +7,10 @@ const attrs = ref([])
 const level = ref(1)
 const exp = ref(0)
 const history = ref([])
-const chartEl = ref(null)
-let chart = null
+const radarEl = ref(null)
+const growthEl = ref(null)
+let radarChart = null
+let growthChart = null
 
 async function load() {
   const [attrData, historyData] = await Promise.all([api.getAttributes(), api.getAttributeHistory()])
@@ -18,14 +20,15 @@ async function load() {
   history.value = historyData || []
   await nextTick()
   renderRadar()
+  renderGrowth()
 }
 
 function renderRadar() {
-  if (!chartEl.value) return
-  if (!chart) chart = echarts.init(chartEl.value)
+  if (!radarEl.value) return
+  if (!radarChart) radarChart = echarts.init(radarEl.value)
   const names = attrs.value.map((a) => a.name)
   const values = attrs.value.map((a) => a.value)
-  chart.setOption({
+  radarChart.setOption({
     color: ['#4f6ef7'],
     radar: {
       indicator: names.map((n) => ({ name: n, max: 100 })),
@@ -43,8 +46,35 @@ function renderRadar() {
   })
 }
 
+function renderGrowth() {
+  if (!growthEl.value) return
+  if (!growthChart) growthChart = echarts.init(growthEl.value)
+  const names = [...new Set(history.value.map((h) => h.name))]
+  if (names.length === 0) {
+    growthChart.setOption({})
+    return
+  }
+  const series = names.map((name) => {
+    const pts = history.value
+      .filter((h) => h.name === name)
+      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+      .map((h) => [h.created_at, h.value_after])
+    return { name, type: 'line', data: pts, smooth: true, showSymbol: true }
+  })
+  growthChart.setOption({
+    color: ['#4f6ef7', '#1f9e6a', '#e0533d', '#d97706', '#8b5cf6', '#0ea5e9'],
+    tooltip: { trigger: 'axis' },
+    legend: { data: names, textStyle: { color: '#2b2f3a' } },
+    grid: { left: 40, right: 20, top: 40, bottom: 40 },
+    xAxis: { type: 'time', axisLabel: { color: '#7a7f8c' } },
+    yAxis: { type: 'value', min: 0, max: 100, axisLabel: { color: '#7a7f8c' } },
+    series,
+  })
+}
+
 function handleResize() {
-  chart && chart.resize()
+  radarChart && radarChart.resize()
+  growthChart && growthChart.resize()
 }
 
 onMounted(() => {
@@ -53,7 +83,8 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
-  chart && chart.dispose()
+  radarChart && radarChart.dispose()
+  growthChart && growthChart.dispose()
 })
 </script>
 
@@ -86,8 +117,14 @@ onBeforeUnmount(() => {
       <div class="card" style="flex: 1">
         <h3>能力雷达图</h3>
         <div v-if="attrs.length === 0" class="muted">暂无数据。</div>
-        <div ref="chartEl" style="width: 100%; height: 320px"></div>
+        <div ref="radarEl" style="width: 100%; height: 320px"></div>
       </div>
+    </div>
+
+    <div class="card">
+      <h3>成长趋势</h3>
+      <div v-if="history.length === 0" class="muted">暂无成长记录，去「记录事件」并确认入账后这里会显示趋势。</div>
+      <div ref="growthEl" style="width: 100%; height: 340px"></div>
     </div>
   </div>
 </template>

@@ -304,3 +304,28 @@ label {
   color: var(--primary);
   margin-bottom: 6px;
 }
+
+/* 审计时间线（M2） */
+.audit-box {
+  background: #fafbfd;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 10px;
+}
+
+.audit-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-sub);
+  margin-bottom: 8px;
+}
+
+.audit-item {
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.audit-item:last-child {
+  border-bottom: none;
+}

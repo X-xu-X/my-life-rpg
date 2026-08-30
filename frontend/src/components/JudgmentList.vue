@@ -7,10 +7,36 @@ const busy = ref(false)
 const error = ref('')
 const actionTarget = ref(null) // 正在操作的判定 id
 const inputText = ref('')
+const auditTarget = ref(null) // 正在查看审计的判定 id
+const auditLogs = ref([])
+
+const ACTION_LABEL = {
+  create: '生成判定',
+  confirm: '确认入账',
+  supplement: '补充信息',
+  dispute: '反驳',
+  rejudge: '重新判定',
+  maintain: '维持原判',
+  delete: '删除事件',
+}
 
 async function load() {
   try {
     judgments.value = await api.listJudgments()
+  } catch (e) {
+    error.value = e.message
+  }
+}
+
+async function toggleAudit(id) {
+  if (auditTarget.value === id) {
+    auditTarget.value = null
+    return
+  }
+  auditTarget.value = id
+  auditLogs.value = []
+  try {
+    auditLogs.value = await api.getJudgmentLogs(id)
   } catch (e) {
     error.value = e.message
   }
@@ -124,10 +150,22 @@ onMounted(load)
           <button class="btn small danger" :disabled="busy" @click="openAction(j.id, 'dispute')">反驳</button>
         </div>
         <span v-else class="muted" style="flex: 1">✓ 已入账</span>
+        <button class="btn small" :disabled="busy" @click="toggleAudit(j.id)">审计</button>
         <!-- v1.1：误提交兜底，任何状态都可删除事件 -->
         <button class="btn small danger" :disabled="busy" @click="removeEvent(j.event_id, j.status === 'confirmed')">
           删除事件
         </button>
+      </div>
+
+      <!-- 审计时间线 -->
+      <div v-if="auditTarget === j.id" class="audit-box">
+        <div class="audit-title">📜 审计轨迹</div>
+        <div v-if="auditLogs.length === 0" class="muted">暂无审计记录。</div>
+        <div v-for="log in auditLogs" :key="log.id" class="audit-item">
+          <span class="tag">{{ ACTION_LABEL[log.action] || log.action }}</span>
+          <span class="muted">{{ log.detail }}</span>
+          <div class="muted" style="font-size: 12px">{{ new Date(log.created_at).toLocaleString('zh-CN') }}</div>
+        </div>
       </div>
 
       <!-- 补充/反驳输入框 -->

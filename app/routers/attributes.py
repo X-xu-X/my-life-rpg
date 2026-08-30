@@ -37,10 +37,11 @@ def get_attributes(db: Session = Depends(get_db)):
 
 @router.get("/attributes/history")
 def get_history(db: Session = Depends(get_db)):
-    """属性变更流水（支撑趋势折线/雷达图）。"""
+    """属性变更流水（含属性名，支撑成长趋势折线）。"""
     user = get_or_create_default_user(db)
     rows = (
-        db.query(AttributeHistory)
+        db.query(AttributeHistory, Attribute.name)
+        .join(Attribute, AttributeHistory.attribute_id == Attribute.id)
         .filter(AttributeHistory.user_id == user.id)
         .order_by(AttributeHistory.created_at.asc())
         .all()
@@ -48,6 +49,7 @@ def get_history(db: Session = Depends(get_db)):
     return [
         {
             "attribute_id": r.attribute_id,
+            "name": name,
             "delta": r.delta,
             "value_after": r.value_after,
             "reason": r.reason,
@@ -56,5 +58,5 @@ def get_history(db: Session = Depends(get_db)):
             "judgment_id": r.judgment_id,
             "created_at": r.created_at,
         }
-        for r in rows
+        for r, name in rows
     ]

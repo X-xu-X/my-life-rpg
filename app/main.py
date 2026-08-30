@@ -52,12 +52,13 @@ def init_db():
     migrate_schema(engine)  # 为已有表补充模型新增的缺失列（如 ai_judgments.analysis）
     from app.database import SessionLocal
     from app.services.anchor_service import seed_anchors
-    from app.services.user_service import get_or_create_default_user
+    from app.services.user_service import ensure_dimensions, get_or_create_default_user
 
     db = SessionLocal()
     try:
         seed_anchors(db)  # 内置锚点幂等写入
-        get_or_create_default_user(db)  # V1 单用户
+        user = get_or_create_default_user(db)  # V1 单用户
+        ensure_dimensions(db, user)  # 补全全部标准维度（维度扩展后给老用户补新维度）
     finally:
         db.close()
 

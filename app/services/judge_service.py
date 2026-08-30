@@ -15,6 +15,7 @@ import json
 from sqlalchemy.orm import Session
 
 from app import prompts
+from app.constants import ATTRIBUTE_ALIASES
 from app.models import AIJudgment, Attribute, AttributeHistory, Event, JudgmentLog
 from app.services.anchor_service import format_anchors_text
 from app.services.llm_service import LLMError, llm_service
@@ -22,16 +23,6 @@ from app.services.user_service import get_or_create_default_user
 
 # 单属性单次增减的合理区间（PRD 4.4 节）
 DELTA_LIMIT = 5.0
-
-# 属性名规范化：AI 可能返回英文/变体，映射到标准维度（DECISIONS.md D5）
-ATTRIBUTE_ALIASES = {
-    "体能": "体能", "体力": "体能", "physical": "体能", "fitness": "体能", "endurance": "体能",
-    "智力": "智力", "学习力": "智力", "intelligence": "智力", "intellect": "智力", "knowledge": "智力",
-    "情商": "情商", "情绪": "情商", "社交": "情商", "eq": "情商", "emotional": "情商", "social": "情商",
-    "创造力": "创造力", "creativity": "创造力", "creative": "创造力",
-    "规划力": "规划力", "自律": "规划力", "执行力": "规划力", "planning": "规划力", "discipline": "规划力",
-    "健康": "健康", "身体": "健康", "health": "健康", "vitality": "健康",
-}
 
 
 def _normalize_attribute_name(name: str) -> str | None:

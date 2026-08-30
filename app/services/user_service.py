@@ -4,7 +4,8 @@ V1 定位"个人自用"，所有 API 默认操作 default 用户；表结构已�
 """
 from sqlalchemy.orm import Session
 
-from app.models import User, UserProfile
+from app.constants import ATTRIBUTE_DIMENSIONS
+from app.models import Attribute, User, UserProfile
 
 DEFAULT_USERNAME = "default"
 
@@ -20,3 +21,20 @@ def get_or_create_default_user(db: Session) -> User:
         db.commit()
         db.refresh(user)
     return user
+
+
+def ensure_dimensions(db: Session, user: User) -> int:
+    """确保用户拥有全部标准维度的属性记录（缺失的以中性值 50 创建）。
+
+    用于维度扩展后（如从 6 项扩展到 12 项），给已建档用户补全新维度。
+    返回本次补建的数量。
+    """
+    existing = {a.name for a in db.query(Attribute).filter(Attribute.user_id == user.id).all()}
+    created = 0
+    for name in ATTRIBUTE_DIMENSIONS:
+        if name not in existing:
+            db.add(Attribute(user_id=user.id, name=name, current_value=50.0))
+            created += 1
+    if created:
+        db.commit()
+    return created

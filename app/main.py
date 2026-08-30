@@ -15,6 +15,7 @@ from app.routers import (
     attributes,
     goals,
     anchors,
+    export,
     settings as settings_router,
 )
 
@@ -41,6 +42,7 @@ app.include_router(attributes.router, prefix="/api", tags=["attributes"])
 app.include_router(goals.router, prefix="/api", tags=["goals"])
 app.include_router(anchors.router, prefix="/api", tags=["anchors"])
 app.include_router(settings_router.router, prefix="/api", tags=["settings"])
+app.include_router(export.router, prefix="/api", tags=["export"])
 
 
 @app.on_event("startup")

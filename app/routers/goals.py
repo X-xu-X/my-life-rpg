@@ -1,26 +1,40 @@
-"""目标路由：目标 CRUD + 状态操作。
-
-说明：目标达成/未达成的属性点结算逻辑在 M2 完善（TODO）。
-M1 提供 CRUD 与状态标记（达成/取消），结算扣分遵循锚点默认值（规划力 +2/-1）。
-"""
+"""目标路由：目标 CRUD + 结算（达成奖励 / 未达成扣分 / 修改取消记审计）。"""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Goal
 from app.schemas import GoalCreate, GoalOut, GoalUpdate
+from app.services import goal_service
 from app.services.user_service import get_or_create_default_user
 
 router = APIRouter()
 
 
-@router.get("/goals", response_model=list[GoalOut])
+def _goal_out(goal: Goal) -> dict:
+    """序列化目标（含审计流水）。"""
+    return {
+        "id": goal.id,
+        "description": goal.description,
+        "metric": goal.metric,
+        "deadline": goal.deadline,
+        "related_attribute": goal.related_attribute,
+        "status": goal.status,
+        "reward": goal.reward,
+        "penalty": goal.penalty,
+        "audit": goal.audit or [],
+        "created_at": goal.created_at,
+    }
+
+
+@router.get("/goals")
 def list_goals(db: Session = Depends(get_db)):
     user = get_or_create_default_user(db)
-    return db.query(Goal).filter(Goal.user_id == user.id).order_by(Goal.created_at.desc()).all()
+    goals = db.query(Goal).filter(Goal.user_id == user.id).order_by(Goal.created_at.desc()).all()
+    return [_goal_out(g) for g in goals]
 
 
-@router.post("/goals", response_model=GoalOut)
+@router.post("/goals")
 def create_goal(body: GoalCreate, db: Session = Depends(get_db)):
     user = get_or_create_default_user(db)
     goal = Goal(
@@ -35,62 +49,53 @@ def create_goal(body: GoalCreate, db: Session = Depends(get_db)):
     db.add(goal)
     db.commit()
     db.refresh(goal)
-    return goal
+    return _goal_out(goal)
 
 
-@router.get("/goals/{goal_id}", response_model=GoalOut)
+@router.get("/goals/{goal_id}")
 def get_goal(goal_id: int, db: Session = Depends(get_db)):
     goal = db.get(Goal, goal_id)
     if goal is None:
         raise HTTPException(status_code=404, detail="目标不存在")
-    return goal
+    return _goal_out(goal)
 
 
-@router.put("/goals/{goal_id}", response_model=GoalOut)
+@router.put("/goals/{goal_id}")
 def update_goal(goal_id: int, body: GoalUpdate, db: Session = Depends(get_db)):
-    """修改目标（记审计，M2 完善审计流水）。"""
+    """修改目标（记审计）。"""
     goal = db.get(Goal, goal_id)
     if goal is None:
         raise HTTPException(status_code=404, detail="目标不存在")
     data = body.model_dump(exclude_unset=True)
-    for k, v in data.items():
-        setattr(goal, k, v)
-    db.commit()
-    db.refresh(goal)
-    return goal
+    goal = goal_service.update_goal(db, goal, data)
+    return _goal_out(goal)
 
 
-@router.post("/goals/{goal_id}/achieve", response_model=GoalOut)
+@router.post("/goals/{goal_id}/achieve")
 def achieve_goal(goal_id: int, db: Session = Depends(get_db)):
-    """标记目标达成。TODO(M2)：触发奖励结算（规划力 +2 及关联属性）。"""
+    """标记目标达成，触发奖励结算。"""
     goal = db.get(Goal, goal_id)
     if goal is None:
         raise HTTPException(status_code=404, detail="目标不存在")
-    goal.status = "achieved"
-    db.commit()
-    db.refresh(goal)
-    return goal
+    goal, applied = goal_service.achieve_goal(db, goal)
+    return {"goal": _goal_out(goal), "applied": applied}
 
 
-@router.post("/goals/{goal_id}/fail", response_model=GoalOut)
+@router.post("/goals/{goal_id}/fail")
 def fail_goal(goal_id: int, db: Session = Depends(get_db)):
-    """标记目标未达成。TODO(M2)：触发扣分结算（规划力 -1）。"""
+    """标记目标未达成，触发扣分结算。"""
     goal = db.get(Goal, goal_id)
     if goal is None:
         raise HTTPException(status_code=404, detail="目标不存在")
-    goal.status = "failed"
-    db.commit()
-    db.refresh(goal)
-    return goal
+    goal, applied = goal_service.fail_goal(db, goal)
+    return {"goal": _goal_out(goal), "applied": applied}
 
 
-@router.post("/goals/{goal_id}/cancel", response_model=GoalOut)
+@router.post("/goals/{goal_id}/cancel")
 def cancel_goal(goal_id: int, db: Session = Depends(get_db)):
-    """取消目标（记审计，M2 完善审计流水）。"""
+    """取消目标（记审计，不结算）。"""
     goal = db.get(Goal, goal_id)
     if goal is None:
         raise HTTPException(status_code=404, detail="目标不存在")
-    goal.status = "cancelled"
-    db.commit()
-    db.refresh(goal)
-    return goal
+    goal = goal_service.cancel_goal(db, goal)
+    return _goal_out(goal)

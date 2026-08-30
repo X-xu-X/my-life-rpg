@@ -38,13 +38,35 @@ async function create() {
 }
 
 async function setStatus(id, action) {
+  busy.value = true
+  error.value = ''
   try {
-    if (action === 'achieve') await api.achieveGoal(id)
-    else if (action === 'fail') await api.failGoal(id)
-    else if (action === 'cancel') await api.cancelGoal(id)
+    if (action === 'achieve') {
+      const res = await api.achieveGoal(id)
+      const applied = res.applied || []
+      if (applied.length) {
+        const msg = applied.map((a) => `${a.name} ${a.delta >= 0 ? '+' : ''}${a.delta}`).join('、')
+        alert(`目标达成，奖励已入账：${msg}`)
+      } else {
+        alert('目标已标记达成')
+      }
+    } else if (action === 'fail') {
+      const res = await api.failGoal(id)
+      const applied = res.applied || []
+      if (applied.length) {
+        const msg = applied.map((a) => `${a.name} ${a.delta >= 0 ? '+' : ''}${a.delta}`).join('、')
+        alert(`目标未达成，扣分已入账：${msg}`)
+      } else {
+        alert('目标已标记未达成')
+      }
+    } else if (action === 'cancel') {
+      await api.cancelGoal(id)
+    }
     await load()
   } catch (e) {
     error.value = e.message
+  } finally {
+    busy.value = false
   }
 }
 
@@ -76,7 +98,7 @@ onMounted(load)
         </div>
       </div>
       <button class="btn primary" :disabled="busy" @click="create">创建目标</button>
-      <p class="muted" style="margin-top: 8px">达成默认奖励规划力 +2，未达成扣规划力 -1（结算逻辑 M2 完善）。</p>
+      <p class="muted" style="margin-top: 8px">达成奖励规划力 +2 及关联属性，未达成扣规划力 -1，修改/取消均记审计。</p>
     </div>
 
     <div class="card">
@@ -89,6 +111,9 @@ onMounted(load)
         </div>
         <div class="muted">指标：{{ g.metric }}</div>
         <div v-if="g.deadline" class="muted">期限：{{ new Date(g.deadline).toLocaleDateString('zh-CN') }}</div>
+        <div v-if="g.audit && g.audit.length" class="muted" style="font-size: 12px; margin-top: 4px">
+          最近操作：{{ g.audit[g.audit.length - 1].detail }}
+        </div>
         <div v-if="g.status === 'active'" class="row" style="margin-top: 8px">
           <button class="btn small primary" @click="setStatus(g.id, 'achieve')">达成</button>
           <button class="btn small" @click="setStatus(g.id, 'fail')">未达成</button>

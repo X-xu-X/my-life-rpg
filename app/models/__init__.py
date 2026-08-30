@@ -170,6 +170,8 @@ class Goal(Base):
     status: Mapped[str] = mapped_column(String(20), default="active")  # active/achieved/failed/cancelled
     reward: Mapped[float] = mapped_column(Float, default=2.0)  # 达成奖励点数
     penalty: Mapped[float] = mapped_column(Float, default=-1.0)  # 未达成扣点
+    # 操作审计：修改/取消/达成/失败的流水记录 [{action, detail, created_at}]
+    audit: Mapped[list] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
 

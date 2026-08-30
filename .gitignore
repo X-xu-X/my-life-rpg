@@ -22,6 +22,9 @@ dist/
 .idea/
 .vscode/
 
+# 工具状态目录（不入库）
+.workbuddy/
+
 # 系统
 .DS_Store
 Thumbs.db

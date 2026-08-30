@@ -1,54 +1,86 @@
 @echo off
-chcp 65001 >nul
-title æ¸¸æˆäººç”Ÿ Â· ä¸€é”®å¯åŠ¨
+setlocal
+title Game of Life - Launcher
 cd /d "%~dp0"
 
 echo ============================================
-echo   æ¸¸æˆäººç”Ÿï¼ˆGame of Lifeï¼‰ä¸€é”®å¯åŠ¨
+echo   ÓÎÏ·ÈËÉú Game of Life - Ò»¼üÆô¶¯
 echo ============================================
+echo.
 
-REM ---- 1. æ£€æŸ¥ .env ----
+REM ========== 0. ÇåÀí¾É½ø³Ì£¬ÊÍ·Å¶Ë¿Ú ==========
+echo [0/5] ÇåÀíÕ¼ÓÃ 8000/5173 µÄ¾É½ø³Ì£¨ÈçÓĞ£©...
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8000 " ^| findstr "LISTENING"') do taskkill /f /pid %%p >nul 2>nul
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":5173 " ^| findstr "LISTENING"') do taskkill /f /pid %%p >nul 2>nul
+
+REM ========== 1. ¼ì²é .env ==========
 if not exist ".env" (
-  echo [1/4] æœªæ‰¾åˆ° .envï¼Œæ­£åœ¨ä» .env.example å¤åˆ¶æ¨¡æ¿...
-  copy ".env.example" ".env" >nul
-  echo.
-  echo [é‡è¦] å·²ç”Ÿæˆ .envï¼Œè¯·å…ˆç¼–è¾‘å¡«å…¥ä½ çš„ DeepSeek API Keyï¼š
-  echo        æ‰§è¡Œï¼šnotepad .env
-  pause
-  exit /b 1
+    echo [×¼±¸] Î´ÕÒµ½ .env£¬ÕıÔÚ´ÓÄ£°å¸´ÖÆ...
+    copy ".env.example" ".env" >nul
+    echo [ÖØÒª] ÒÑÉú³É .env£¬ÇëÏÈÌîÈë DeepSeek API Key ºóÖØĞÂÔËĞĞ£¡
+    start notepad ".env"
+    pause
+    exit /b 1
 )
 
-REM ---- 2. åç«¯ä¾èµ– ----
-echo [1/4] æ£€æŸ¥ Python ä¾èµ–...
-python -c "import fastapi, uvicorn, sqlalchemy, openai, dotenv" 2>nul
+REM ========== 2. ºó¶Ë Python »·¾³ ==========
+echo [1/5] ¼ì²éºó¶Ë Python »·¾³...
+set "PYTHON=%~dp0.venv\Scripts\python.exe"
+
+if not exist "%PYTHON%" (
+    echo       Î´ÕÒµ½ÏîÄ¿ĞéÄâ»·¾³£¬ÕıÔÚ´´½¨²¢°²×°ÒÀÀµ£¨Ê×´ÎÔ¼ 1-2 ·ÖÖÓ£©...
+    python -m venv ".venv"
+    if errorlevel 1 (
+        echo [´íÎó] ´´½¨ĞéÄâ»·¾³Ê§°Ü£¬ÇëÈ·ÈÏÒÑ°²×° Python 3.10+ ²¢¼ÓÈë PATH
+        pause
+        exit /b 1
+    )
+    "%PYTHON%" -m pip install -r requirements.txt
+    if errorlevel 1 (
+        echo [´íÎó] ºó¶ËÒÀÀµ°²×°Ê§°Ü£¬Çë¼ì²éÍøÂçºóÖØÊÔ
+        pause
+        exit /b 1
+    )
+)
+
+"%PYTHON%" -c "import fastapi, uvicorn, sqlalchemy, openai, dotenv" >nul 2>nul
 if errorlevel 1 (
-  echo        é¦–æ¬¡è¿è¡Œï¼Œå®‰è£…åç«¯ä¾èµ–ä¸­...
-  python -m pip install -r requirements.txt
+    echo       ¼ì²âµ½ºó¶ËÒÀÀµÈ±Ê§£¬ÕıÔÚ°²×°...
+    "%PYTHON%" -m pip install -r requirements.txt
+    if errorlevel 1 (
+        echo [´íÎó] ºó¶ËÒÀÀµ°²×°Ê§°Ü£¬Çë¼ì²éÍøÂçºóÖØÊÔ
+        pause
+        exit /b 1
+    )
 )
 
-REM ---- 3. å‰ç«¯ä¾èµ– ----
-echo [2/4] æ£€æŸ¥å‰ç«¯ä¾èµ–...
+REM ========== 3. Ç°¶ËÒÀÀµ ==========
+echo [2/5] ¼ì²éÇ°¶ËÒÀÀµ...
 if not exist "frontend\node_modules" (
-  echo        é¦–æ¬¡è¿è¡Œï¼Œå®‰è£…å‰ç«¯ä¾èµ–ä¸­...
-  pushd frontend
-  call npm install
-  popd
+    echo       Ê×´ÎÔËĞĞ£¬°²×°Ç°¶ËÒÀÀµ...
+    pushd frontend
+    call npm install
+    popd
 )
 
-REM ---- 4. å¯åŠ¨åç«¯ ----
-echo [3/4] å¯åŠ¨åç«¯ï¼ˆhttp://127.0.0.1:8000ï¼‰...
-start "æ¸¸æˆäººç”Ÿ-åç«¯" cmd /k "cd /d %~dp0 && python -m uvicorn app.main:app --reload --port 8000"
+REM ========== 4. Æô¶¯ºó¶Ë ==========
+echo [3/5] Æô¶¯ºó¶Ë http://127.0.0.1:8000 ...
+start "game-life-backend" /d "%~dp0" cmd /k ".venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000"
 
-REM ---- 5. å¯åŠ¨å‰ç«¯ ----
-echo [4/4] å¯åŠ¨å‰ç«¯ï¼ˆhttp://127.0.0.1:5173ï¼‰...
-start "æ¸¸æˆäººç”Ÿ-å‰ç«¯" cmd /k "cd /d %~dp0frontend && npm run dev"
+REM ========== 5. Æô¶¯Ç°¶Ë ==========
+echo [4/5] Æô¶¯Ç°¶Ë http://127.0.0.1:5173 ...
+start "game-life-frontend" /d "%~dp0frontend" cmd /k "npm run dev"
 
-REM ---- 6. æ‰“å¼€æµè§ˆå™¨ ----
-echo ç­‰å¾…æœåŠ¡å°±ç»ªï¼Œè‡ªåŠ¨æ‰“å¼€æµè§ˆå™¨...
+REM ========== 6. ´ò¿ªä¯ÀÀÆ÷ ==========
+echo [5/5] µÈ´ı·şÎñ¾ÍĞ÷£¬×Ô¶¯´ò¿ªä¯ÀÀÆ÷...
 timeout /t 6 /nobreak >nul
-start http://127.0.0.1:5173
+start "" http://127.0.0.1:5173
 
 echo.
-echo å¯åŠ¨å®Œæˆï¼å¥åº·æ£€æŸ¥ï¼šhttp://127.0.0.1:8000/api/health
-echo å…³é—­ä¸¤ä¸ªæ–°å¼€çš„å‘½ä»¤è¡Œçª—å£å³å¯åœæ­¢æœåŠ¡ã€‚
+echo ============================================
+echo   Æô¶¯Íê³É£¡
+echo   ºó¶Ë½¡¿µ¼ì²é£ºhttp://127.0.0.1:8000/api/health
+echo   ¹Ø±ÕÁ½¸ö game-life-* ´°¿Ú¼´¿ÉÍ£Ö¹·şÎñ
+echo ============================================
+echo.
 pause

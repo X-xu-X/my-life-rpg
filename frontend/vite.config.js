@@ -6,6 +6,8 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     port: 5173,
+    // 固定监听 IPv4，避免默认绑定 ::1 导致 127.0.0.1 无法访问
+    host: '127.0.0.1',
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8000',

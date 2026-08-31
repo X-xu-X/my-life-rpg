@@ -33,10 +33,14 @@ export const api = {
       body: JSON.stringify({ detail }),
     }),
   confirmSupplement: () => request('/onboarding/supplement/confirm', { method: 'POST' }),
+  resetOnboarding: () => request('/onboarding/reset', { method: 'POST' }),
+  resetAllData: () => request('/onboarding/reset-all', { method: 'POST' }),
 
   // 事件
   createEvent: (payload) => request('/events', { method: 'POST', body: JSON.stringify(payload) }),
   listEvents: (pure) => request(pure !== undefined ? `/events?pure=${pure}` : '/events'),
+  getEvent: (id) => request(`/events/${id}`),
+  updateEvent: (id, payload) => request(`/events/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   judgeEvent: (eventId) => request(`/events/${eventId}/judge`, { method: 'POST' }),
   deleteEvent: (eventId) => request(`/events/${eventId}`, { method: 'DELETE' }),
   getHeatmap: () => request('/events/heatmap'),
@@ -86,4 +90,11 @@ export const api = {
     a.click()
     URL.revokeObjectURL(url)
   },
+
+  // 备份
+  backup: () => request('/backup', { method: 'POST' }),
+  listBackups: () => request('/backup/list'),
+
+  // 成长报告
+  getReport: (period) => request(`/report?period=${period}`),
 }

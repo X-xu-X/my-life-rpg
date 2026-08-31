@@ -5,6 +5,8 @@ import { api } from '../api'
 const settings = ref(null)
 const error = ref('')
 const exporting = ref(false)
+const backups = ref([])
+const backingUp = ref(false)
 
 const MODULES = {
   achievements: { label: '成就徽章', desc: '达成特定里程碑时颁发徽章' },
@@ -18,6 +20,55 @@ async function load() {
     settings.value = await api.getSettings()
   } catch (e) {
     error.value = e.message
+  }
+}
+
+async function loadBackups() {
+  try {
+    backups.value = await api.listBackups()
+  } catch (e) {
+    error.value = e.message
+  }
+}
+
+async function doBackup() {
+  backingUp.value = true
+  error.value = ''
+  try {
+    const res = await api.backup()
+    alert(res.backup_file ? `备份完成：${res.backup_file}` : '备份失败')
+    await loadBackups()
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    backingUp.value = false
+  }
+}
+
+async function resetAll() {
+  if (!window.confirm('⚠️ 重置全部数据？将清空所有事件/判定/属性流水/目标，属性回中性值，并解锁角色档案。此操作不可恢复！')) return
+  if (!window.confirm('再次确认：真的要清空所有数据重新开始吗？（建议先备份）')) return
+  error.value = ''
+  try {
+    await api.resetAllData()
+    alert('已重置，可重新开始（请刷新页面）。')
+  } catch (e) {
+    error.value = e.message
+  }
+}
+
+const reportData = ref(null)
+const reportBusy = ref(false)
+
+async function genReport(period) {
+  reportBusy.value = true
+  error.value = ''
+  try {
+    reportData.value = await api.getReport(period)
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    reportBusy.value = false
   }
 }
 
@@ -44,7 +95,10 @@ async function exportData(format) {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  loadBackups()
+})
 </script>
 
 <template>
@@ -81,6 +135,47 @@ onMounted(load)
         <button class="btn primary" :disabled="exporting" @click="exportData('json')">导出 JSON（全部数据）</button>
         <button class="btn" :disabled="exporting" @click="exportData('csv')">导出事件 CSV</button>
       </div>
+    </div>
+
+    <div class="card">
+      <h3>数据备份</h3>
+      <p class="muted">每次启动自动备份（保留最近 30 份），也可以手动备份。</p>
+      <button class="btn primary" :disabled="backingUp" @click="doBackup">
+        {{ backingUp ? '备份中…' : '立即备份' }}
+      </button>
+      <div v-if="backups.length" style="margin-top: 10px">
+        <div class="muted" style="font-size: 12px; margin-bottom: 4px">最近备份：</div>
+        <div v-for="b in backups.slice(0, 5)" :key="b.file" class="muted" style="font-size: 13px">
+          {{ b.file }}（{{ (b.size / 1024).toFixed(1) }} KB，{{ b.created_at }}）
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>成长报告</h3>
+      <p class="muted">AI 基于近期数据生成成长总结与建议。</p>
+      <div class="row">
+        <button class="btn primary" :disabled="reportBusy" @click="genReport('week')">{{ reportBusy ? '生成中…' : '生成周报' }}</button>
+        <button class="btn" :disabled="reportBusy" @click="genReport('month')">生成月报</button>
+      </div>
+      <div v-if="reportData" style="margin-top: 12px">
+        <div class="muted" style="margin-bottom: 6px">{{ reportData.start }} ~ {{ reportData.end }}</div>
+        <div class="judgment-item"><b>✨ 亮点</b><div class="muted">{{ reportData.report.highlights }}</div></div>
+        <div class="judgment-item"><b>⚠️ 关注</b><div class="muted">{{ reportData.report.concerns }}</div></div>
+        <div class="judgment-item">
+          <b>💡 建议</b>
+          <ul v-if="reportData.report.suggestions && reportData.report.suggestions.length" style="margin: 6px 0 0; padding-left: 20px">
+            <li v-for="(s, i) in reportData.report.suggestions" :key="i">{{ s }}</li>
+          </ul>
+        </div>
+        <p class="muted" style="margin-top: 6px">{{ reportData.report.tone }}</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>测试 / 重置</h3>
+      <p class="muted">⚠️ 清空所有数据（事件/判定/流水/目标），属性回中性值，解锁角色档案。用于测试，操作前建议先备份。</p>
+      <button class="btn danger" @click="resetAll">重置全部数据</button>
     </div>
 
     <p v-if="error" class="muted" style="color: #d33">{{ error }}</p>

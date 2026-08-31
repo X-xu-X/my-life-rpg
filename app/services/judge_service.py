@@ -115,8 +115,38 @@ def _parse_changes(raw_changes: list[dict]) -> list[dict]:
 # ============ 判定 ============
 
 def judge_event(db: Session, event: Event) -> AIJudgment:
-    """对事件触发 AI 判定，创建 pending 判定记录。"""
+    """对事件触发 AI 判定，创建 pending 判定记录。
+
+    幂等约束：
+    - 事件已入账（confirmed）：拒绝重复判定，避免判定中心出现"同事件双记录"（修复 bug）。
+    - 事件已有未确认判定（pending/adjusted）：先清除旧判定（连同审计）再新建，避免重复。
+    """
     user = get_or_create_default_user(db)
+    existing_confirmed = (
+        db.query(AIJudgment)
+        .filter(
+            AIJudgment.event_id == event.id,
+            AIJudgment.user_id == user.id,
+            AIJudgment.status == "confirmed",
+        )
+        .first()
+    )
+    if existing_confirmed:
+        raise ValueError("该事件已确认入账。如需重新判定，请删除该事件后重新记录，或用「补充信息」调整。")
+    stale = (
+        db.query(AIJudgment)
+        .filter(
+            AIJudgment.event_id == event.id,
+            AIJudgment.user_id == user.id,
+            AIJudgment.status.in_(["pending", "adjusted"]),
+        )
+        .all()
+    )
+    for j in stale:
+        db.query(JudgmentLog).filter(JudgmentLog.judgment_id == j.id).delete()
+        db.delete(j)
+    db.flush()
+
     anchors_text = format_anchors_text(db)
     messages = prompts.build_judge_messages(
         anchors_text=anchors_text,

@@ -114,6 +114,8 @@ def judge(event_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="事件不存在")
     try:
         judgment = judge_service.judge_event(db, event)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     except LLMError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     return {

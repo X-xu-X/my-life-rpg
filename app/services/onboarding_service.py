@@ -251,3 +251,39 @@ def confirm_adjustment(db: Session) -> dict:
     profile.pending_adjustment = {}
     db.commit()
     return {"applied": applied, "message": "调整已生效。"}
+
+
+def reset_onboarding(db: Session) -> dict:
+    """重置角色档案：解锁首次引导，可重新走问卷生成新面板。属性值保留（重新建档时覆盖）。"""
+    user = get_or_create_default_user(db)
+    profile = _get_profile(db, user)
+    profile.onboarding_completed = False
+    profile.onboarding_state = {}
+    profile.pending_adjustment = {}
+    db.commit()
+    return {"status": "ok", "message": "角色档案已重置，可重新开始问卷。"}
+
+
+def reset_all_data(db: Session) -> dict:
+    """重置全部数据（测试用）：清空事件/判定/流水/目标，属性回中性值，解锁引导。"""
+    from app.models import AIJudgment, AttributeHistory, Event, Goal, JudgmentLog
+
+    user = get_or_create_default_user(db)
+    for model in (JudgmentLog, AIJudgment, AttributeHistory, Event, Goal):
+        if hasattr(model, "user_id"):
+            db.query(model).filter(model.user_id == user.id).delete()
+        else:
+            db.query(model).delete()
+    # 属性回中性值
+    for attr in db.query(Attribute).filter(Attribute.user_id == user.id).all():
+        attr.current_value = 50.0
+        attr.description = ""
+    # 解锁引导并清空画像
+    profile = _get_profile(db, user)
+    profile.onboarding_completed = False
+    profile.onboarding_state = {}
+    profile.pending_adjustment = {}
+    profile.initial_attributes_snapshot = {}
+    profile.basic_profile = {}
+    db.commit()
+    return {"status": "ok", "message": "全部数据已重置，可重新开始。"}

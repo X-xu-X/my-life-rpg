@@ -57,3 +57,15 @@ def supplement(body: SupplementProfileIn, db: Session = Depends(get_db)):
 def confirm_supplement(db: Session = Depends(get_db)):
     """确认应用补充信息的属性调整建议。"""
     return onboarding_service.confirm_adjustment(db)
+
+
+@router.post("/onboarding/reset")
+def reset_onboarding(db: Session = Depends(get_db)):
+    """重置角色档案：解锁首次引导，可重新走问卷生成新面板。"""
+    return onboarding_service.reset_onboarding(db)
+
+
+@router.post("/onboarding/reset-all")
+def reset_all(db: Session = Depends(get_db)):
+    """重置全部数据（测试用）：清空事件/判定/流水/目标，属性回中性值，解锁引导。"""
+    return onboarding_service.reset_all_data(db)

@@ -181,6 +181,28 @@ function ignoreSupplement() {
   supplementNote.value = '已忽略本次调整建议。'
 }
 
+async function resetProfile() {
+  if (!window.confirm('重置角色档案？将解锁首次引导，可重新走问卷生成新面板（当前属性值保留到重新建档时覆盖）。')) return
+  busy.value = true
+  error.value = ''
+  try {
+    await api.resetOnboarding()
+    phase.value = 'init'
+    messages.value = []
+    currentQuestions.value = []
+    answerInputs.value = {}
+    panel.value = null
+    summary.value = ''
+    pendingAdjustment.value = null
+    supplementNote.value = ''
+    emit('created')
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    busy.value = false
+  }
+}
+
 onMounted(loadStatus)
 </script>
 
@@ -230,6 +252,11 @@ onMounted(loadStatus)
         <div class="muted">{{ a.reason || a.description }}</div>
       </div>
       <p v-if="summary" class="muted">{{ summary }}</p>
+
+      <!-- 重置角色档案（测试/重新建档用） -->
+      <div class="row" style="margin-top: 12px">
+        <button class="btn small danger" :disabled="busy" @click="resetProfile">重置角色档案（重新走问卷）</button>
+      </div>
 
       <!-- 补充长期信息入口（仅首次完成后） -->
       <div v-if="phase === 'completed'" class="card" style="margin-top: 12px">

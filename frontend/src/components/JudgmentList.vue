@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { api } from '../api'
 
 const judgments = ref([])
@@ -9,6 +9,19 @@ const actionTarget = ref(null) // 正在操作的判定 id
 const inputText = ref('')
 const auditTarget = ref(null) // 正在查看审计的判定 id
 const auditLogs = ref([])
+const editTarget = ref(null) // 正在编辑的事件 id
+const editForm = ref({ title: '', category: '', content: '' })
+const searchText = ref('')
+
+const filteredJudgments = computed(() => {
+  const kw = searchText.value.trim().toLowerCase()
+  if (!kw) return judgments.value
+  return judgments.value.filter((j) =>
+    (j.event_title || '').toLowerCase().includes(kw) ||
+    (j.category || '').toLowerCase().includes(kw) ||
+    (j.summary || '').toLowerCase().includes(kw)
+  )
+})
 
 const ACTION_LABEL = {
   create: '生成判定',
@@ -103,6 +116,40 @@ async function runAction(id, fn, okMsg) {
   }
 }
 
+// 编辑事件：回填事件详情
+async function openEdit(eventId) {
+  try {
+    const ev = await api.getEvent(eventId)
+    editForm.value = {
+      title: ev.title || '',
+      category: ev.category || '',
+      content: ev.content || '',
+    }
+    editTarget.value = eventId
+  } catch (e) {
+    error.value = e.message
+  }
+}
+
+async function saveEdit() {
+  busy.value = true
+  error.value = ''
+  try {
+    await api.updateEvent(editTarget.value, {
+      title: editForm.value.title,
+      category: editForm.value.category,
+      content: editForm.value.content,
+    })
+    editTarget.value = null
+    await load()
+    alert('已保存。事件内容变更后未确认的判定已删除，可重新判定。')
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    busy.value = false
+  }
+}
+
 function openAction(id, mode) {
   actionTarget.value = id
   inputText.value = ''
@@ -119,7 +166,11 @@ onMounted(load)
     <p v-if="error" class="muted" style="color: #d33">{{ error }}</p>
     <p v-if="judgments.length === 0 && !error" class="muted">暂无判定记录，先去「记录事件」打卡吧。</p>
 
-    <div v-for="j in judgments" :key="j.id" class="judgment-item">
+    <div class="field" v-if="judgments.length > 0">
+      <input v-model="searchText" placeholder="🔍 搜索事件/判定（标题/类别/总结）…" />
+    </div>
+
+    <div v-for="j in filteredJudgments" :key="j.id" class="judgment-item">
       <div class="row" style="align-items: center; margin-bottom: 8px">
         <b>{{ j.event_title || j.category }}</b>
         <span class="tag">{{ j.event_type }}</span>
@@ -150,11 +201,26 @@ onMounted(load)
           <button class="btn small danger" :disabled="busy" @click="openAction(j.id, 'dispute')">反驳</button>
         </div>
         <span v-else class="muted" style="flex: 1">✓ 已入账</span>
+        <button class="btn small" :disabled="busy" @click="openEdit(j.event_id)">编辑</button>
         <button class="btn small" :disabled="busy" @click="toggleAudit(j.id)">审计</button>
         <!-- v1.1：误提交兜底，任何状态都可删除事件 -->
         <button class="btn small danger" :disabled="busy" @click="removeEvent(j.event_id, j.status === 'confirmed')">
           删除事件
         </button>
+      </div>
+
+      <!-- 编辑表单 -->
+      <div v-if="editTarget === j.event_id" class="field" style="margin-top: 10px">
+        <label>标题</label>
+        <input v-model="editForm.title" placeholder="事件标题" />
+        <label>类别</label>
+        <input v-model="editForm.category" placeholder="锻炼/学习/作息/…" />
+        <label>内容（日记原文，可选）</label>
+        <textarea v-model="editForm.content" rows="2" placeholder="事件内容"></textarea>
+        <div class="row" style="margin-top: 8px">
+          <button class="btn small primary" :disabled="busy" @click="saveEdit">保存</button>
+          <button class="btn small" @click="editTarget = null">取消</button>
+        </div>
       </div>
 
       <!-- 审计时间线 -->

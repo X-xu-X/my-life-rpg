@@ -20,6 +20,17 @@ class EventCreate(BaseModel):
     occurred_at: datetime | None = None
 
 
+class EventUpdate(BaseModel):
+    """编辑事件（全部字段可选，仅更新传入的）。"""
+
+    event_type: Literal["positive", "negative", "goal"] | None = None
+    category: str | None = None
+    title: str | None = None
+    params: dict[str, Any] | None = None
+    content: str | None = None
+    occurred_at: datetime | None = None
+
+
 class EventOut(BaseModel):
     id: int
     event_type: str

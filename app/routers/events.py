@@ -2,11 +2,12 @@
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Event
-from app.schemas import EventCreate, EventOut
+from app.models import AIJudgment, Event, JudgmentLog
+from app.schemas import EventCreate, EventOut, EventUpdate
 from app import prompts
 from app.services import judge_service
 from app.services.llm_service import LLMError, llm_service
@@ -69,12 +70,22 @@ def create_event(body: EventCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/events", response_model=list[EventOut])
-def list_events(db: Session = Depends(get_db), pure: bool | None = None):
-    """事件列表（按创建时间倒序）。pure=True 只看纯享记录，pure=False 只看判定记录，缺省全量。"""
+def list_events(
+    db: Session = Depends(get_db),
+    pure: bool | None = None,
+    q: str = "",
+    date: str = "",
+):
+    """事件列表（按创建时间倒序）。支持：pure 纯享过滤、q 关键词（标题/内容/类别）、date 日期（YYYY-MM-DD）。"""
     user = get_or_create_default_user(db)
     query = db.query(Event).filter(Event.user_id == user.id)
     if pure is not None:
         query = query.filter(Event.is_pure == pure)
+    if q:
+        like = f"%{q}%"
+        query = query.filter(or_(Event.title.like(like), Event.content.like(like), Event.category.like(like)))
+    if date:
+        query = query.filter(Event.created_at.like(f"{date}%"))
     return query.order_by(Event.created_at.desc()).all()
 
 
@@ -113,6 +124,38 @@ def judge(event_id: int, db: Session = Depends(get_db)):
         "summary": judgment.summary,
         "confidence": judgment.confidence,
     }
+
+
+@router.get("/events/{event_id}", response_model=EventOut)
+def get_event(event_id: int, db: Session = Depends(get_db)):
+    """获取单个事件详情（供编辑回填）。"""
+    event = db.get(Event, event_id)
+    if event is None:
+        raise HTTPException(status_code=404, detail="事件不存在")
+    return event
+
+
+@router.put("/events/{event_id}", response_model=EventOut)
+def update_event(event_id: int, body: EventUpdate, db: Session = Depends(get_db)):
+    """编辑事件。未确认的判定（pending/adjusted）一并删除（内容变了旧判定失效）；已入账判定保留。"""
+    event = db.get(Event, event_id)
+    if event is None:
+        raise HTTPException(status_code=404, detail="事件不存在")
+    data = body.model_dump(exclude_unset=True)
+    for k, v in data.items():
+        setattr(event, k, v)
+    # 删除未确认判定：事件内容变化后，旧判定结果不再可信
+    stale = (
+        db.query(AIJudgment)
+        .filter(AIJudgment.event_id == event.id, AIJudgment.status.in_(["pending", "adjusted"]))
+        .all()
+    )
+    for j in stale:
+        db.query(JudgmentLog).filter(JudgmentLog.judgment_id == j.id).delete()
+        db.delete(j)
+    db.commit()
+    db.refresh(event)
+    return event
 
 
 @router.delete("/events/{event_id}")

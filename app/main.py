@@ -16,6 +16,7 @@ from app.routers import (
     goals,
     anchors,
     export,
+    report,
     settings as settings_router,
 )
 
@@ -43,6 +44,7 @@ app.include_router(goals.router, prefix="/api", tags=["goals"])
 app.include_router(anchors.router, prefix="/api", tags=["anchors"])
 app.include_router(settings_router.router, prefix="/api", tags=["settings"])
 app.include_router(export.router, prefix="/api", tags=["export"])
+app.include_router(report.router, prefix="/api", tags=["report"])
 
 
 @app.on_event("startup")
@@ -61,6 +63,11 @@ def init_db():
         ensure_dimensions(db, user)  # 补全全部标准维度（维度扩展后给老用户补新维度）
     finally:
         db.close()
+
+    # 启动时自动备份数据库（SQLite backup API，失败不影响启动）
+    from app.services.backup_service import backup_now
+
+    backup_now()
 
 
 @app.get("/api/health")

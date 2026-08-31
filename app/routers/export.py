@@ -128,3 +128,22 @@ def export_data(db: Session = Depends(get_db), format: str = "json"):
         )
 
     return data
+
+
+# ============ 备份 ============
+
+@router.post("/backup")
+def create_backup():
+    """手动触发数据库备份。"""
+    from app.services.backup_service import backup_now
+
+    dest = backup_now()
+    return {"status": "ok", "backup_file": dest.name if dest else None}
+
+
+@router.get("/backup/list")
+def list_backups():
+    """列出已有备份。"""
+    from app.services.backup_service import list_backups
+
+    return list_backups()

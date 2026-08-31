@@ -37,15 +37,17 @@ def get_db():
 
 
 def migrate_schema(engine) -> None:
-    """轻量迁移：为已存在的表补充 ORM 模型新增的缺失列（仅 ADD COLUMN，不删列、不改类型）。
+    """轻量迁移：为已存在的表补充 ORM 模型新增的缺失列 + 标量默认值 NULL 回填。
 
     适用场景：模型迭代（如 ai_judgments 新增 analysis 字段）后，本地 SQLite 文件已存有
     旧数据，而 create_all 不会给已有表加列，导致 INSERT 报 "no column named xxx"。
-    启动时调用，幂等：已存在的列会被跳过。
+    启动时调用，幂等。
 
-    说明：新增列一律按「可空」方式添加（不追加 NOT NULL 约束）——旧数据该列为 NULL，
-    新写入由 ORM 的 default 提供值。这样可避开 SQLite 对 NOT NULL 无默认值列无法
-    ALTER TABLE 的限制，且不破坏已有数据。
+    说明：
+    - 新增列一律按「可空」方式添加（不追加 NOT NULL 约束），避开 SQLite 对
+      NOT NULL 无默认值列无法 ALTER TABLE 的限制。
+    - SQLite ALTER TABLE 新增列对已有行为 NULL，若模型有 Python 标量默认值
+      （bool/int/float/str），统一回填，避免下游 schema 校验失败（如 is_pure=None）。
     """
     from sqlalchemy import inspect, text
 
@@ -57,10 +59,18 @@ def migrate_schema(engine) -> None:
             continue  # 新表交给 create_all 处理
         existing_cols = {c["name"] for c in inspector.get_columns(table.name)}
         for column in table.columns:
-            if column.name in existing_cols:
-                continue
-            col_type = column.type.compile(engine.dialect)
-            ddl = f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {col_type}'
-            with engine.begin() as conn:
-                conn.execute(text(ddl))
-            print(f"[migrate] 已添加缺失列 {table.name}.{column.name} ({col_type})")
+            if column.name not in existing_cols:
+                col_type = column.type.compile(engine.dialect)
+                ddl = f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {col_type}'
+                with engine.begin() as conn:
+                    conn.execute(text(ddl))
+                print(f"[migrate] 已添加缺失列 {table.name}.{column.name} ({col_type})")
+            # 标量默认值 NULL 回填（对已存在列同样执行，幂等）
+            arg = getattr(column.default, "arg", None)
+            if isinstance(arg, (bool, int, float, str)):
+                default_val = 1 if arg is True else (0 if arg is False else arg)
+                with engine.begin() as conn:
+                    conn.execute(
+                        text(f'UPDATE "{table.name}" SET "{column.name}" = :v WHERE "{column.name}" IS NULL'),
+                        {"v": default_val},
+                    )

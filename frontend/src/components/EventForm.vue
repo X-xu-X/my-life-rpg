@@ -66,8 +66,39 @@ async function submitJournal() {
     result.value = { status: 'pure', summary: '已作为纯享记录保存，不参与 AI 判定。' }
     return
   }
-  result.value = await api.judgeEvent(event.id)
+  const res = await api.judgeEvent(event.id)
+  if (res.needs_clarify) {
+    // AI 认为信息不足，先追问
+    clarifyEvent.value = { id: event.id, questions: res.questions || [] }
+    return
+  }
+  result.value = res
   emit('judged')
+}
+
+// 追问流程：用户回答 AI 的问题后，带补充信息重新判定
+const clarifyEvent = ref(null)
+const clarifyAnswer = ref('')
+
+async function submitClarify() {
+  busy.value = true
+  error.value = ''
+  try {
+    const res = await api.judgeEvent(clarifyEvent.value.id, clarifyAnswer.value.trim())
+    if (res.needs_clarify) {
+      clarifyEvent.value.questions = res.questions || []
+      clarifyAnswer.value = ''
+      return
+    }
+    result.value = res
+    clarifyEvent.value = null
+    clarifyAnswer.value = ''
+    emit('judged')
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    busy.value = false
+  }
 }
 
 async function submit() {
@@ -88,6 +119,8 @@ function reset() {
   form.value = { event_type: 'positive', category: '锻炼', title: '', duration: '', distance: '', intensity: '', note: '' }
   journalContent.value = ''
   result.value = null
+  clarifyEvent.value = null
+  clarifyAnswer.value = ''
 }
 </script>
 
@@ -169,6 +202,16 @@ function reset() {
     </div>
 
     <p v-if="error" class="muted" style="color: #d33">{{ error }}</p>
+
+    <!-- AI 追问区（日记信息不足时） -->
+    <div v-if="clarifyEvent" class="card" style="margin-top: 12px">
+      <h3>🤔 AI 想多了解一点</h3>
+      <div v-for="(q, i) in clarifyEvent.questions" :key="i" class="muted" style="margin: 4px 0">• {{ q }}</div>
+      <div class="field" style="margin-top: 8px">
+        <textarea v-model="clarifyAnswer" rows="2" placeholder="补充回答，例如：坐了 4 小时，中间没起来…"></textarea>
+      </div>
+      <button class="btn primary" :disabled="busy" @click="submitClarify">{{ busy ? '判定中…' : '提交补充并判定' }}</button>
+    </div>
 
     <!-- 结果预览：纯享 / 判定 两种 -->
     <div v-if="result" class="judgment-item" style="margin-top: 16px">

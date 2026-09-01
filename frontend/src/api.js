@@ -41,7 +41,11 @@ export const api = {
   listEvents: (pure) => request(pure !== undefined ? `/events?pure=${pure}` : '/events'),
   getEvent: (id) => request(`/events/${id}`),
   updateEvent: (id, payload) => request(`/events/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
-  judgeEvent: (eventId) => request(`/events/${eventId}/judge`, { method: 'POST' }),
+  judgeEvent: (eventId, clarification) =>
+    request(`/events/${eventId}/judge`, {
+      method: 'POST',
+      body: JSON.stringify({ clarification: clarification || '' }),
+    }),
   deleteEvent: (eventId) => request(`/events/${eventId}`, { method: 'DELETE' }),
   getHeatmap: () => request('/events/heatmap'),
 

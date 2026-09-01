@@ -61,6 +61,22 @@ def _recent_same_category_count(db: Session, user_id: int, event: Event) -> int:
     )
 
 
+def _attribute_context(db: Session, user_id: int) -> str:
+    """当前属性值文本（边际递减参考）。"""
+    attrs = db.query(Attribute).filter(Attribute.user_id == user_id).all()
+    if not attrs:
+        return ""
+    return "、".join(f"{a.name} {a.current_value:.0f}" for a in attrs)
+
+
+class ClarifyNeededError(Exception):
+    """判定前信息不足，需要用户补充回答（携带追问问题）。"""
+
+    def __init__(self, questions: list[str]):
+        self.questions = questions
+        super().__init__("事件信息不足，需要追问补充")
+
+
 def format_event_description(event: Event) -> str:
     """将事件转成可读文本，供 AI 判定。form 通道格式参数，journal 通道用原文。"""
     lines = [f"事件类型：{event.event_type}"]
@@ -139,12 +155,15 @@ def _parse_changes(raw_changes: list[dict]) -> list[dict]:
 
 # ============ 判定 ============
 
-def judge_event(db: Session, event: Event) -> AIJudgment:
+def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgment:
     """对事件触发 AI 判定，创建 pending 判定记录。
 
     幂等约束：
     - 事件已入账（confirmed）：拒绝重复判定，避免判定中心出现"同事件双记录"（修复 bug）。
     - 事件已有未确认判定（pending/adjusted）：先清除旧判定（连同审计）再新建，避免重复。
+
+    v1.2：信息缺口追问——AI 认为描述不足且未提供 clarification 时抛 ClarifyNeededError；
+    用户补充回答后带 clarification 重新判定。
     """
     user = get_or_create_default_user(db)
     existing_confirmed = (
@@ -178,12 +197,18 @@ def judge_event(db: Session, event: Event) -> AIJudgment:
         event_description=format_event_description(event),
         profile_context=_profile_context(db, user.id),
         recent_count=_recent_same_category_count(db, user.id, event),
+        attribute_context=_attribute_context(db, user.id),
+        clarification=clarification,
     )
     result = llm_service.chat_json(messages)
 
     # 真实性甄别（v1.2）：事件明显不符合科学常理 → 拒绝判定，累计不实提交第 3 次起减诚信
     if not result.get("realistic", True):
         _handle_unrealistic(db, user.id, event, str(result.get("realistic_reason", "事件不符合常理")))
+
+    # 信息缺口（v1.2）：AI 认为描述不足且用户尚未补充 → 抛出追问，不生成判定
+    if result.get("needs_clarify") and not clarification:
+        raise ClarifyNeededError(result.get("questions") or ["请补充一下事件的关键细节。"])
 
     changes = _parse_changes(result.get("affected_attributes", []))
     judgment = AIJudgment(
@@ -313,6 +338,7 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
         event_description=extra_desc,
         profile_context=_profile_context(db, user.id),
         recent_count=_recent_same_category_count(db, user.id, event),
+        attribute_context=_attribute_context(db, user.id),
     )
     result = llm_service.chat_json(messages)
     changes = _parse_changes(result.get("affected_attributes", []))

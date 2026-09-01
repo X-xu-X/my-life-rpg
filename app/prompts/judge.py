@@ -55,6 +55,17 @@ JUDGE_SYSTEM_PROMPT = """你是「游戏人生」的科学判定引擎。用户�
 - 只依据事实与科学标准判定，不得迎合、不得夸大。
 - 若事件信息不足以支撑判定，可下调 confidence 并在 summary 中说明。
 
+## 信息缺口判断（务必遵守）
+- 若事件描述缺少支撑加点判定的关键量化信息（如时长/强度/频率/完成度），且这些信息明显影响加点，输出 needs_clarify=true，并在 questions 中给出 1~3 个针对性追问（口语化，如"今天久坐了吗？大概多久？"）。
+- 若描述信息已足够判定（或缺口不影响加点），needs_clarify=false，questions 为空数组。
+- 日记中已体现的信息不要重复提问；追问要精炼、一次到位，避免反复打扰。
+- 结构化打卡（已有时长/强度等参数）通常信息足够，不要追问。
+
+## 边际递减（属性越高收益越小，务必遵守）
+- 系统会提供「当前属性值」。对于技能/积累类属性（体能、智力、规划力、创造力等）：属性值越高，同样的行为投入边际收益越小，接近上限（100）时明显趋缓——如体能 82 时晨跑收益低于体能 50 时。
+- 对于心态/情绪类属性（幸福感、感恩、意义感、心理韧性等）：不强制边际递减，按事件本身强度判定。
+- 若因边际递减调整了点数，必须在「加权推导」步骤说明理由与依据（如"体能已 82，边际收益递减，本次适当下调"）。
+
 ## 分析过程要求
 - 先展示分析过程（推理链路），再给结论。analysis 数组按顺序包含 3 步：
   1. "要素解析：..."（识别事件类型/强度/时长/质量，以及语境与情感）
@@ -70,7 +81,9 @@ JUDGE_SYSTEM_PROMPT = """你是「游戏人生」的科学判定引擎。用户�
   "summary": "一句话总结",
   "confidence": 0.0,
   "realistic": true,
-  "realistic_reason": ""
+  "realistic_reason": "",
+  "needs_clarify": false,
+  "questions": []
 }}
 """
 
@@ -80,6 +93,8 @@ def build_judge_messages(
     event_description: str,
     profile_context: str = "",
     recent_count: int = 0,
+    attribute_context: str = "",
+    clarification: str = "",
 ) -> list[dict[str, str]]:
     """构建判定消息。
 
@@ -87,6 +102,8 @@ def build_judge_messages(
     :param event_description: 事件描述（结构化参数或日记原文）
     :param profile_context: 用户画像上下文（可选，辅助判断事件相对水平）
     :param recent_count: 近 30 天同类事件次数（>1 时注入累积效应提示）
+    :param attribute_context: 当前属性值文本（边际递减参考）
+    :param clarification: 用户对追问的补充回答（非空时注入，AI 据此完成判定）
     """
     system = JUDGE_SYSTEM_PROMPT.format(anchors=anchors_text)
     user_lines = ["请判定以下生活事件：", event_description]
@@ -95,6 +112,10 @@ def build_judge_messages(
             f"\n【近期同类事件频率】用户近 30 天已记录 {recent_count} 次同类事件。"
             "若是正面事件：坚持可适当上浮加分；若是负面事件：频繁应适当加重减分（累积效应）。"
         )
+    if attribute_context:
+        user_lines.append(f"\n【当前属性值】{attribute_context}")
+    if clarification:
+        user_lines.append(f"\n【用户对追问的补充回答】{clarification}")
     if profile_context:
         user_lines.append(f"\n用户画像背景：\n{profile_context}")
     return [

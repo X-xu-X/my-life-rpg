@@ -7,9 +7,10 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import AIJudgment, Event, JudgmentLog
-from app.schemas import EventCreate, EventOut, EventUpdate
+from app.schemas import EventCreate, EventOut, EventUpdate, JudgeIn
 from app import prompts
 from app.services import judge_service
+from app.services.judge_service import ClarifyNeededError
 from app.services.llm_service import LLMError, llm_service
 from app.services.user_service import get_or_create_default_user
 
@@ -107,13 +108,18 @@ def get_heatmap(db: Session = Depends(get_db)):
 
 
 @router.post("/events/{event_id}/judge")
-def judge(event_id: int, db: Session = Depends(get_db)):
-    """触发 AI 判定，生成 pending 判定记录。"""
+def judge(event_id: int, body: JudgeIn, db: Session = Depends(get_db)):
+    """触发 AI 判定，生成 pending 判定记录。
+
+    信息不足（needs_clarify）时返回追问问题；用户补充回答后带 clarification 重新判定。
+    """
     event = db.get(Event, event_id)
     if event is None:
         raise HTTPException(status_code=404, detail="事件不存在")
     try:
-        judgment = judge_service.judge_event(db, event)
+        judgment = judge_service.judge_event(db, event, clarification=body.clarification)
+    except ClarifyNeededError as exc:
+        return {"status": "clarify", "needs_clarify": True, "questions": exc.questions}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except LLMError as exc:

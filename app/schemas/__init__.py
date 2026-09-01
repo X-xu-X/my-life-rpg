@@ -48,6 +48,11 @@ class EventOut(BaseModel):
 
 # ============ AI 判定 ============
 
+class JudgeIn(BaseModel):
+    """触发判定的入参。clarification 为对 AI 追问的补充回答（可选）。"""
+
+    clarification: str = Field("", description="对 AI 追问的补充回答（日记追问流程使用）")
+
 class AttributeChange(BaseModel):
     """AI 判定的单条属性增减。"""
 

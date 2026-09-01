@@ -199,7 +199,11 @@ onMounted(load)
       <!-- 操作区 -->
       <div class="row" style="margin-top: 10px; align-items: center">
         <div v-if="j.status !== 'confirmed'" class="row" style="gap: 8px; flex: 1">
-          <button class="btn small primary" :disabled="busy" @click="confirm(j.id)">确认入账</button>
+          <button
+            class="btn small primary"
+            :disabled="busy || (j.confidence || 0) < 0.8"
+            @click="confirm(j.id)"
+          >确认入账</button>
           <button class="btn small" :disabled="busy" @click="openAction(j.id, 'supplement')">补充信息</button>
           <button class="btn small danger" :disabled="busy" @click="openAction(j.id, 'dispute')">反驳</button>
         </div>
@@ -211,6 +215,15 @@ onMounted(load)
           删除事件
         </button>
       </div>
+
+      <!-- 低置信度提示（v1.2） -->
+      <p
+        v-if="j.status !== 'confirmed' && (j.confidence || 0) < 0.8"
+        class="muted"
+        style="color: #b7791f; font-size: 12px; margin-top: 6px"
+      >
+        ⚠️ 置信度不足（{{ ((j.confidence || 0) * 100).toFixed(0) }}% < 80%），请先「补充信息」补充细节后重新判定，才能确认入账。
+      </p>
 
       <!-- 编辑表单 -->
       <div v-if="editTarget === j.event_id" class="field" style="margin-top: 10px">

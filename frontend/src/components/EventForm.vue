@@ -187,6 +187,9 @@ function reset() {
         <div v-for="a in result.suggested_changes" :key="a.name" class="judgment-item">
           <span class="attr-name">{{ a.name }}</span>
           <span :class="a.delta >= 0 ? 'positive' : 'negative'">{{ a.delta >= 0 ? '+' : '' }}{{ a.delta }}</span>
+          <span class="muted" style="font-size: 12px">
+            → 预计入账 {{ (a.delta * (result.confidence || 1)).toFixed(1) }}
+          </span>
           <div class="muted">{{ a.reason }}</div>
           <div class="evidence">依据：{{ a.evidence }}</div>
         </div>

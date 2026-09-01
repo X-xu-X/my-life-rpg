@@ -189,6 +189,9 @@ onMounted(load)
       <div v-for="a in j.suggested_changes" :key="a.name" class="judgment-item">
         <span class="attr-name">{{ a.name }}</span>
         <span :class="a.delta >= 0 ? 'positive' : 'negative'">{{ a.delta >= 0 ? '+' : '' }}{{ a.delta }}</span>
+        <span class="muted" style="font-size: 12px">
+          → 入账 {{ (a.delta * (j.confidence || 1)).toFixed(1) }}（置信度 {{ ((j.confidence || 1) * 100).toFixed(0) }}%）
+        </span>
         <div class="muted">{{ a.reason }}</div>
         <div class="evidence">依据：{{ a.evidence }}</div>
       </div>

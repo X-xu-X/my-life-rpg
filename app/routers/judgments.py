@@ -91,11 +91,14 @@ def get_logs(judgment_id: int, db: Session = Depends(get_db)):
 
 @router.post("/judgments/{judgment_id}/confirm")
 def confirm(judgment_id: int, db: Session = Depends(get_db)):
-    """确认入账：写属性流水 + 更新属性值。"""
+    """确认入账：写属性流水 + 更新属性值。低置信度会被拦截。"""
     judgment = _get_judgment(db, judgment_id)
     if judgment.status == "confirmed":
         raise HTTPException(status_code=409, detail="该判定已确认入账，请勿重复操作。")
-    judgment = judge_service.confirm(db, judgment)
+    try:
+        judgment = judge_service.confirm(db, judgment)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     return {"status": judgment.status, "final_changes": judgment.final_changes}
 
 

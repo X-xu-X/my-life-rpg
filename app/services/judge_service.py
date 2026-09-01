@@ -18,13 +18,21 @@ from sqlalchemy.orm import Session
 
 from app import prompts
 from app.constants import ATTRIBUTE_ALIASES
-from app.models import AIJudgment, Attribute, AttributeHistory, Event, JudgmentLog
+from app.models import AIJudgment, Attribute, AttributeHistory, Event, JudgmentLog, Setting
 from app.services.anchor_service import format_anchors_text
 from app.services.llm_service import LLMError, llm_service
 from app.services.user_service import get_or_create_default_user
 
 # 单属性单次增减的合理区间（PRD 4.4 节）
 DELTA_LIMIT = 5.0
+
+# 低置信度入账拦截阈值（v1.2）：低于该置信度不允许直接入账
+CONFIDENCE_CONFIRM_MIN = 0.8
+
+# 不实事件触发诚信减分的累计次数阈值（v1.2）
+UNREALISTIC_HONESTY_THRESHOLD = 3
+# 每次诚信减分
+UNREALISTIC_HONESTY_DELTA = -0.5
 
 
 def _normalize_attribute_name(name: str) -> str | None:
@@ -173,6 +181,10 @@ def judge_event(db: Session, event: Event) -> AIJudgment:
     )
     result = llm_service.chat_json(messages)
 
+    # 真实性甄别（v1.2）：事件明显不符合科学常理 → 拒绝判定，累计不实提交第 3 次起减诚信
+    if not result.get("realistic", True):
+        _handle_unrealistic(db, user.id, event, str(result.get("realistic_reason", "事件不符合常理")))
+
     changes = _parse_changes(result.get("affected_attributes", []))
     judgment = AIJudgment(
         event_id=event.id,
@@ -196,6 +208,44 @@ def judge_event(db: Session, event: Event) -> AIJudgment:
     return judgment
 
 
+def _handle_unrealistic(db: Session, user_id: int, event: Event, reason: str) -> None:
+    """处理不实事件：累计次数，第 3 次起减诚信。以 ValueError 终止判定。"""
+    row = db.query(Setting).filter(Setting.user_id == user_id, Setting.key == "unreal_count").first()
+    count = 0
+    if row:
+        try:
+            count = int(row.value)
+        except (TypeError, ValueError):
+            count = 0
+    count += 1
+    if row:
+        row.value = count
+    else:
+        db.add(Setting(user_id=user_id, key="unreal_count", value=count))
+
+    msg = f"AI 认为该事件不符合常理：{reason}。请修正后重新提交。"
+    if count >= UNREALISTIC_HONESTY_THRESHOLD:
+        attr = _ensure_attribute(db, user_id, "诚信")
+        attr.current_value = round(attr.current_value + UNREALISTIC_HONESTY_DELTA, 2)
+        db.add(
+            AttributeHistory(
+                user_id=user_id,
+                attribute_id=attr.id,
+                event_id=event.id,
+                judgment_id=None,
+                delta=UNREALISTIC_HONESTY_DELTA,
+                value_after=attr.current_value,
+                reason=f"连续 {count} 次提交不实事件，诚信减分",
+                evidence=f"AI 真实性甄别：事件明显不符合科学常理（{reason}）。",
+            )
+        )
+        msg += f"（累计 {count} 次不实提交，诚信 {UNREALISTIC_HONESTY_DELTA}）"
+    # 不实事件不予保留，直接删除，避免垃圾数据
+    db.delete(event)
+    db.commit()
+    raise ValueError(msg)
+
+
 # ============ 确认入账 ============
 
 def confirm(db: Session, judgment: AIJudgment) -> AIJudgment:
@@ -203,8 +253,14 @@ def confirm(db: Session, judgment: AIJudgment) -> AIJudgment:
 
     v1.2：置信度加权——实际入账 delta = 原始建议 delta × confidence
     （描述越详细真实置信度越高 → 越接近满额加点；含糊/有编造嫌疑 → 打折）。
+    v1.2：低置信度拦截——confidence < 80% 不允许入账，引导补充信息重判。
     """
     user = get_or_create_default_user(db)
+    if judgment.confidence is not None and judgment.confidence < CONFIDENCE_CONFIRM_MIN:
+        raise ValueError(
+            f"判定置信度不足（{judgment.confidence:.0%} < {CONFIDENCE_CONFIRM_MIN:.0%}），"
+            "请使用「补充信息」补充细节后重新判定，再确认入账。"
+        )
     conf = judgment.confidence if judgment.confidence is not None else 1.0
     changes = judgment.suggested_changes
     applied_changes = []

@@ -11,7 +11,9 @@
 - 全程写 judgment_logs 审计
 """
 import json
+from datetime import datetime, timedelta
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app import prompts
@@ -34,6 +36,21 @@ def _normalize_attribute_name(name: str) -> str | None:
 def _clamp_delta(delta: float) -> float:
     """将 delta 钳制到 [-DELTA_LIMIT, +DELTA_LIMIT]，防止模型输出异常值。"""
     return max(-DELTA_LIMIT, min(DELTA_LIMIT, delta))
+
+
+def _recent_same_category_count(db: Session, user_id: int, event: Event) -> int:
+    """近 30 天同类别事件次数（累积效应：坚持上浮 / 频繁加重）。"""
+    cutoff = datetime.now() - timedelta(days=30)
+    return (
+        db.query(func.count(Event.id))
+        .filter(
+            Event.user_id == user_id,
+            Event.category == event.category,
+            Event.created_at >= cutoff,
+        )
+        .scalar()
+        or 0
+    )
 
 
 def format_event_description(event: Event) -> str:
@@ -152,6 +169,7 @@ def judge_event(db: Session, event: Event) -> AIJudgment:
         anchors_text=anchors_text,
         event_description=format_event_description(event),
         profile_context=_profile_context(db, user.id),
+        recent_count=_recent_same_category_count(db, user.id, event),
     )
     result = llm_service.chat_json(messages)
 
@@ -181,13 +199,21 @@ def judge_event(db: Session, event: Event) -> AIJudgment:
 # ============ 确认入账 ============
 
 def confirm(db: Session, judgment: AIJudgment) -> AIJudgment:
-    """确认判定入账：写属性流水 + 更新属性当前值。"""
+    """确认判定入账：写属性流水 + 更新属性当前值。
+
+    v1.2：置信度加权——实际入账 delta = 原始建议 delta × confidence
+    （描述越详细真实置信度越高 → 越接近满额加点；含糊/有编造嫌疑 → 打折）。
+    """
     user = get_or_create_default_user(db)
-    # 以最新建议增减为准（可能已因补充/反驳被调整）
+    conf = judgment.confidence if judgment.confidence is not None else 1.0
     changes = judgment.suggested_changes
+    applied_changes = []
     for item in changes:
         name = item["name"]
-        delta = item["delta"]
+        raw_delta = item["delta"]
+        delta = round(raw_delta * conf, 2)
+        if delta == 0:
+            continue  # 加权后为 0，不入账
         attr = _ensure_attribute(db, user.id, name)
         attr.current_value = round(attr.current_value + delta, 2)
         db.add(
@@ -198,16 +224,17 @@ def confirm(db: Session, judgment: AIJudgment) -> AIJudgment:
                 judgment_id=judgment.id,
                 delta=delta,
                 value_after=attr.current_value,
-                reason=item.get("reason", ""),
+                reason=f"{item.get('reason', '')}（置信度 {conf:.0%} 加权）",
                 evidence=item.get("evidence", ""),
             )
         )
+        applied_changes.append({**item, "delta": delta})
     judgment.status = "confirmed"
-    judgment.final_changes = changes
+    judgment.final_changes = applied_changes
     _log(
         db, judgment.id, user.id, "confirm",
-        detail="用户确认入账",
-        payload={"final_changes": changes},
+        detail=f"用户确认入账（置信度 {conf:.0%} 加权）",
+        payload={"raw_changes": changes, "applied_changes": applied_changes},
     )
     db.commit()
     db.refresh(judgment)
@@ -229,6 +256,7 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
         anchors_text=anchors_text,
         event_description=extra_desc,
         profile_context=_profile_context(db, user.id),
+        recent_count=_recent_same_category_count(db, user.id, event),
     )
     result = llm_service.chat_json(messages)
     changes = _parse_changes(result.get("affected_attributes", []))

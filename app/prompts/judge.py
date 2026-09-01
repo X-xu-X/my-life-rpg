@@ -39,6 +39,12 @@ JUDGE_SYSTEM_PROMPT = """你是「游戏人生」的科学判定引擎。用户�
 - 单属性单次增减量 delta 必须落在 [-5, +5] 之间。
 - 目标类事件（goal）：达成按锚点给「规划力」正向分并叠加关联属性；未达成给「规划力」负分。
 
+## 累积效应（坚持与频繁，务必遵守）
+- 若消息中提供了「近期同类事件频率」：说明用户近 30 天有多次同类行为，应体现累积效应。
+- 正面事件频率越高（坚持）：加分可在基准上适当上浮（如规律锻炼的长期收益累积）。
+- 负面事件频率越高（频繁）：减分应在基准上适当加重（如慢性睡眠剥夺的累积健康损害 > 偶发）。
+- 累积调整仍受 [-5, +5] 约束，并在「加权推导」步骤说明频率对本次判定的影响。
+
 ## 客观性硬约束
 - 只依据事实与科学标准判定，不得迎合、不得夸大。
 - 若事件信息不足以支撑判定，可下调 confidence 并在 summary 中说明。
@@ -65,15 +71,22 @@ def build_judge_messages(
     anchors_text: str,
     event_description: str,
     profile_context: str = "",
+    recent_count: int = 0,
 ) -> list[dict[str, str]]:
     """构建判定消息。
 
     :param anchors_text: 格式化后的锚点库文本（由 anchor_service 生成）
     :param event_description: 事件描述（结构化参数或日记原文）
     :param profile_context: 用户画像上下文（可选，辅助判断事件相对水平）
+    :param recent_count: 近 30 天同类事件次数（>1 时注入累积效应提示）
     """
     system = JUDGE_SYSTEM_PROMPT.format(anchors=anchors_text)
     user_lines = ["请判定以下生活事件：", event_description]
+    if recent_count > 1:
+        user_lines.append(
+            f"\n【近期同类事件频率】用户近 30 天已记录 {recent_count} 次同类事件。"
+            "若是正面事件：坚持可适当上浮加分；若是负面事件：频繁应适当加重减分（累积效应）。"
+        )
     if profile_context:
         user_lines.append(f"\n用户画像背景：\n{profile_context}")
     return [

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app import prompts
 from app.database import get_db
 from app.models import AIJudgment, Attribute, AttributeHistory, Event, Goal
+from app.services import memory_service
 from app.services.llm_service import LLMError, llm_service
 from app.services.user_service import get_or_create_default_user
 
@@ -78,6 +79,7 @@ def generate_report(db: Session = Depends(get_db), period: str = "week"):
         start=start.strftime("%Y-%m-%d"),
         end=now.strftime("%Y-%m-%d"),
         stats=stats,
+        memory_context=memory_service.format_memory_text(memory_service.get_long_term_memory(db, user.id)),
     )
     try:
         report = llm_service.chat_json(messages)

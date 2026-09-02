@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 from app import prompts
 from app.constants import ATTRIBUTE_ALIASES
 from app.models import AIJudgment, Attribute, AttributeHistory, Event, JudgmentLog, Setting
+from app.services import memory_service
 from app.services.anchor_service import format_anchors_text
 from app.services.llm_service import LLMError, llm_service
 from app.services.user_service import get_or_create_default_user
@@ -218,6 +219,9 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
     db.flush()
 
     anchors_text = format_anchors_text(db)
+    # 长期记忆：每天检查更新一次（失败不影响判定）
+    memory = memory_service.maybe_update_memory(db, user)
+    memory_text = memory_service.format_memory_text(memory)
     messages = prompts.build_judge_messages(
         anchors_text=anchors_text,
         event_description=format_event_description(event),
@@ -226,6 +230,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
         attribute_context=_attribute_context(db, user.id),
         clarification=clarification,
         recent_events_context=_recent_events_context(db, user.id, event.id),
+        memory_context=memory_text,
     )
     result = llm_service.chat_json(messages)
 

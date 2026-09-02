@@ -20,13 +20,14 @@ REPORT_SYSTEM_PROMPT = """你是「游戏人生」的成长顾问。根据用户
 """
 
 
-def build_report_messages(period: str, start: str, end: str, stats: dict) -> list[dict[str, str]]:
+def build_report_messages(period: str, start: str, end: str, stats: dict, memory_context: str = "") -> list[dict[str, str]]:
     """构建生成报告的消息。
 
     :param period: week / month
     :param start: 起始日期 YYYY-MM-DD
     :param end: 结束日期 YYYY-MM-DD
     :param stats: 统计信息（事件数、类别分布、属性变化、判定数）
+    :param memory_context: 用户长期记忆摘要（长期目标/性格/偏好等）
     """
     stats_text = (
         f"期间：{start} ~ {end}\n"
@@ -39,8 +40,10 @@ def build_report_messages(period: str, start: str, end: str, stats: dict) -> lis
     )
     user = (
         f"请为以下用户生成{'周报' if period == 'week' else '月报'}：\n{stats_text}\n"
-        "请给出成长报告。"
     )
+    if memory_context:
+        user += f"\n用户长期记忆背景：\n{memory_context}\n"
+    user += "请给出成长报告。"
     return [
         {"role": "system", "content": REPORT_SYSTEM_PROMPT},
         {"role": "user", "content": user},

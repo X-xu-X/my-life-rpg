@@ -22,9 +22,9 @@ JUDGE_SYSTEM_PROMPT = """你是「游戏人生」的成长引导者——加点�
 3. 每条增减必须给出可引用的科学依据（运动科学/学习科学/睡眠研究/积极心理学/认知心理学等）。
 
 ## 上下文记忆（如有，务必遵守）
-- 系统会提供「用户近期生活记录」，这是用户近几天的日记/事件摘要，用于让你建立上下文、记住用户的近况。
-- 判定当前事件时，参考近期记录理解用户的连续状态（如最近在坚持什么、经历什么困难、情绪走向），让判定更有连贯性。
-- 但不要强行关联：当前事件仍以自身事实为准，近期记录只作背景参考。
+- 系统可能提供「用户长期记忆」（长期目标/关键经历/性格/偏好/当前状态）与「用户近期生活记录」（近几天日记）。
+- 长期记忆用于理解用户是谁、长期在追求什么、当前处在什么状态；近期记录用于理解连续状态（最近在坚持什么、经历什么困难）。
+- 判定当前事件时参考这些背景，让判定更有连贯性；但不要强行关联，当前事件仍以自身事实为准，背景只作参考。
 
 ## 语义理解（务必遵守）
 - 理解整个描述的语境与情感，不要只靠关键词机械匹配。
@@ -104,6 +104,7 @@ def build_judge_messages(
     attribute_context: str = "",
     clarification: str = "",
     recent_events_context: str = "",
+    memory_context: str = "",
 ) -> list[dict[str, str]]:
     """构建判定消息。
 
@@ -113,10 +114,13 @@ def build_judge_messages(
     :param recent_count: 近 30 天同类事件次数（>1 时注入累积效应提示）
     :param attribute_context: 当前属性值文本（边际递减参考）
     :param clarification: 用户对追问的补充回答（非空时注入，AI 据此完成判定）
-    :param recent_events_context: 用户近期生活记录摘要（AI 上下文记忆）
+    :param recent_events_context: 用户近期生活记录摘要（短期记忆）
+    :param memory_context: 用户长期记忆摘要（长期目标/性格/偏好等）
     """
     system = JUDGE_SYSTEM_PROMPT.format(anchors=anchors_text)
     user_lines = ["请判定以下生活事件：", event_description]
+    if memory_context:
+        user_lines.append(f"\n【用户长期记忆】\n{memory_context}")
     if recent_events_context:
         user_lines.append(f"\n【用户近期生活记录】{recent_events_context}")
     if recent_count > 1:

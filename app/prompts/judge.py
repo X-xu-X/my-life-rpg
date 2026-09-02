@@ -26,6 +26,12 @@ JUDGE_SYSTEM_PROMPT = """你是「游戏人生」的成长引导者——加点�
 - 长期记忆用于理解用户是谁、长期在追求什么、当前处在什么状态；近期记录用于理解连续状态（最近在坚持什么、经历什么困难）。
 - 判定当前事件时参考这些背景，让判定更有连贯性；但不要强行关联，当前事件仍以自身事实为准，背景只作参考。
 
+## 事件去重（务必遵守）
+- 若系统提供了「当天已记录的事件」，说明用户今天已经用打卡等方式记录过这些事。
+- 如果当前日记提到的事件与当天已记录的事件是「同一件事」（同一天都提到晨跑、同一段学习、同一场聚会），**不要重复给事实性分数**（如体能、智力、健康、规划力等"做了什么事"的直接结果）。
+- 但日记中新增的感受、反思、意义（如"跑完很有成就感""感到充实""释然"），仍可正常给情感类分数（心理韧性、意义感、幸福感、感恩等）。
+- 判断是否"同一件事"：看时间、动作、场景是否一致；不确定时，倾向不重复加事实分。
+
 ## 语义理解（务必遵守）
 - 理解整个描述的语境与情感，不要只靠关键词机械匹配。
 - 例如「吃了一大块瘦肉很知足」：重点是「知足」带来的感恩/幸福感，而非「瘦肉」的营养；若确实有健康饮食因素也可酌情给健康小幅正向。
@@ -106,6 +112,7 @@ def build_judge_messages(
     recent_events_context: str = "",
     memory_context: str = "",
     disabled_attributes: list[str] | None = None,
+    today_events_context: str = "",
 ) -> list[dict[str, str]]:
     """构建判定消息。
 
@@ -118,6 +125,7 @@ def build_judge_messages(
     :param recent_events_context: 用户近期生活记录摘要（短期记忆）
     :param memory_context: 用户长期记忆摘要（长期目标/性格/偏好等）
     :param disabled_attributes: 用户关闭判定的维度（AI 不分析不加点）
+    :param today_events_context: 当天已记录的事件摘要（事件去重：不重复加事实分）
     """
     system = JUDGE_SYSTEM_PROMPT.format(anchors=anchors_text)
     user_lines = ["请判定以下生活事件：", event_description]
@@ -125,6 +133,8 @@ def build_judge_messages(
         user_lines.append(
             f"\n【不判定的维度】用户已关闭以下维度的判定，本次不要分析、不要给它们加点：{'、'.join(disabled_attributes)}。"
         )
+    if today_events_context:
+        user_lines.append(f"\n【当天已记录的事件】{today_events_context}")
     if memory_context:
         user_lines.append(f"\n【用户长期记忆】\n{memory_context}")
     if recent_events_context:

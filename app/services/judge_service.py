@@ -104,6 +104,29 @@ def _get_disabled_attributes(db: Session, user_id: int) -> set[str]:
     return set()
 
 
+def _today_events_context(db: Session, user_id: int, exclude_event_id: int) -> str:
+    """当天已记录的事件摘要（事件去重：日记提到同一件事时，不重复加事实分）。"""
+    start_of_day = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    events = (
+        db.query(Event)
+        .filter(
+            Event.user_id == user_id,
+            Event.created_at >= start_of_day,
+            Event.id != exclude_event_id,
+            Event.is_pure.is_(False),
+        )
+        .order_by(Event.created_at.asc())
+        .all()
+    )
+    if not events:
+        return ""
+    parts = []
+    for e in events:
+        text = (e.content or e.title or "").strip()
+        parts.append(f"{e.created_at.strftime('%H:%M')} {e.category}：{text}")
+    return "；".join(parts)
+
+
 class ClarifyNeededError(Exception):
     """判定前信息不足，需要用户补充回答（携带追问问题）。"""
 
@@ -242,6 +265,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
         recent_events_context=_recent_events_context(db, user.id, event.id),
         memory_context=memory_text,
         disabled_attributes=sorted(disabled),
+        today_events_context=_today_events_context(db, user.id, event.id),
     )
     result = llm_service.chat_json(messages)
 

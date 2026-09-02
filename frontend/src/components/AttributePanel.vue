@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { api } from '../api'
 
@@ -14,6 +14,9 @@ const heatmapEl = ref(null)
 let radarChart = null
 let growthChart = null
 let heatmapChart = null
+
+// 可见维度：隐藏（hidden）的维度不显示，关闭判定（disabled）的仍显示但标记
+const visibleAttrs = computed(() => attrs.value.filter((a) => a.visibility !== 'hidden'))
 
 async function load() {
   const [attrData, historyData, heatmapData] = await Promise.all([
@@ -35,8 +38,8 @@ async function load() {
 function renderRadar() {
   if (!radarEl.value) return
   if (!radarChart) radarChart = echarts.init(radarEl.value)
-  const names = attrs.value.map((a) => a.name)
-  const values = attrs.value.map((a) => a.value)
+  const names = visibleAttrs.value.map((a) => a.name)
+  const values = visibleAttrs.value.map((a) => a.value)
   radarChart.setOption({
     color: ['#4f6ef7'],
     radar: {
@@ -160,10 +163,13 @@ onBeforeUnmount(() => {
     <div class="row">
       <div class="card" style="flex: 1">
         <h3>能力数值</h3>
-        <div v-if="attrs.length === 0" class="muted">暂无属性数据，请先完成角色档案。</div>
-        <div v-for="a in attrs" :key="a.name" class="attr-bar">
+        <div v-if="visibleAttrs.length === 0" class="muted">暂无属性数据，请先完成角色档案。</div>
+        <div v-for="a in visibleAttrs" :key="a.name" class="attr-bar" :style="a.visibility === 'disabled' ? 'opacity: 0.55' : ''">
           <div class="head">
-            <span><b>{{ a.name }}</b></span>
+            <span>
+              <b>{{ a.name }}</b>
+              <span v-if="a.visibility === 'disabled'" class="tag" style="margin-left: 6px">已关闭判定</span>
+            </span>
             <span>{{ a.value }} / {{ a.max_value }}</span>
           </div>
           <div class="track">
@@ -175,7 +181,7 @@ onBeforeUnmount(() => {
 
       <div class="card" style="flex: 1">
         <h3>能力雷达图</h3>
-        <div v-if="attrs.length === 0" class="muted">暂无数据。</div>
+        <div v-if="visibleAttrs.length === 0" class="muted">暂无数据。</div>
         <div ref="radarEl" style="width: 100%; height: 320px"></div>
       </div>
     </div>

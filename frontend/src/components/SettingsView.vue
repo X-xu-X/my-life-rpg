@@ -8,6 +8,11 @@ const exporting = ref(false)
 const backups = ref([])
 const backingUp = ref(false)
 
+// 属性维度开关
+const attributes = ref([])
+const hiddenAttrs = ref([])
+const disabledAttrs = ref([])
+
 const MODULES = {
   achievements: { label: '成就徽章', desc: '达成特定里程碑时颁发徽章' },
   streak: { label: '连续打卡 Streak', desc: '记录连续打卡天数，鼓励坚持' },
@@ -18,6 +23,32 @@ const MODULES = {
 async function load() {
   try {
     settings.value = await api.getSettings()
+    hiddenAttrs.value = settings.value.hidden_attributes || []
+    disabledAttrs.value = settings.value.disabled_attributes || []
+    const attrData = await api.getAttributes()
+    attributes.value = (attrData.attributes || []).map((a) => a.name)
+  } catch (e) {
+    error.value = e.message
+  }
+}
+
+function stateOf(name) {
+  if (disabledAttrs.value.includes(name)) return 'disabled'
+  if (hiddenAttrs.value.includes(name)) return 'hidden'
+  return 'show'
+}
+
+async function setState(name, state) {
+  const hidden = hiddenAttrs.value.filter((n) => n !== name)
+  const disabled = disabledAttrs.value.filter((n) => n !== name)
+  if (state === 'hidden') hidden.push(name)
+  if (state === 'disabled') disabled.push(name)
+  hiddenAttrs.value = hidden
+  disabledAttrs.value = disabled
+  error.value = ''
+  try {
+    await api.updateSetting('hidden_attributes', hidden)
+    await api.updateSetting('disabled_attributes', disabled)
   } catch (e) {
     error.value = e.message
   }
@@ -124,6 +155,21 @@ onMounted(() => {
           >
             {{ (settings?.gamification_modules || {})[key] ? '已开启' : '已关闭' }}
           </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>属性维度开关</h3>
+      <p class="muted">「隐藏」= AI 照判但面板不显示；「关闭判定」= AI 不分析不加点（值冻结，重开从当前值继续）。</p>
+      <div v-for="name in attributes" :key="name" class="judgment-item">
+        <div class="row" style="align-items: center; justify-content: space-between">
+          <b>{{ name }}</b>
+          <div class="row" style="gap: 6px">
+            <button class="btn small" :class="{ primary: stateOf(name) === 'show' }" @click="setState(name, 'show')">显示</button>
+            <button class="btn small" :class="{ primary: stateOf(name) === 'hidden' }" @click="setState(name, 'hidden')">隐藏</button>
+            <button class="btn small" :class="{ primary: stateOf(name) === 'disabled' }" @click="setState(name, 'disabled')">关闭判定</button>
+          </div>
         </div>
       </div>
     </div>

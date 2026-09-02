@@ -233,8 +233,8 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
     if not result.get("realistic", True):
         _handle_unrealistic(db, user.id, event, str(result.get("realistic_reason", "事件不符合常理")))
 
-    # 信息缺口（v1.2）：AI 认为描述不足且用户尚未补充 → 抛出追问，不生成判定
-    if result.get("needs_clarify") and not clarification:
+    # 信息缺口（v1.2）：AI 认为描述不足（无论是否已补充）→ 继续追问，直到信息足够
+    if result.get("needs_clarify"):
         raise ClarifyNeededError(result.get("questions") or ["请补充一下事件的关键细节。"])
 
     changes = _parse_changes(result.get("affected_attributes", []))

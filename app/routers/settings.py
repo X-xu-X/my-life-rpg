@@ -22,6 +22,11 @@ def get_settings(db: Session = Depends(get_db)):
     # 游戏化模块开关默认关闭
     if "gamification_modules" not in result:
         result["gamification_modules"] = {m: False for m in GAMIFICATION_MODULES}
+    # 属性维度开关默认全显示、全判定
+    if "hidden_attributes" not in result:
+        result["hidden_attributes"] = []
+    if "disabled_attributes" not in result:
+        result["disabled_attributes"] = []
     return result
 
 

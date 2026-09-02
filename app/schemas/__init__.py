@@ -158,4 +158,4 @@ class AnchorCalibrateIn(BaseModel):
 
 class SettingIn(BaseModel):
     key: str
-    value: dict[str, Any]
+    value: Any  # 设置值可为任意 JSON 类型（dict / list / bool / 数字 / 字符串）

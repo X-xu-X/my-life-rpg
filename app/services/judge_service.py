@@ -96,6 +96,14 @@ def _recent_events_context(db: Session, user_id: int, exclude_event_id: int, day
     return "；".join(parts)
 
 
+def _get_disabled_attributes(db: Session, user_id: int) -> set[str]:
+    """读取用户关闭判定的维度（AI 不分析不加点）。"""
+    row = db.query(Setting).filter(Setting.user_id == user_id, Setting.key == "disabled_attributes").first()
+    if row and isinstance(row.value, list):
+        return set(row.value)
+    return set()
+
+
 class ClarifyNeededError(Exception):
     """判定前信息不足，需要用户补充回答（携带追问问题）。"""
 
@@ -222,6 +230,8 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
     # 长期记忆：每天检查更新一次（失败不影响判定）
     memory = memory_service.maybe_update_memory(db, user)
     memory_text = memory_service.format_memory_text(memory)
+    # 维度开关：关闭判定的维度不分析不加点
+    disabled = _get_disabled_attributes(db, user.id)
     messages = prompts.build_judge_messages(
         anchors_text=anchors_text,
         event_description=format_event_description(event),
@@ -231,6 +241,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
         clarification=clarification,
         recent_events_context=_recent_events_context(db, user.id, event.id),
         memory_context=memory_text,
+        disabled_attributes=sorted(disabled),
     )
     result = llm_service.chat_json(messages)
 
@@ -243,6 +254,9 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
         raise ClarifyNeededError(result.get("questions") or ["请补充一下事件的关键细节。"])
 
     changes = _parse_changes(result.get("affected_attributes", []))
+    # 双保险：过滤掉用户关闭判定的维度（即使 AI 仍返回了）
+    if disabled:
+        changes = [c for c in changes if c["name"] not in disabled]
     judgment = AIJudgment(
         event_id=event.id,
         user_id=user.id,

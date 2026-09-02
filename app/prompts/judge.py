@@ -105,6 +105,7 @@ def build_judge_messages(
     clarification: str = "",
     recent_events_context: str = "",
     memory_context: str = "",
+    disabled_attributes: list[str] | None = None,
 ) -> list[dict[str, str]]:
     """构建判定消息。
 
@@ -116,9 +117,14 @@ def build_judge_messages(
     :param clarification: 用户对追问的补充回答（非空时注入，AI 据此完成判定）
     :param recent_events_context: 用户近期生活记录摘要（短期记忆）
     :param memory_context: 用户长期记忆摘要（长期目标/性格/偏好等）
+    :param disabled_attributes: 用户关闭判定的维度（AI 不分析不加点）
     """
     system = JUDGE_SYSTEM_PROMPT.format(anchors=anchors_text)
     user_lines = ["请判定以下生活事件：", event_description]
+    if disabled_attributes:
+        user_lines.append(
+            f"\n【不判定的维度】用户已关闭以下维度的判定，本次不要分析、不要给它们加点：{'、'.join(disabled_attributes)}。"
+        )
     if memory_context:
         user_lines.append(f"\n【用户长期记忆】\n{memory_context}")
     if recent_events_context:

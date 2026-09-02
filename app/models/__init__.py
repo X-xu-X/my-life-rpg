@@ -64,6 +64,9 @@ class UserProfile(Base):
     # 游戏化字段（M3 实现曲线逻辑，此处预留）
     level: Mapped[int] = mapped_column(Integer, default=1)
     exp: Mapped[float] = mapped_column(Float, default=0.0)
+    # 长期记忆（智能体式）：LLM 压缩历史事件成的五类摘要（长期目标/关键经历/性格/偏好/当前状态），JSON 字符串
+    long_term_memory: Mapped[str | None] = mapped_column(Text, nullable=True)
+    memory_updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
 

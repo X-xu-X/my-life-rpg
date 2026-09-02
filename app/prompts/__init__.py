@@ -3,6 +3,7 @@ from app.prompts.judge import build_judge_messages
 from app.prompts.dispute import build_dispute_messages
 from app.prompts.extract import build_extract_messages
 from app.prompts.report import build_report_messages
+from app.prompts.memory import build_memory_messages
 from app.prompts.onboarding import (
     build_panel_dispute_messages,
     build_panel_messages,
@@ -15,6 +16,7 @@ __all__ = [
     "build_dispute_messages",
     "build_extract_messages",
     "build_report_messages",
+    "build_memory_messages",
     "build_question_messages",
     "build_panel_messages",
     "build_panel_dispute_messages",

@@ -4,6 +4,7 @@ import { api } from './api'
 import Onboarding from './components/Onboarding.vue'
 import AttributePanel from './components/AttributePanel.vue'
 import EventForm from './components/EventForm.vue'
+import TimelineView from './components/TimelineView.vue'
 import JournalView from './components/JournalView.vue'
 import JudgmentList from './components/JudgmentList.vue'
 import GoalsView from './components/GoalsView.vue'
@@ -13,11 +14,12 @@ import SettingsView from './components/SettingsView.vue'
 const tabs = [
   { key: 'panel', label: '属性面板' },
   { key: 'event', label: '记录事件' },
-  { key: 'journal', label: '纯享手账' },
+  { key: 'timeline', label: '手账本' },
   { key: 'judgments', label: '判定中心' },
   { key: 'goals', label: '目标' },
   { key: 'anchors', label: '锚点库' },
   { key: 'onboarding', label: '角色档案' },
+  { key: 'journal', label: '纯享记录' },
   { key: 'settings', label: '设置' },
 ]
 
@@ -97,9 +99,10 @@ onMounted(() => {
   <Onboarding v-if="activeTab === 'onboarding'" @created="onProfileCreated" />
   <AttributePanel v-else-if="activeTab === 'panel'" />
   <EventForm v-else-if="activeTab === 'event'" />
-  <JournalView v-else-if="activeTab === 'journal'" />
+  <TimelineView v-else-if="activeTab === 'timeline'" />
   <JudgmentList v-else-if="activeTab === 'judgments'" />
   <GoalsView v-else-if="activeTab === 'goals'" />
   <AnchorsView v-else-if="activeTab === 'anchors'" />
+  <JournalView v-else-if="activeTab === 'journal'" />
   <SettingsView v-else-if="activeTab === 'settings'" />
 </template>

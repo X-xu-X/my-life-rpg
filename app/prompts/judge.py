@@ -21,6 +21,11 @@ JUDGE_SYSTEM_PROMPT = """你是「游戏人生」的成长引导者——加点�
 2. 依据下方「量化锚点库」判定影响哪些属性、增减多少点。
 3. 每条增减必须给出可引用的科学依据（运动科学/学习科学/睡眠研究/积极心理学/认知心理学等）。
 
+## 上下文记忆（如有，务必遵守）
+- 系统会提供「用户近期生活记录」，这是用户近几天的日记/事件摘要，用于让你建立上下文、记住用户的近况。
+- 判定当前事件时，参考近期记录理解用户的连续状态（如最近在坚持什么、经历什么困难、情绪走向），让判定更有连贯性。
+- 但不要强行关联：当前事件仍以自身事实为准，近期记录只作背景参考。
+
 ## 语义理解（务必遵守）
 - 理解整个描述的语境与情感，不要只靠关键词机械匹配。
 - 例如「吃了一大块瘦肉很知足」：重点是「知足」带来的感恩/幸福感，而非「瘦肉」的营养；若确实有健康饮食因素也可酌情给健康小幅正向。
@@ -97,6 +102,7 @@ def build_judge_messages(
     recent_count: int = 0,
     attribute_context: str = "",
     clarification: str = "",
+    recent_events_context: str = "",
 ) -> list[dict[str, str]]:
     """构建判定消息。
 
@@ -106,9 +112,12 @@ def build_judge_messages(
     :param recent_count: 近 30 天同类事件次数（>1 时注入累积效应提示）
     :param attribute_context: 当前属性值文本（边际递减参考）
     :param clarification: 用户对追问的补充回答（非空时注入，AI 据此完成判定）
+    :param recent_events_context: 用户近期生活记录摘要（AI 上下文记忆）
     """
     system = JUDGE_SYSTEM_PROMPT.format(anchors=anchors_text)
     user_lines = ["请判定以下生活事件：", event_description]
+    if recent_events_context:
+        user_lines.append(f"\n【用户近期生活记录】{recent_events_context}")
     if recent_count > 1:
         user_lines.append(
             f"\n【近期同类事件频率】用户近 30 天已记录 {recent_count} 次同类事件。"

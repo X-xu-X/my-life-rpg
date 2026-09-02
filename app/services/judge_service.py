@@ -69,6 +69,32 @@ def _attribute_context(db: Session, user_id: int) -> str:
     return "、".join(f"{a.name} {a.current_value:.0f}" for a in attrs)
 
 
+def _recent_events_context(db: Session, user_id: int, exclude_event_id: int, days: int = 7, limit: int = 10) -> str:
+    """用户近期生活记录摘要（AI 上下文记忆：跨会话记住用户近况）。"""
+    cutoff = datetime.now() - timedelta(days=days)
+    events = (
+        db.query(Event)
+        .filter(
+            Event.user_id == user_id,
+            Event.created_at >= cutoff,
+            Event.id != exclude_event_id,
+            Event.is_pure.is_(False),
+        )
+        .order_by(Event.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    if not events:
+        return ""
+    parts = []
+    for e in events:
+        text = (e.content or e.title or "").strip()
+        if len(text) > 60:
+            text = text[:60] + "…"
+        parts.append(f"{e.created_at.strftime('%m-%d')} {e.category}：{text}")
+    return "；".join(parts)
+
+
 class ClarifyNeededError(Exception):
     """判定前信息不足，需要用户补充回答（携带追问问题）。"""
 
@@ -199,6 +225,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
         recent_count=_recent_same_category_count(db, user.id, event),
         attribute_context=_attribute_context(db, user.id),
         clarification=clarification,
+        recent_events_context=_recent_events_context(db, user.id, event.id),
     )
     result = llm_service.chat_json(messages)
 

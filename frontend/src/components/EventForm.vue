@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { api } from '../api'
 
 const emit = defineEmits(['judged'])
@@ -27,6 +27,37 @@ const busy = ref(false)
 const error = ref('')
 const result = ref(null)
 
+// ============ 草稿缓存：切换页面不丢内容 ============
+const CACHE_KEY = 'game_of_life_event_draft'
+
+onMounted(() => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null')
+    if (saved) {
+      if (saved.mode) mode.value = saved.mode
+      if (saved.form) form.value = { ...form.value, ...saved.form }
+      if (saved.journalContent) journalContent.value = saved.journalContent
+      if (saved.isPure !== undefined) isPure.value = saved.isPure
+    }
+  } catch (e) { /* 忽略损坏的缓存 */ }
+})
+
+watch([mode, form, journalContent, isPure], () => {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      mode: mode.value,
+      form: form.value,
+      journalContent: journalContent.value,
+      isPure: isPure.value,
+    }))
+  } catch (e) { /* 忽略存储失败 */ }
+}, { deep: true })
+
+function clearDraft() {
+  try { localStorage.removeItem(CACHE_KEY) } catch (e) { /* 忽略 */ }
+}
+
+
 async function submitForm() {
   // 组装结构化参数（仅保留非空字段）
   const params = {}
@@ -43,6 +74,7 @@ async function submitForm() {
     params,
     is_pure: isPure.value,
   })
+  clearDraft()
   if (isPure.value) {
     result.value = { status: 'pure', summary: '已作为纯享记录保存，不参与 AI 判定。' }
     return
@@ -62,6 +94,7 @@ async function submitJournal() {
     event_type: 'positive', // 占位，后端 AI 会重新提取
     is_pure: isPure.value,
   })
+  clearDraft()
   if (isPure.value) {
     result.value = { status: 'pure', summary: '已作为纯享记录保存，不参与 AI 判定。' }
     return
@@ -121,6 +154,7 @@ function reset() {
   result.value = null
   clarifyEvent.value = null
   clarifyAnswer.value = ''
+  clearDraft()
 }
 </script>
 

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, nextTick, onMounted } from 'vue'
+import { ref, nextTick, onMounted, watch } from 'vue'
 import { api } from '../api'
 
 const emit = defineEmits(['created'])
@@ -20,6 +20,24 @@ const chatEl = ref(null)
 const supplementText = ref('')
 const pendingAdjustment = ref(null)
 const supplementNote = ref('')
+
+// ============ 草稿缓存：问卷作答写一半不丢 ============
+const CACHE_KEY = 'game_of_life_onboarding_draft'
+
+onMounted(() => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null')
+    if (saved && saved.answerInputs) {
+      answerInputs.value = saved.answerInputs
+    }
+  } catch (e) { /* 忽略损坏缓存 */ }
+})
+
+watch(answerInputs, () => {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ answerInputs: answerInputs.value }))
+  } catch (e) { /* 忽略 */ }
+}, { deep: true })
 
 async function scrollToBottom() {
   await nextTick()

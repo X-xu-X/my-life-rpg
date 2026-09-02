@@ -54,7 +54,10 @@ def list_backups() -> list[dict]:
 
 
 def _cleanup() -> None:
-    """保留最近 BACKUP_KEEP 份，删除更旧的。"""
+    """保留最近 BACKUP_KEEP 份，删除更旧的（删除失败静默，不影响启动）。"""
     files = sorted(BACKUP_DIR.glob("game_of_life_*.db"))
     for f in files[:-BACKUP_KEEP] if len(files) > BACKUP_KEEP else []:
-        f.unlink(missing_ok=True)
+        try:
+            f.unlink(missing_ok=True)
+        except OSError:
+            pass  # 删除失败（如文件占用/权限）不影响主流程

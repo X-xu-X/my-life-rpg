@@ -10,6 +10,10 @@ REPORT_SYSTEM_PROMPT = """你是「游戏人生」的成长顾问。根据用户
 3. 给出 2~3 条可执行的建议：结合数据给出，具体可行。
 4. 整体基调：温暖、鼓励、真诚。
 
+## 关闭维度的温和关心
+- 若提供了用户「关闭判定的维度」，请在报告中温和地提及关心（如"你最近关闭了 XX 的判定，是想暂时放松对这块的关注吗？如果遇到卡点，欢迎随时聊聊"）。
+- 语气是关心与理解，不是批评或强迫；点到为止，不要长篇说教，更不要因此责备。
+
 ## 输出格式（严格 JSON，不要输出其他文字）
 {
   "highlights": "亮点总结（1-2 句）",
@@ -20,7 +24,14 @@ REPORT_SYSTEM_PROMPT = """你是「游戏人生」的成长顾问。根据用户
 """
 
 
-def build_report_messages(period: str, start: str, end: str, stats: dict, memory_context: str = "") -> list[dict[str, str]]:
+def build_report_messages(
+    period: str,
+    start: str,
+    end: str,
+    stats: dict,
+    memory_context: str = "",
+    disabled_attributes: list[str] | None = None,
+) -> list[dict[str, str]]:
     """构建生成报告的消息。
 
     :param period: week / month
@@ -28,6 +39,7 @@ def build_report_messages(period: str, start: str, end: str, stats: dict, memory
     :param end: 结束日期 YYYY-MM-DD
     :param stats: 统计信息（事件数、类别分布、属性变化、判定数）
     :param memory_context: 用户长期记忆摘要（长期目标/性格/偏好等）
+    :param disabled_attributes: 用户关闭判定的维度（报告中温和提及关心）
     """
     stats_text = (
         f"期间：{start} ~ {end}\n"
@@ -43,6 +55,8 @@ def build_report_messages(period: str, start: str, end: str, stats: dict, memory
     )
     if memory_context:
         user += f"\n用户长期记忆背景：\n{memory_context}\n"
+    if disabled_attributes:
+        user += f"\n用户当前关闭了以下维度的判定：{'、'.join(disabled_attributes)}。请温和地关心提及。\n"
     user += "请给出成长报告。"
     return [
         {"role": "system", "content": REPORT_SYSTEM_PROMPT},

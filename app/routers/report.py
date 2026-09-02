@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app import prompts
 from app.database import get_db
-from app.models import AIJudgment, Attribute, AttributeHistory, Event, Goal
+from app.models import AIJudgment, Attribute, AttributeHistory, Event, Goal, Setting
 from app.services import memory_service
 from app.services.llm_service import LLMError, llm_service
 from app.services.user_service import get_or_create_default_user
@@ -74,12 +74,17 @@ def generate_report(db: Session = Depends(get_db), period: str = "week"):
         "goals": goals_stat,
     }
 
+    # 用户关闭判定的维度（报告温和提及）
+    disabled_row = db.query(Setting).filter(Setting.user_id == user.id, Setting.key == "disabled_attributes").first()
+    disabled_attrs = disabled_row.value if disabled_row and isinstance(disabled_row.value, list) else []
+
     messages = prompts.build_report_messages(
         period=period,
         start=start.strftime("%Y-%m-%d"),
         end=now.strftime("%Y-%m-%d"),
         stats=stats,
         memory_context=memory_service.format_memory_text(memory_service.get_long_term_memory(db, user.id)),
+        disabled_attributes=disabled_attrs,
     )
     try:
         report = llm_service.chat_json(messages)

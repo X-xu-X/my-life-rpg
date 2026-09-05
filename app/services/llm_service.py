@@ -81,22 +81,66 @@ class LLMService:
         return self._parse_json(raw)
 
     @staticmethod
-    def _parse_json(raw: str) -> dict:
-        """容错解析模型返回的 JSON（模型可能输出多余说明或 markdown 代码块）。"""
+    def _repair_curly_quotes(text: str) -> str:
+        """位置感知修复模型误用的中文全角引号（v1.3 兜底）。
+
+        规则：处于 JSON 结构位置的全角引号（开引号前是 { [ , : ；闭引号后是 } ] , :，
+        含对应全角字符），还原为半角定界符；其余（字符串内容里的引用）替换为「」，
+        避免破坏字符串。
+        """
+        out: list[str] = []
+        n = len(text)
+        for i, ch in enumerate(text):
+            if ch in "“”":
+                j = i - 1
+                while j >= 0 and text[j] in " \t\r\n":
+                    j -= 1
+                prev = text[j] if j >= 0 else ""
+                k = i + 1
+                while k < n and text[k] in " \t\r\n":
+                    k += 1
+                nxt = text[k] if k < n else ""
+                if ch == "“" and prev in "{[,:，":
+                    out.append('"')
+                elif ch == "”" and nxt in "]},:，":
+                    out.append('"')
+                else:
+                    out.append("「" if ch == "“" else "」")
+            else:
+                out.append(ch)
+        fixed = "".join(out)
+        # 后处理：两个定界符之间的全角逗号（"，"）是结构性分隔符，转半角
+        fixed = re.sub(r'"\s*，\s*"', '","', fixed)
+        return fixed
+
+    @classmethod
+    def _parse_json(cls, raw: str) -> dict:
+        """容错解析模型返回的 JSON（模型可能输出多余说明或 markdown 代码块）。
+
+        v1.3 兜底：模型偶尔用中文全角引号（“”）充当 JSON 定界符导致解析失败，
+        此时做位置感知修复后再解析；仍失败才抛 LLMError。
+        """
         text = raw.strip()
         # 去掉可能的 markdown 代码块围栏
         text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.IGNORECASE)
         try:
             return json.loads(text)
         except json.JSONDecodeError:
-            # 提取首个平衡的大括号块
-            match = re.search(r"\{.*\}", text, flags=re.DOTALL)
-            if match:
-                try:
-                    return json.loads(match.group(0))
-                except json.JSONDecodeError as exc:
-                    raise LLMError(f"LLM 返回内容无法解析为 JSON：{raw[:200]}") from exc
-            raise LLMError(f"LLM 返回内容不含 JSON 对象：{raw[:200]}")
+            pass
+        # 提取首个平衡的大括号块
+        match = re.search(r"\{.*\}", text, flags=re.DOTALL)
+        candidates = []
+        if match:
+            candidates.append(match.group(0))
+        # 全角引号兜底（v1.3）
+        if "“" in text or "”" in text:
+            candidates.append(cls._repair_curly_quotes(text))
+        for candidate in candidates:
+            try:
+                return json.loads(candidate)
+            except json.JSONDecodeError:
+                continue
+        raise LLMError(f"LLM 返回内容无法解析为 JSON：{raw[:200]}")
 
 
 # 全局单例，业务层统一 import 使用

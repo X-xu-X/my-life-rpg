@@ -2,7 +2,7 @@
 import { ref, watch, onMounted } from 'vue'
 import { api } from '../api'
 
-const emit = defineEmits(['judged'])
+const emit = defineEmits(['judged', 'go-judgments'])
 
 // mode: form(结构化打卡) / journal(自由日记)
 const mode = ref('form')
@@ -40,6 +40,8 @@ onMounted(() => {
       if (saved.isPure !== undefined) isPure.value = saved.isPure
     }
   } catch (e) { /* 忽略损坏的缓存 */ }
+  // v1.3：恢复上次的判定结果/追问状态（切页返回不丢）
+  restoreJudgeState()
 })
 
 watch([mode, form, journalContent, isPure], () => {
@@ -56,6 +58,36 @@ watch([mode, form, journalContent, isPure], () => {
 function clearDraft() {
   try { localStorage.removeItem(CACHE_KEY) } catch (e) { /* 忽略 */ }
 }
+
+// ============ 判定结果/追问状态持久化（v1.3）：切页返回不丢 ============
+// 用 sessionStorage（关浏览器标签即清），避免跳转其他页面后结果重置
+const JUDGE_CACHE_KEY = 'gol_last_judgment'
+
+function saveJudgeState() {
+  try {
+    if (result.value || clarifyEvent.value) {
+      sessionStorage.setItem(JUDGE_CACHE_KEY, JSON.stringify({
+        result: result.value,
+        clarifyEvent: clarifyEvent.value,
+        clarifyAnswer: clarifyAnswer.value,
+      }))
+    } else {
+      sessionStorage.removeItem(JUDGE_CACHE_KEY)
+    }
+  } catch (e) { /* 忽略存储失败 */ }
+}
+
+function restoreJudgeState() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(JUDGE_CACHE_KEY) || 'null')
+    if (saved) {
+      result.value = saved.result || null
+      clarifyEvent.value = saved.clarifyEvent || null
+      clarifyAnswer.value = saved.clarifyAnswer || ''
+    }
+  } catch (e) { /* 忽略损坏的缓存 */ }
+}
+
 
 
 async function submitForm() {
@@ -113,6 +145,9 @@ async function submitJournal() {
 const clarifyEvent = ref(null)
 const clarifyAnswer = ref('')
 
+// v1.3：状态持久化 watch（须在 result/clarifyEvent/clarifyAnswer 声明之后）
+watch([result, clarifyEvent, clarifyAnswer], saveJudgeState, { deep: true })
+
 async function submitClarify() {
   busy.value = true
   error.value = ''
@@ -155,6 +190,13 @@ function reset() {
   clarifyEvent.value = null
   clarifyAnswer.value = ''
   clearDraft()
+}
+
+// v1.3：只清除判定结果/追问状态（保留表单草稿）
+function clearResult() {
+  result.value = null
+  clarifyEvent.value = null
+  clarifyAnswer.value = ''
 }
 </script>
 
@@ -271,7 +313,11 @@ function reset() {
           <div class="evidence">依据：{{ a.evidence }}</div>
         </div>
         <p v-if="result.summary" class="muted">{{ result.summary }}</p>
-        <p class="muted">请在「判定中心」确认入账 / 补充信息 / 反驳复核；录错了可删除该事件。</p>
+        <div class="row" style="margin-top: 8px; align-items: center">
+          <button class="btn small primary" @click="emit('go-judgments')">去判定中心确认 →</button>
+          <button class="btn small" @click="clearResult">清除这条结果</button>
+        </div>
+        <p class="muted" style="font-size: 12px; margin-top: 6px">请在「判定中心」确认入账 / 补充信息 / 反驳复核；录错了可删除该事件。</p>
       </template>
     </div>
   </div>

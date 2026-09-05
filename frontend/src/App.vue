@@ -98,7 +98,7 @@ onMounted(() => {
 
   <Onboarding v-if="activeTab === 'onboarding'" @created="onProfileCreated" />
   <AttributePanel v-else-if="activeTab === 'panel'" />
-  <EventForm v-else-if="activeTab === 'event'" />
+  <EventForm v-else-if="activeTab === 'event'" @go-judgments="activeTab = 'judgments'" />
   <TimelineView v-else-if="activeTab === 'timeline'" />
   <JudgmentList v-else-if="activeTab === 'judgments'" />
   <GoalsView v-else-if="activeTab === 'goals'" />

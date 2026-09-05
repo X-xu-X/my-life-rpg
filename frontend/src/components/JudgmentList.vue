@@ -41,6 +41,15 @@ async function load() {
   }
 }
 
+async function refreshAudit(id) {
+  // v1.3：审计拉取独立成函数，供操作成功后同步刷新（无需关闭重开）
+  try {
+    auditLogs.value = await api.getJudgmentLogs(id)
+  } catch (e) {
+    error.value = e.message
+  }
+}
+
 async function toggleAudit(id) {
   if (auditTarget.value === id) {
     auditTarget.value = null
@@ -48,11 +57,7 @@ async function toggleAudit(id) {
   }
   auditTarget.value = id
   auditLogs.value = []
-  try {
-    auditLogs.value = await api.getJudgmentLogs(id)
-  } catch (e) {
-    error.value = e.message
-  }
+  await refreshAudit(id)
 }
 
 const STATUS_LABEL = {
@@ -91,6 +96,9 @@ async function removeEvent(eventId, confirmed) {
   error.value = ''
   try {
     await api.deleteEvent(eventId)
+    // v1.3：事件删除后判定消失，收起审计面板（避免残留旧轨迹）
+    auditTarget.value = null
+    auditLogs.value = []
     await load()
     alert('已删除' + (confirmed ? '，相关点数已回滚' : ''))
   } catch (e) {
@@ -106,6 +114,8 @@ async function runAction(id, fn, okMsg) {
   try {
     const res = await fn()
     await load()
+    // v1.3：若该判定的审计面板正展开，同步刷新轨迹（修复确认/补充/反驳后轨迹不更新）
+    if (auditTarget.value === id) await refreshAudit(id)
     return res
   } catch (e) {
     error.value = e.message

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { api } from '../api'
 
 const settings = ref(null)
@@ -49,10 +49,20 @@ async function setState(name, state) {
   try {
     await api.updateSetting('hidden_attributes', hidden)
     await api.updateSetting('disabled_attributes', disabled)
+    // v1.3：轻提示（2 秒后消失）
+    saveHint.value = `已保存「${name}」设置`
+    clearTimeout(hintTimer)
+    hintTimer = setTimeout(() => (saveHint.value = ''), 2000)
   } catch (e) {
     error.value = e.message
   }
 }
+
+// v1.3：非默认状态（隐藏/关闭判定）的维度，前置展示
+const changedAttrs = computed(() => attributes.value.filter((n) => stateOf(n) !== 'show'))
+
+const saveHint = ref('')
+let hintTimer = null
 
 async function loadBackups() {
   try {
@@ -162,16 +172,39 @@ onMounted(() => {
     <div class="card">
       <h3>属性维度开关</h3>
       <p class="muted">「隐藏」= AI 照判但面板不显示；「关闭判定」= AI 不分析不加点（值冻结，重开从当前值继续）。</p>
-      <div v-for="name in attributes" :key="name" class="judgment-item">
-        <div class="row" style="align-items: center; justify-content: space-between">
-          <b>{{ name }}</b>
-          <div class="row" style="gap: 6px">
-            <button class="btn small" :class="{ primary: stateOf(name) === 'show' }" @click="setState(name, 'show')">显示</button>
-            <button class="btn small" :class="{ primary: stateOf(name) === 'hidden' }" @click="setState(name, 'hidden')">隐藏</button>
-            <button class="btn small" :class="{ primary: stateOf(name) === 'disabled' }" @click="setState(name, 'disabled')">关闭判定</button>
+
+      <!-- v1.3：默认只展示改过状态的维度，其余收进折叠区，减少视觉噪音 -->
+      <div v-if="changedAttrs.length">
+        <div v-for="name in changedAttrs" :key="'c-' + name" class="judgment-item">
+          <div class="row" style="align-items: center; justify-content: space-between">
+            <b>{{ name }}</b>
+            <select :value="stateOf(name)" @change="setState(name, $event.target.value)">
+              <option value="show">显示</option>
+              <option value="hidden">隐藏</option>
+              <option value="disabled">关闭判定</option>
+            </select>
           </div>
         </div>
       </div>
+      <p v-else class="muted">所有维度均为默认「显示」状态。</p>
+
+      <details style="margin-top: 8px">
+        <summary class="muted" style="cursor: pointer">全部 {{ attributes.length }} 个维度</summary>
+        <div style="margin-top: 8px">
+          <div v-for="name in attributes" :key="name" class="judgment-item">
+            <div class="row" style="align-items: center; justify-content: space-between">
+              <b>{{ name }}</b>
+              <select :value="stateOf(name)" @change="setState(name, $event.target.value)">
+                <option value="show">显示</option>
+                <option value="hidden">隐藏</option>
+                <option value="disabled">关闭判定</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <p v-if="saveHint" class="muted" style="color: #2a7f3e; font-size: 12px; margin-top: 6px">✓ {{ saveHint }}</p>
     </div>
 
     <div class="card">

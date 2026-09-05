@@ -266,6 +266,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
         memory_context=memory_text,
         disabled_attributes=sorted(disabled),
         today_events_context=_today_events_context(db, user.id, event.id),
+        event_source=event.source,
     )
     result = llm_service.chat_json(messages)
 
@@ -409,6 +410,7 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
         profile_context=_profile_context(db, user.id),
         recent_count=_recent_same_category_count(db, user.id, event),
         attribute_context=_attribute_context(db, user.id),
+        event_source=event.source,
     )
     result = llm_service.chat_json(messages)
     changes = _parse_changes(result.get("affected_attributes", []))

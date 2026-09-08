@@ -64,6 +64,104 @@ const changedAttrs = computed(() => attributes.value.filter((n) => stateOf(n) !=
 const saveHint = ref('')
 let hintTimer = null
 
+// ============ AI 模型配置（BYOK，v1.4） ============
+const GROUP_META = {
+  primary: {
+    label: '判定模型组',
+    desc: '日记/打卡判定、追问、要素提取、首次引导、长期记忆都走这一组',
+    baseUrlPh: 'https://api.deepseek.com',
+    modelPh: 'deepseek-chat',
+  },
+  aux: {
+    label: '辅助模型组',
+    desc: '周报/月报走这一组；判定组未配置时，判定自动降级用本组并标注「判定质量一般」——可填 SiliconFlow 等任何 OpenAI 兼容端点的免费模型作兜底',
+    baseUrlPh: 'https://api.siliconflow.cn',
+    modelPh: '例如免费档模型（OpenAI 兼容端点均可）',
+  },
+}
+
+const llmRaw = ref(null) // 服务端原始配置（掩码回显 + .env 状态）
+const llmForm = ref({
+  primary: { enabled: false, api_key: '', base_url: '', model: '' },
+  aux: { enabled: false, api_key: '', base_url: '', model: '' },
+})
+const llmBusy = ref(false)
+const llmHint = ref('')
+
+const envFallback = computed(() => llmRaw.value?.env_fallback || { ready: false, model: '' })
+const anyConfigured = computed(
+  () => llmRaw.value && (llmRaw.value.primary.configured || llmRaw.value.aux.configured)
+)
+
+async function loadLLMConfig() {
+  try {
+    const data = await api.getLLMConfig()
+    llmRaw.value = data
+    for (const g of ['primary', 'aux']) {
+      const src = data[g] || {}
+      llmForm.value[g] = {
+        enabled: !!src.enabled,
+        api_key: '', // 掩码安全：不回填明文，留空 = 不改
+        base_url: src.base_url || '',
+        model: src.model || '',
+      }
+    }
+  } catch (e) {
+    error.value = e.message
+  }
+}
+
+function keyPlaceholder(group) {
+  const src = llmRaw.value?.[group]
+  return src?.configured ? `已绑定（${src.api_key}），留空则不修改` : 'sk-…'
+}
+
+async function saveLLM(group) {
+  const f = llmForm.value[group]
+  const src = llmRaw.value?.[group] || {}
+  if (!f.api_key.trim() && !src.configured) {
+    alert('请先填写 API Key')
+    return
+  }
+  if (!f.base_url.trim() || !f.model.trim()) {
+    alert('请填写 Base URL 和模型名')
+    return
+  }
+  // 口径变化确认（仅判定组）：模型端点/key 与旧值有差异时弹确认
+  if (group === 'primary' && src.configured) {
+    const changed =
+      (f.api_key.trim() && f.api_key.trim() !== '__KEEP__') ||
+      f.model.trim() !== (src.model || '') ||
+      f.base_url.trim().replace(/\/+$/, '') !== (src.base_url || '').replace(/\/+$/, '')
+    if (changed) {
+      const ok = window.confirm(
+        '更换判定模型后，后续加点口径可能与之前不同（历史数据全部保留；长期记忆会自动注入新模型衔接上下文）。确认更换？'
+      )
+      if (!ok) return
+    }
+  }
+  llmBusy.value = true
+  error.value = ''
+  try {
+    const payload = {
+      group,
+      enabled: f.enabled,
+      base_url: f.base_url.trim(),
+      model: f.model.trim(),
+    }
+    if (f.api_key.trim()) payload.api_key = f.api_key.trim()
+    await api.putLLMConfig(payload)
+    llmHint.value = `已保存「${GROUP_META[group].label}」`
+    clearTimeout(hintTimer)
+    hintTimer = setTimeout(() => (llmHint.value = ''), 2500)
+    await loadLLMConfig()
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    llmBusy.value = false
+  }
+}
+
 async function loadBackups() {
   try {
     backups.value = await api.listBackups()
@@ -205,6 +303,48 @@ onMounted(() => {
       </details>
 
       <p v-if="saveHint" class="muted" style="color: #2a7f3e; font-size: 12px; margin-top: 6px">✓ {{ saveHint }}</p>
+    </div>
+
+    <div class="card">
+      <h3>AI 模型（自带 Key，BYOK）</h3>
+      <p v-if="!anyConfigured && envFallback.ready" class="muted">
+        当前使用服务端默认模型（.env）：{{ envFallback.model }}。可在此绑定你自己的 Key（任何 OpenAI 兼容端点均可）。
+      </p>
+      <p v-else-if="!anyConfigured && !envFallback.ready" class="muted" style="color: #b7791f">
+        ⚠️ 尚未配置任何 AI 模型：提交日记/打卡会提示到本页绑定。可只配「辅助模型组」（免费模型兜底）。
+      </p>
+      <p class="muted" style="font-size: 12px">
+        判定走「判定模型组」，周报走「辅助模型组」；判定组未启用时自动降级用辅助组并标注「判定质量一般」。Key 仅保存在本地数据库，导出数据不含 Key。
+      </p>
+
+      <div v-for="(meta, group) in GROUP_META" :key="group" class="judgment-item">
+        <div class="row" style="align-items: center; justify-content: space-between">
+          <b>{{ meta.label }}</b>
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 13px">
+            <input type="checkbox" v-model="llmForm[group].enabled" style="width: auto" /> 启用
+          </label>
+        </div>
+        <div class="muted" style="font-size: 12px">{{ meta.desc }}</div>
+        <div class="row" style="margin-top: 6px">
+          <div class="field" style="flex: 2">
+            <label>Base URL</label>
+            <input v-model="llmForm[group].base_url" :placeholder="meta.baseUrlPh" />
+          </div>
+          <div class="field" style="flex: 1">
+            <label>模型名</label>
+            <input v-model="llmForm[group].model" :placeholder="meta.modelPh" />
+          </div>
+        </div>
+        <div class="field">
+          <label>API Key</label>
+          <input type="password" v-model="llmForm[group].api_key" :placeholder="keyPlaceholder(group)" autocomplete="new-password" />
+        </div>
+        <div class="row" style="margin-top: 6px">
+          <button class="btn small primary" :disabled="llmBusy" @click="saveLLM(group)">保存{{ meta.label }}</button>
+        </div>
+      </div>
+
+      <p v-if="llmHint" class="muted" style="color: #2a7f3e; font-size: 12px; margin-top: 6px">✓ {{ llmHint }}</p>
     </div>
 
     <div class="card">

@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from app import prompts
 from app.constants import ATTRIBUTE_ALIASES
 from app.models import AIJudgment, Attribute, AttributeHistory, Event, JudgmentLog, Setting
-from app.services import memory_service
+from app.services import llm_config, memory_service
 from app.services.anchor_service import format_anchors_text
 from app.services.llm_service import LLMError, llm_service
 from app.services.user_service import get_or_create_default_user
@@ -145,9 +145,9 @@ def format_event_description(event: Event) -> str:
     if event.source == "journal" and event.content:
         lines.append(f"日记原文：{event.content}")
     elif event.params:
-        # 结构化参数转可读文本
+        # 结构化参数转可读文本（跳过 "_" 开头的内部键，如 _clarify_history）
         for k, v in event.params.items():
-            if v is not None and v != "":
+            if v is not None and v != "" and not k.startswith("_"):
                 lines.append(f"{k}：{v}")
     return "\n".join(lines)
 
@@ -222,6 +222,8 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
 
     v1.2：信息缺口追问——AI 认为描述不足且未提供 clarification 时抛 ClarifyNeededError；
     用户补充回答后带 clarification 重新判定。
+    v1.4：追问历史累积——每次用户的补充回答持久化到 event.params["_clarify_history"]，
+    后续轮次全部注入 prompt，AI 才能做到「问过即止」（同一面已答过不再重复问）。
     """
     user = get_or_create_default_user(db)
     existing_confirmed = (
@@ -255,6 +257,12 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
     memory_text = memory_service.format_memory_text(memory)
     # 维度开关：关闭判定的维度不分析不加点
     disabled = _get_disabled_attributes(db, user.id)
+    # v1.4：追问历史累积（含本轮回答），供 AI「问过即止」
+    clarify_history = list((event.params or {}).get("_clarify_history") or [])
+    if clarification.strip():
+        clarify_history.append(clarification.strip())
+        event.params = {**(event.params or {}), "_clarify_history": clarify_history}
+        db.flush()  # 立即持久化，下一轮追问可见
     messages = prompts.build_judge_messages(
         anchors_text=anchors_text,
         event_description=format_event_description(event),
@@ -262,13 +270,16 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
         recent_count=_recent_same_category_count(db, user.id, event),
         attribute_context=_attribute_context(db, user.id),
         clarification=clarification,
+        clarify_history=clarify_history,
         recent_events_context=_recent_events_context(db, user.id, event.id),
         memory_context=memory_text,
         disabled_attributes=sorted(disabled),
         today_events_context=_today_events_context(db, user.id, event.id),
         event_source=event.source,
     )
-    result = llm_service.chat_json(messages)
+    # v1.4：按用户解析判定模型配置（BYOK；降级用辅助模型时 quality_note 非空）
+    config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_JUDGE)
+    result = llm_service.chat_json(messages, config=config)
 
     # 真实性甄别（v1.2）：事件明显不符合科学常理 → 拒绝判定，累计不实提交第 3 次起减诚信
     if not result.get("realistic", True):
@@ -282,13 +293,18 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
     # 双保险：过滤掉用户关闭判定的维度（即使 AI 仍返回了）
     if disabled:
         changes = [c for c in changes if c["name"] not in disabled]
+    summary = str(result.get("summary", ""))
+    if config.quality_note:
+        # v1.4：判定经降级路径（辅助模型）时，summary 末尾附质量标注（前端显示小标签）
+        summary = (summary + "\n" + config.quality_note).strip()
     judgment = AIJudgment(
         event_id=event.id,
         user_id=user.id,
         suggested_changes=changes,
         analysis=result.get("analysis", []),  # v1.1：AI 分析过程（推理链路）
-        summary=str(result.get("summary", "")),
+        summary=summary,
         confidence=float(result.get("confidence", 0.0)),
+        confidence_reason=str(result.get("confidence_reason", "")),  # v1.4：置信度说明
         status="pending",
         final_changes=[],
     )
@@ -353,9 +369,11 @@ def confirm(db: Session, judgment: AIJudgment) -> AIJudgment:
     """
     user = get_or_create_default_user(db)
     if judgment.confidence is not None and judgment.confidence < CONFIDENCE_CONFIRM_MIN:
+        reason = (judgment.confidence_reason or "").strip()
+        reason_part = f"AI 的不确定点：{reason}。" if reason else ""
         raise ValueError(
-            f"判定置信度不足（{judgment.confidence:.0%} < {CONFIDENCE_CONFIRM_MIN:.0%}），"
-            "请使用「补充信息」补充细节后重新判定，再确认入账。"
+            f"判定置信度不足（{judgment.confidence:.0%} < {CONFIDENCE_CONFIRM_MIN:.0%}）。{reason_part}"
+            "可使用「补充信息」补充细节后重新判定，再确认入账。"
         )
     conf = judgment.confidence if judgment.confidence is not None else 1.0
     changes = judgment.suggested_changes
@@ -412,13 +430,19 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
         attribute_context=_attribute_context(db, user.id),
         event_source=event.source,
     )
-    result = llm_service.chat_json(messages)
+    # v1.4：按用户解析判定模型配置（BYOK）
+    config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_JUDGE)
+    result = llm_service.chat_json(messages, config=config)
     changes = _parse_changes(result.get("affected_attributes", []))
 
     judgment.suggested_changes = changes
     judgment.analysis = result.get("analysis", [])  # v1.1：补充重判同样记录分析过程
-    judgment.summary = str(result.get("summary", ""))
+    summary = str(result.get("summary", ""))
+    if config.quality_note:
+        summary = (summary + "\n" + config.quality_note).strip()
+    judgment.summary = summary
     judgment.confidence = float(result.get("confidence", 0.0))
+    judgment.confidence_reason = str(result.get("confidence_reason", ""))  # v1.4：补充重判后同步更新
     judgment.status = "adjusted"
     _log(
         db, judgment.id, user.id, "rejudge",
@@ -449,10 +473,13 @@ def dispute(db: Session, judgment: AIJudgment, detail: str) -> dict:
             "affected_attributes": judgment.suggested_changes,
             "summary": judgment.summary,
             "confidence": judgment.confidence,
+            "confidence_reason": judgment.confidence_reason or "",  # v1.4：让复核 AI 知道原判的不确定点
         },
         dispute_reason=detail,
     )
-    result = llm_service.chat_json(messages)
+    # v1.4：按用户解析判定模型配置（BYOK）
+    config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_JUDGE)
+    result = llm_service.chat_json(messages, config=config)
     conclusion = str(result.get("conclusion", "maintain"))
 
     if conclusion == "adjust":

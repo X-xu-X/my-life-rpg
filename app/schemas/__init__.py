@@ -159,3 +159,18 @@ class AnchorCalibrateIn(BaseModel):
 class SettingIn(BaseModel):
     key: str
     value: Any  # 设置值可为任意 JSON 类型（dict / list / bool / 数字 / 字符串）
+
+
+# ============ AI 模型配置（BYOK，v1.4） ============
+
+class LLMConfigIn(BaseModel):
+    """写入一组模型配置。group: primary（判定）/ aux（辅助）。
+
+    api_key 传 "__KEEP__" 表示不改（配合掩码回显）；传空串表示清除。
+    """
+
+    group: Literal["primary", "aux"]
+    api_key: str | None = None
+    base_url: str | None = None
+    model: str | None = None
+    enabled: bool | None = None

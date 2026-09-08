@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app import prompts
 from app.models import Event, User, UserProfile
+from app.services import llm_config
 from app.services.llm_service import llm_service
 
 # 记忆更新间隔（每天一次）
@@ -61,7 +62,9 @@ def update_long_term_memory(db: Session, user: User) -> dict | None:
         return None  # 无事件，不更新
     messages = prompts.build_memory_messages(existing, summary)
     try:
-        result = llm_service.chat_json(messages)
+        # v1.4：走判定模型组（judge），缺失自动回退；失败不影响主流程
+        config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_JUDGE)
+        result = llm_service.chat_json(messages, config=config)
     except Exception:
         return None  # 记忆更新失败不影响主流程
     profile.long_term_memory = json.dumps(result, ensure_ascii=False)

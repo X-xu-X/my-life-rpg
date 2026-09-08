@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app import prompts
 from app.database import get_db
 from app.models import AIJudgment, Attribute, AttributeHistory, Event, Goal, Setting
-from app.services import memory_service
+from app.services import llm_config, memory_service
 from app.services.llm_service import LLMError, llm_service
 from app.services.user_service import get_or_create_default_user
 
@@ -87,7 +87,9 @@ def generate_report(db: Session = Depends(get_db), period: str = "week"):
         disabled_attributes=disabled_attrs,
     )
     try:
-        report = llm_service.chat_json(messages)
+        # v1.4：周报走辅助模型组（aux），缺失自动回退判定组/.env
+        config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_AUX)
+        report = llm_service.chat_json(messages, config=config)
     except LLMError as exc:
         raise HTTPException(status_code=503, detail=f"报告生成失败：{exc}")
 

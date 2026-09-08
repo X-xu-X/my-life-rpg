@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app import prompts
 from app.models import Attribute, AttributeHistory, UserProfile
 from app.prompts.onboarding import CONFIDENCE_THRESHOLD
+from app.services import llm_config
 from app.services.llm_service import llm_service
 from app.services.user_service import get_or_create_default_user
 
@@ -42,7 +43,9 @@ def get_status(db: Session) -> dict:
 
 def _evaluate(db: Session, profile: UserProfile, conversation: list[dict]) -> dict:
     """让 AI 基于当前问答评估把握度并出题。返回 {questions, hint, confidence}。"""
-    result = llm_service.chat_json(prompts.build_question_messages(conversation))
+    # v1.4：走判定模型组（judge）
+    config = llm_config.resolve_llm_config(db, profile.user_id, llm_config.PURPOSE_JUDGE)
+    result = llm_service.chat_json(prompts.build_question_messages(conversation), config=config)
     questions = result.get("questions", [])
     hint = result.get("hint", "")
     confidence = int(result.get("confidence", 0))
@@ -121,7 +124,9 @@ def submit_answer(db: Session, answers: list[dict]) -> dict:
 
 def _generate_panel(db: Session, profile: UserProfile, conversation: list[dict]) -> tuple[list, str]:
     """AI 生成初始属性面板，持久化到画像快照与 attributes 表。"""
-    result = llm_service.chat_json(prompts.build_panel_messages(conversation))
+    # v1.4：走判定模型组（judge）
+    config = llm_config.resolve_llm_config(db, profile.user_id, llm_config.PURPOSE_JUDGE)
+    result = llm_service.chat_json(prompts.build_panel_messages(conversation), config=config)
     panel = result.get("attributes", [])
     summary = result.get("summary", "")
 
@@ -180,13 +185,16 @@ def supplement_profile(db: Session, detail: str) -> dict:
         for h in history_rows
     ]
 
+    # v1.4：走判定模型组（judge）
+    config = llm_config.resolve_llm_config(db, profile.user_id, llm_config.PURPOSE_JUDGE)
     result = llm_service.chat_json(
         prompts.build_supplement_messages(
             basic_profile=profile.basic_profile or {},
             current_attributes=current_attributes,
             history=history,
             supplement_text=detail,
-        )
+        ),
+        config=config,
     )
     adjustments = result.get("adjustments", [])
     explanation = result.get("explanation", "")

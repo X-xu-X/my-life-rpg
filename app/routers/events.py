@@ -9,7 +9,7 @@ from app.database import get_db
 from app.models import AIJudgment, Event, JudgmentLog
 from app.schemas import EventCreate, EventOut, EventUpdate, JudgeIn
 from app import prompts
-from app.services import judge_service
+from app.services import judge_service, llm_config
 from app.services.judge_service import ClarifyNeededError
 from app.services.llm_service import LLMError, llm_service
 from app.services.user_service import get_or_create_default_user
@@ -33,7 +33,9 @@ def create_event(body: EventCreate, db: Session = Depends(get_db)):
     # 自由日记：AI 从原文提取结构化要素（纯享记录跳过提取）
     if not body.is_pure and body.source == "journal" and body.content:
         try:
-            result = llm_service.chat_json(prompts.build_extract_messages(body.content))
+            # v1.4：走判定模型组（judge）
+            config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_JUDGE)
+            result = llm_service.chat_json(prompts.build_extract_messages(body.content), config=config)
         except LLMError as exc:
             raise HTTPException(status_code=503, detail=f"日记要素提取失败：{exc}")
         event_type = result.get("event_type") or "positive"
@@ -131,6 +133,7 @@ def judge(event_id: int, body: JudgeIn, db: Session = Depends(get_db)):
         "analysis": judgment.analysis,
         "summary": judgment.summary,
         "confidence": judgment.confidence,
+        "confidence_reason": judgment.confidence_reason or "",  # v1.4：置信度说明
     }
 
 

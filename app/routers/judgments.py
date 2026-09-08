@@ -43,6 +43,7 @@ def list_judgments(db: Session = Depends(get_db)):
             "final_changes": j.final_changes,
             "summary": j.summary,
             "confidence": j.confidence,
+            "confidence_reason": j.confidence_reason or "",  # v1.4：置信度说明
             "created_at": j.created_at,
         }
         for j, e in rows
@@ -62,6 +63,7 @@ def get_judgment(judgment_id: int, db: Session = Depends(get_db)):
         "final_changes": j.final_changes,
         "summary": j.summary,
         "confidence": j.confidence,
+        "confidence_reason": j.confidence_reason or "",  # v1.4：置信度说明
         "created_at": j.created_at,
         "updated_at": j.updated_at,
     }
@@ -115,6 +117,7 @@ def supplement(judgment_id: int, body: SupplementIn, db: Session = Depends(get_d
         "suggested_changes": judgment.suggested_changes,
         "summary": judgment.summary,
         "confidence": judgment.confidence,
+        "confidence_reason": judgment.confidence_reason or "",  # v1.4：置信度说明
     }
 
 

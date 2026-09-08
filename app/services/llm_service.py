@@ -8,11 +8,14 @@
 """
 import json
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from openai import OpenAI
 
 from app.config import settings
+
+if TYPE_CHECKING:  # 仅供类型标注；运行时不导入（llm_config 会导入本模块的 LLMError）
+    from app.services.llm_config import LLMConfig
 
 
 class LLMError(RuntimeError):
@@ -20,24 +23,37 @@ class LLMError(RuntimeError):
 
 
 class LLMService:
-    """DeepSeek（OpenAI 兼容）调用的统一入口。"""
+    """DeepSeek（OpenAI 兼容）调用的统一入口。
+
+    v1.4：支持按次传入 LLMConfig（BYOK 双模型架构）覆盖 .env 默认配置；
+    客户端按 (api_key, base_url) 缓存复用，避免每次新建连接。
+    """
 
     def __init__(self) -> None:
-        # 惰性初始化客户端：仅当配置了密钥时才创建，避免误用
-        self._client: OpenAI | None = None
+        # 客户端缓存：key=(api_key, base_url)
+        self._clients: dict[tuple[str, str], OpenAI] = {}
 
-    def _get_client(self) -> OpenAI:
+    def _get_client(self, config: "LLMConfig | None" = None) -> OpenAI:
         """获取（或懒创建）OpenAI 兼容客户端。"""
-        if self._client is None:
-            if not settings.llm_ready:
-                raise LLMError(
-                    "尚未配置 DEEPSEEK_API_KEY。请复制 .env.example 为 .env 并填入真实密钥。"
-                )
-            self._client = OpenAI(
-                api_key=settings.deepseek_api_key,
-                base_url=settings.deepseek_base_url,
+        if config is not None:
+            key = (config.api_key, config.base_url)
+            client = self._clients.get(key)
+            if client is None:
+                client = OpenAI(api_key=config.api_key, base_url=config.base_url)
+                self._clients[key] = client
+            return client
+        # .env 默认路径（未传 config 时，行为与 v1.3 完全一致）
+        if not settings.llm_ready:
+            raise LLMError(
+                "尚未配置 DEEPSEEK_API_KEY。请到「设置 → AI 模型」绑定密钥，"
+                "或复制 .env.example 为 .env 并填入真实密钥。"
             )
-        return self._client
+        key = (settings.deepseek_api_key, settings.deepseek_base_url)
+        client = self._clients.get(key)
+        if client is None:
+            client = OpenAI(api_key=settings.deepseek_api_key, base_url=settings.deepseek_base_url)
+            self._clients[key] = client
+        return client
 
     def chat(
         self,
@@ -45,18 +61,20 @@ class LLMService:
         *,
         temperature: float | None = None,
         json_mode: bool = False,
+        config: "LLMConfig | None" = None,
     ) -> str:
         """发起一次对话补全，返回文本内容。
 
         :param messages: [{"role": "system"|"user"|"assistant", "content": "..."}]
         :param temperature: 采样温度，默认取配置（判定用 0.3 保证口径稳定）
         :param json_mode: 是否要求模型输出 JSON（DeepSeek 需 prompt 含 json 关键字）
+        :param config: v1.4 可选覆盖配置（BYOK）；不传走 .env 默认
         """
-        client = self._get_client()
+        client = self._get_client(config)
         temp = settings.llm_temperature if temperature is None else temperature
 
         kwargs: dict[str, Any] = {
-            "model": settings.deepseek_model,
+            "model": config.model if config is not None else settings.deepseek_model,
             "messages": messages,
             "temperature": temp,
         }
@@ -72,12 +90,18 @@ class LLMService:
         content = resp.choices[0].message.content or ""
         return content
 
-    def chat_json(self, messages: list[dict[str, str]], *, temperature: float | None = None) -> dict:
+    def chat_json(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        temperature: float | None = None,
+        config: "LLMConfig | None" = None,
+    ) -> dict:
         """发起对话并解析为 JSON 对象。
 
         对模型输出做容错：先尝试整体 json.loads，失败则提取首个 {...} 块再解析。
         """
-        raw = self.chat(messages, temperature=temperature, json_mode=True)
+        raw = self.chat(messages, temperature=temperature, json_mode=True, config=config)
         return self._parse_json(raw)
 
     @staticmethod

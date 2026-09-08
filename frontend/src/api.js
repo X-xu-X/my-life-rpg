@@ -82,6 +82,11 @@ export const api = {
   updateSetting: (key, value) =>
     request('/settings', { method: 'POST', body: JSON.stringify({ key, value }) }),
 
+  // AI 模型配置（BYOK，v1.4）
+  getLLMConfig: () => request('/llm-config'),
+  putLLMConfig: (payload) =>
+    request('/llm-config', { method: 'PUT', body: JSON.stringify(payload) }),
+
   // 数据导出（文件下载）
   exportData: async (format) => {
     const resp = await fetch(`${BASE}/export?format=${format}`)

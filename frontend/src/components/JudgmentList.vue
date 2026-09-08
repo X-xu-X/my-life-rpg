@@ -7,6 +7,7 @@ const busy = ref(false)
 const error = ref('')
 const actionTarget = ref(null) // 正在操作的判定 id
 const inputText = ref('')
+const actionError = ref({ id: null, msg: '' }) // v1.4：操作失败的就近错误提示（不再只显示在卡片顶部）
 const auditTarget = ref(null) // 正在查看审计的判定 id
 const auditLogs = ref([])
 const editTarget = ref(null) // 正在编辑的事件 id
@@ -111,18 +112,21 @@ async function removeEvent(eventId, confirmed) {
 async function runAction(id, fn, okMsg) {
   busy.value = true
   error.value = ''
+  actionError.value = { id: null, msg: '' }
   try {
     const res = await fn()
     await load()
     // v1.3：若该判定的审计面板正展开，同步刷新轨迹（修复确认/补充/反驳后轨迹不更新）
     if (auditTarget.value === id) await refreshAudit(id)
-    return res
-  } catch (e) {
-    error.value = e.message
-  } finally {
-    busy.value = false
+    // v1.4：仅成功路径收起输入框并清空（失败时保留用户已输入内容）
     actionTarget.value = null
     inputText.value = ''
+    return res
+  } catch (e) {
+    // v1.4：失败不收起输入框、不清空内容，错误就近显示在输入框上方
+    actionError.value = { id, msg: e.message }
+  } finally {
+    busy.value = false
   }
 }
 
@@ -161,6 +165,8 @@ async function saveEdit() {
 }
 
 function openAction(id, mode) {
+  // v1.4：切换目标时清掉上一次的就近错误
+  if (actionTarget.value !== id) actionError.value = { id: null, msg: '' }
   actionTarget.value = id
   inputText.value = ''
 }
@@ -186,6 +192,10 @@ onMounted(load)
         <span class="tag">{{ j.event_type }}</span>
         <span class="tag">{{ STATUS_LABEL[j.status] || j.status }}</span>
         <span class="muted">置信度 {{ (j.confidence * 100).toFixed(0) }}%</span>
+      </div>
+      <!-- v1.4：置信度说明（低置信度时 AI 给出的不确定点） -->
+      <div v-if="j.confidence_reason && j.status !== 'confirmed'" class="muted" style="font-size: 12px; margin-bottom: 6px; color: #b7791f">
+        💡 {{ j.confidence_reason }}
       </div>
 
       <div v-if="j.summary" class="muted" style="margin-bottom: 6px">{{ j.summary }}</div>
@@ -226,13 +236,30 @@ onMounted(load)
         </button>
       </div>
 
-      <!-- 低置信度提示（v1.2） -->
+      <!-- v1.4：操作失败的就近错误提示（在输入框上方 / 操作按钮下方，不再跑到卡片顶部） -->
+      <p
+        v-if="actionError.id === j.id"
+        class="muted"
+        style="color: #d33; font-size: 12px; margin-top: 6px"
+      >⚠️ {{ actionError.msg }}</p>
+
+      <!-- 补充/反驳输入框（v1.4：就近渲染在操作按钮行正下方，长卡片不再滚出视口） -->
+      <div v-if="actionTarget === j.id" class="field" style="margin-top: 10px">
+        <label>补充信息 / 反驳理由：</label>
+        <textarea v-model="inputText" rows="2" placeholder="说明你的补充或反驳理由…"></textarea>
+        <div class="row" style="margin-top: 8px">
+          <button class="btn small primary" :disabled="busy" @click="supplement(j.id)">提交补充</button>
+          <button class="btn small danger" :disabled="busy" @click="dispute(j.id)">提交反驳</button>
+        </div>
+      </div>
+
+      <!-- 低置信度提示（v1.2；v1.4 引用 AI 置信度说明） -->
       <p
         v-if="j.status !== 'confirmed' && (j.confidence || 0) < 0.8"
         class="muted"
         style="color: #b7791f; font-size: 12px; margin-top: 6px"
       >
-        ⚠️ 置信度不足（{{ ((j.confidence || 0) * 100).toFixed(0) }}% < 80%），请先「补充信息」补充细节后重新判定，才能确认入账。
+        ⚠️ 置信度 {{ ((j.confidence || 0) * 100).toFixed(0) }}%<template v-if="j.confidence_reason">：{{ j.confidence_reason }}</template>，可补充信息后重判或直接反驳。
       </p>
 
       <!-- 编辑表单 -->
@@ -257,16 +284,6 @@ onMounted(load)
           <span class="tag">{{ ACTION_LABEL[log.action] || log.action }}</span>
           <span class="muted">{{ log.detail }}</span>
           <div class="muted" style="font-size: 12px">{{ new Date(log.created_at).toLocaleString('zh-CN') }}</div>
-        </div>
-      </div>
-
-      <!-- 补充/反驳输入框 -->
-      <div v-if="actionTarget === j.id" class="field" style="margin-top: 10px">
-        <label>补充信息 / 反驳理由：</label>
-        <textarea v-model="inputText" rows="2" placeholder="说明你的补充或反驳理由…"></textarea>
-        <div class="row" style="margin-top: 8px">
-          <button class="btn small primary" :disabled="busy" @click="supplement(j.id)">提交补充</button>
-          <button class="btn small danger" :disabled="busy" @click="dispute(j.id)">提交反驳</button>
         </div>
       </div>
     </div>

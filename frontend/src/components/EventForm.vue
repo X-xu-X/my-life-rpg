@@ -298,6 +298,8 @@ function clearResult() {
       <template v-else>
         <h3>AI 判定结果 <span class="tag">{{ result.status }}</span></h3>
         <p class="muted">置信度 {{ (result.confidence * 100).toFixed(0) }}%</p>
+        <!-- v1.4：置信度说明 -->
+        <p v-if="result.confidence_reason" class="muted" style="font-size: 12px; color: #b7791f">💡 {{ result.confidence_reason }}</p>
         <!-- AI 分析过程 -->
         <div v-if="result.analysis && result.analysis.length" class="analysis-box">
           <div class="analysis-title">🤖 AI 分析过程</div>

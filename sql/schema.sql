@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS ai_judgments (
     analysis         JSON,                     -- AI 分析过程（推理链路），v1.1 新增
     summary          TEXT,
     confidence       DOUBLE NOT NULL DEFAULT 0.0,
+    confidence_reason TEXT,                     -- 置信度说明（v1.4：低置信度时 AI 给出不确定点）
     status           VARCHAR(20) NOT NULL DEFAULT 'pending',  -- pending/confirmed/adjusted/rejected
     final_changes    JSON,                     -- 最终生效增减
     created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

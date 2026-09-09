@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { api } from '../api'
 
 const judgments = ref([])
@@ -30,6 +30,68 @@ const filteredJudgments = computed(() => {
   )
 })
 
+// ============ v1.5 B1：按日期分组折叠（今天/昨天/本周更早/更早） ============
+const GROUP_KEY = 'gol_judgment_group_expand'
+const groupExpanded = ref(JSON.parse(localStorage.getItem(GROUP_KEY) || 'null') || { today: true }) // 默认只展开「今天」
+watch(groupExpanded, () => {
+  try { localStorage.setItem(GROUP_KEY, JSON.stringify(groupExpanded.value)) } catch (e) { /* 忽略 */ }
+}, { deep: true })
+
+const expandedItems = ref(new Set()) // 展开详情的判定（内存态，刷新复位）
+
+function toggleGroup(key) {
+  groupExpanded.value[key] = !groupExpanded.value[key]
+}
+function groupIsOpen(key) {
+  if (searchText.value.trim()) return true // 搜索命中时自动展开所在组
+  return !!groupExpanded.value[key]
+}
+function toggleItem(id) {
+  const s = new Set(expandedItems.value)
+  if (s.has(id)) s.delete(id)
+  else s.add(id)
+  expandedItems.value = s
+}
+function itemIsOpen(id) {
+  if (searchText.value.trim()) return true // 搜索命中直接展开详情
+  return expandedItems.value.has(id)
+}
+
+const groupedJudgments = computed(() => {
+  const now = new Date()
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const startOfYesterday = new Date(startOfToday.getTime() - 86400000)
+  const monday = new Date(startOfToday)
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7)) // 本周一 0 点
+  const buckets = { today: [], yesterday: [], thisweek: [], earlier: [] }
+  for (const j of filteredJudgments.value) {
+    const d = new Date(j.created_at)
+    if (d >= startOfToday) buckets.today.push(j)
+    else if (d >= startOfYesterday) buckets.yesterday.push(j)
+    else if (d >= monday) buckets.thisweek.push(j)
+    else buckets.earlier.push(j)
+  }
+  const fmt = (d) => `${`${d.getMonth() + 1}`.padStart(2, '0')}-${`${d.getDate()}`.padStart(2, '0')}`
+  const meta = [
+    { key: 'today', label: '今天' },
+    { key: 'yesterday', label: '昨天' },
+    { key: 'thisweek', label: '本周更早' },
+    { key: 'earlier', label: '更早' },
+  ]
+  return meta
+    .map((m) => {
+      const items = buckets[m.key]
+      if (!items.length) return null
+      // 组头日期：今天/昨天显示当天日期；范围组显示首尾日期（items 按时间倒序）
+      const dateRange =
+        m.key === 'today' || m.key === 'yesterday'
+          ? fmt(new Date(items[0].created_at))
+          : `${fmt(new Date(items[items.length - 1].created_at))} ~ ${fmt(new Date(items[0].created_at))}`
+      return { ...m, items, dateRange }
+    })
+    .filter(Boolean)
+})
+
 const ACTION_LABEL = {
   create: '生成判定',
   confirm: '确认入账',
@@ -38,6 +100,7 @@ const ACTION_LABEL = {
   rejudge: '重新判定',
   maintain: '维持原判',
   delete: '删除事件',
+  invalidate: '判定作废',
 }
 
 async function load() {
@@ -178,7 +241,11 @@ async function saveEdit() {
     })
     editTarget.value = null
     await load()
-    alert('已保存。事件内容变更后未确认的判定已删除，可重新判定。')
+    // v1.5 A4：编辑后旧判定作废归档（从列表消失），收起可能悬空的审计面板
+    auditTarget.value = null
+    auditLogs.value = []
+    // v1.5 A2：保存成功用轻提示（原为 alert，且文案对齐 A1 作废语义）
+    flash('已保存。事件内容变更后旧判定已作废，可重新判定。')
   } catch (e) {
     error.value = e.message
   } finally {
@@ -216,25 +283,47 @@ onMounted(load)
       <input v-model="searchText" placeholder="🔍 搜索事件/判定（标题/类别/总结）…" />
     </div>
 
-    <div v-for="j in filteredJudgments" :key="j.id" class="judgment-item">
-      <div class="row" style="align-items: center; margin-bottom: 8px">
-        <b>{{ j.event_title || j.category }}</b>
-        <span class="tag">{{ j.event_type }}</span>
-        <span class="tag">{{ STATUS_LABEL[j.status] || j.status }}</span>
-        <span v-if="j.rejudge_count > 0" class="tag" title="从审计日志统计的重判次数">已重判 · 第 {{ j.rejudge_count }} 次</span>
-        <span class="muted">置信度 {{ (j.confidence * 100).toFixed(0) }}%</span>
+    <!-- v1.5 B1：按日期分组折叠；每条判定默认收起为一行摘要 -->
+    <p v-if="judgments.length > 0" class="muted" style="font-size: 12px">点击标题行展开详情；组头可折叠（搜索时自动展开命中项）。</p>
+
+    <div v-for="g in groupedJudgments" :key="g.key" style="margin-bottom: 12px">
+      <div
+        class="row"
+        style="align-items: center; cursor: pointer; padding: 6px 4px; border-bottom: 1px solid #eee; user-select: none"
+        @click="toggleGroup(g.key)"
+      >
+        <b>{{ g.label }}</b>
+        <span class="muted" style="font-size: 12px">{{ g.dateRange }}</span>
+        <span class="muted" style="font-size: 12px">{{ g.items.length }} 条</span>
+        <span class="muted" style="margin-left: auto">{{ groupIsOpen(g.key) ? '▾' : '▸' }}</span>
       </div>
-      <!-- v1.5 A2：最近一次用户提交的补充/反驳（数据源=审计日志，默认收起） -->
-      <div v-if="j.last_user_input" class="muted" style="font-size: 12px; margin-bottom: 6px">
-        <span style="cursor: pointer; user-select: none" @click="toggleMyInput(j.id)">
-          {{ myInputOpen === j.id ? '▾' : '▸' }} 我的{{ j.last_user_input.action === 'dispute' ? '反驳' : '补充' }}（{{ new Date(j.last_user_input.created_at).toLocaleString('zh-CN') }}）
-        </span>
-        <div v-if="myInputOpen === j.id" style="white-space: pre-wrap; margin-top: 4px; padding: 6px 8px; background: #f7f7f9; border-radius: 6px">{{ j.last_user_input.detail }}</div>
-      </div>
-      <!-- v1.4：置信度说明（低置信度时 AI 给出的不确定点） -->
-      <div v-if="j.confidence_reason && j.status !== 'confirmed'" class="muted" style="font-size: 12px; margin-bottom: 6px; color: #b7791f">
-        💡 {{ j.confidence_reason }}
-      </div>
+
+      <template v-if="groupIsOpen(g.key)">
+        <div v-for="j in g.items" :key="j.id" class="judgment-item">
+          <!-- 摘要行（点击展开/收起详情） -->
+          <div class="row" style="align-items: center; cursor: pointer" @click="toggleItem(j.id)">
+            <b>{{ j.event_title || j.category }}</b>
+            <span class="tag">{{ j.event_type }}</span>
+            <span class="tag">{{ STATUS_LABEL[j.status] || j.status }}</span>
+            <span v-if="j.rejudge_count > 0" class="tag" title="从审计日志统计的重判次数">已重判 · 第 {{ j.rejudge_count }} 次</span>
+            <span class="muted">置信度 {{ (j.confidence * 100).toFixed(0) }}%</span>
+            <span class="muted" style="margin-left: auto; font-size: 12px">{{ new Date(j.created_at).toLocaleString('zh-CN') }}</span>
+            <span class="muted">{{ itemIsOpen(j.id) ? '▾' : '▸' }}</span>
+          </div>
+
+          <template v-if="itemIsOpen(j.id)">
+            <!-- v1.4：置信度说明（低置信度时 AI 给出的不确定点） -->
+            <div v-if="j.confidence_reason && j.status !== 'confirmed'" class="muted" style="font-size: 12px; margin-bottom: 6px; color: #b7791f">
+              💡 {{ j.confidence_reason }}
+            </div>
+
+            <!-- v1.5 A2：最近一次用户提交的补充/反驳（数据源=审计日志，默认收起） -->
+            <div v-if="j.last_user_input" class="muted" style="font-size: 12px; margin-bottom: 6px">
+              <span style="cursor: pointer; user-select: none" @click="toggleMyInput(j.id)">
+                {{ myInputOpen === j.id ? '▾' : '▸' }} 我的{{ j.last_user_input.action === 'dispute' ? '反驳' : '补充' }}（{{ new Date(j.last_user_input.created_at).toLocaleString('zh-CN') }}）
+              </span>
+              <div v-if="myInputOpen === j.id" style="white-space: pre-wrap; margin-top: 4px; padding: 6px 8px; background: #f7f7f9; border-radius: 6px">{{ j.last_user_input.detail }}</div>
+            </div>
 
       <div v-if="j.summary" class="muted" style="margin-bottom: 6px">{{ j.summary }}</div>
 
@@ -338,6 +427,9 @@ onMounted(load)
           <div class="muted" style="font-size: 12px">{{ new Date(log.created_at).toLocaleString('zh-CN') }}</div>
         </div>
       </div>
+          </template><!-- /itemIsOpen -->
+        </div>
+      </template><!-- /groupIsOpen -->
     </div>
   </div>
 </template>

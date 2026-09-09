@@ -33,6 +33,29 @@ def list_judgments(db: Session = Depends(get_db)):
         .order_by(AIJudgment.created_at.desc())
         .all()
     )
+    # v1.5 A2/A3：从审计日志统计——最近一次用户补充/反驳内容 + 重判次数（一条查询取全量，Python 内分组）
+    last_input: dict[int, dict] = {}
+    rejudge_counts: dict[int, int] = {}
+    judgment_ids = [j.id for j, _ in rows]
+    if judgment_ids:
+        logs = (
+            db.query(JudgmentLog)
+            .filter(
+                JudgmentLog.judgment_id.in_(judgment_ids),
+                JudgmentLog.action.in_(["supplement", "dispute", "rejudge"]),
+            )
+            .order_by(JudgmentLog.created_at.desc())
+            .all()
+        )
+        for log in logs:
+            if log.action in ("supplement", "dispute") and log.judgment_id not in last_input:
+                last_input[log.judgment_id] = {
+                    "action": log.action,
+                    "detail": log.detail,
+                    "created_at": log.created_at,
+                }
+            elif log.action == "rejudge":
+                rejudge_counts[log.judgment_id] = rejudge_counts.get(log.judgment_id, 0) + 1
     return [
         {
             "id": j.id,
@@ -47,6 +70,8 @@ def list_judgments(db: Session = Depends(get_db)):
             "summary": j.summary,
             "confidence": j.confidence,
             "confidence_reason": j.confidence_reason or "",  # v1.4：置信度说明
+            "last_user_input": last_input.get(j.id),  # v1.5 A2：最近一次补充/反驳
+            "rejudge_count": rejudge_counts.get(j.id, 0),  # v1.5 A3：重判次数
             "created_at": j.created_at,
         }
         for j, e in rows

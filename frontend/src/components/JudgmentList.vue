@@ -8,6 +8,12 @@ const error = ref('')
 const actionTarget = ref(null) // 正在操作的判定 id
 const inputText = ref('')
 const actionError = ref({ id: null, msg: '' }) // v1.4：操作失败的就近错误提示（不再只显示在卡片顶部）
+const actionSuccess = ref({ id: null, msg: '' }) // v1.5 A2：成功轻提示（2 秒自动消失）
+const disputeResult = ref({ id: null, conclusion: '', explanation: '' }) // v1.5 A2：反驳复核结论就地展示
+const myInputOpen = ref(null) // v1.5 A2：「我的补充/反驳」折叠区展开的判定 id
+const notice = ref('') // v1.5 A2：卡片顶部轻提示（删除/保存成功等，2 秒消失）
+let successTimer = null
+let noticeTimer = null
 const auditTarget = ref(null) // 正在查看审计的判定 id
 const auditLogs = ref([])
 const editTarget = ref(null) // 正在编辑的事件 id
@@ -82,7 +88,8 @@ async function dispute(id) {
   if (!inputText.value.trim()) return alert('请填写反驳理由')
   const res = await runAction(id, () => api.disputeJudgment(id, inputText.value.trim()))
   if (res) {
-    alert(res.conclusion === 'adjust' ? '复核已调整判定' : 'AI 坚持原判定：' + res.explanation)
+    // v1.5 A2：复核结论就地展示（替代阻塞式 alert）
+    disputeResult.value = { id, conclusion: res.conclusion, explanation: res.explanation || '' }
   }
 }
 
@@ -102,12 +109,20 @@ async function removeEvent(eventId, confirmed) {
     auditTarget.value = null
     auditLogs.value = []
     await load()
-    alert('已删除' + (confirmed ? '，相关点数已回滚' : ''))
+    // v1.5 A2：删除成功用轻提示（原为 alert）
+    flash('已删除' + (confirmed ? '，相关点数已回滚' : ''))
   } catch (e) {
     error.value = e.message
   } finally {
     busy.value = false
   }
+}
+
+function flash(msg) {
+  // v1.5 A2：顶部轻提示，2 秒自动消失（替代成功场景的阻塞式 alert）
+  notice.value = msg
+  clearTimeout(noticeTimer)
+  noticeTimer = setTimeout(() => (notice.value = ''), 2000)
 }
 
 async function runAction(id, fn, okMsg) {
@@ -122,6 +137,12 @@ async function runAction(id, fn, okMsg) {
     // v1.4：仅成功路径收起输入框并清空（失败时保留用户已输入内容）
     actionTarget.value = null
     inputText.value = ''
+    // v1.5 A2：成功轻提示（真正使用 okMsg，2 秒自动消失）
+    if (okMsg) {
+      actionSuccess.value = { id, msg: okMsg }
+      clearTimeout(successTimer)
+      successTimer = setTimeout(() => (actionSuccess.value = { id: null, msg: '' }), 2000)
+    }
     return res
   } catch (e) {
     // v1.4：失败不收起输入框、不清空内容，错误就近显示在输入框上方
@@ -168,8 +189,14 @@ async function saveEdit() {
 function openAction(id, mode) {
   // v1.4：切换目标时清掉上一次的就近错误
   if (actionTarget.value !== id) actionError.value = { id: null, msg: '' }
+  // v1.5 A2：切换目标时收起上一条的复核结论
+  if (actionTarget.value !== id && disputeResult.value.id !== id) disputeResult.value = { id: null, conclusion: '', explanation: '' }
   actionTarget.value = id
   inputText.value = ''
+}
+
+function toggleMyInput(id) {
+  myInputOpen.value = myInputOpen.value === id ? null : id
 }
 
 onMounted(load)
@@ -181,6 +208,8 @@ onMounted(load)
     <p class="muted">AI 对每条事件给出建议增减，你可以确认入账、补充信息重判、或反驳复核。</p>
 
     <p v-if="error" class="muted" style="color: #d33">{{ error }}</p>
+    <!-- v1.5 A2：轻提示（删除/保存等成功反馈，2 秒消失） -->
+    <p v-if="notice" class="muted" style="color: #2f855a; font-size: 13px">✓ {{ notice }}</p>
     <p v-if="judgments.length === 0 && !error" class="muted">暂无判定记录，先去「记录事件」打卡吧。</p>
 
     <div class="field" v-if="judgments.length > 0">
@@ -192,7 +221,15 @@ onMounted(load)
         <b>{{ j.event_title || j.category }}</b>
         <span class="tag">{{ j.event_type }}</span>
         <span class="tag">{{ STATUS_LABEL[j.status] || j.status }}</span>
+        <span v-if="j.rejudge_count > 0" class="tag" title="从审计日志统计的重判次数">已重判 · 第 {{ j.rejudge_count }} 次</span>
         <span class="muted">置信度 {{ (j.confidence * 100).toFixed(0) }}%</span>
+      </div>
+      <!-- v1.5 A2：最近一次用户提交的补充/反驳（数据源=审计日志，默认收起） -->
+      <div v-if="j.last_user_input" class="muted" style="font-size: 12px; margin-bottom: 6px">
+        <span style="cursor: pointer; user-select: none" @click="toggleMyInput(j.id)">
+          {{ myInputOpen === j.id ? '▾' : '▸' }} 我的{{ j.last_user_input.action === 'dispute' ? '反驳' : '补充' }}（{{ new Date(j.last_user_input.created_at).toLocaleString('zh-CN') }}）
+        </span>
+        <div v-if="myInputOpen === j.id" style="white-space: pre-wrap; margin-top: 4px; padding: 6px 8px; background: #f7f7f9; border-radius: 6px">{{ j.last_user_input.detail }}</div>
       </div>
       <!-- v1.4：置信度说明（低置信度时 AI 给出的不确定点） -->
       <div v-if="j.confidence_reason && j.status !== 'confirmed'" class="muted" style="font-size: 12px; margin-bottom: 6px; color: #b7791f">
@@ -243,6 +280,20 @@ onMounted(load)
         class="muted"
         style="color: #d33; font-size: 12px; margin-top: 6px"
       >⚠️ {{ actionError.msg }}</p>
+
+      <!-- v1.5 A2：成功轻提示（2 秒消失） -->
+      <p
+        v-if="actionSuccess.id === j.id"
+        class="muted"
+        style="color: #2f855a; font-size: 12px; margin-top: 6px"
+      >✓ {{ actionSuccess.msg }}</p>
+
+      <!-- v1.5 A2：反驳复核结论就地展示（替代 alert） -->
+      <div
+        v-if="disputeResult.id === j.id"
+        class="muted"
+        style="font-size: 12px; margin-top: 6px; padding: 6px 8px; background: #f7f7f9; border-radius: 6px"
+      >⚖️ {{ disputeResult.conclusion === 'adjust' ? '复核已调整判定' : 'AI 坚持原判' }}<template v-if="disputeResult.explanation">：{{ disputeResult.explanation }}</template></div>
 
       <!-- 补充/反驳输入框（v1.4：就近渲染在操作按钮行正下方，长卡片不再滚出视口） -->
       <div v-if="actionTarget === j.id" class="field" style="margin-top: 10px">

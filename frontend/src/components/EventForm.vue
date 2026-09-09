@@ -59,15 +59,19 @@ function clearDraft() {
   try { localStorage.removeItem(CACHE_KEY) } catch (e) { /* 忽略 */ }
 }
 
-// ============ 判定结果/追问状态持久化（v1.3）：切页返回不丢 ============
-// 用 sessionStorage（关浏览器标签即清），避免跳转其他页面后结果重置
+// ============ 判定结果/追问状态持久化（v1.3，v1.5 A3 升级）：切页返回不丢 ============
+// 用 sessionStorage（关浏览器标签即清），避免跳转其他页面后结果重置。
+// v1.5 A3 单一数据源：缓存只存 judgment_id，恢复时从 DB 拉现行判定展示——
+// 重判就地更新（id 不变）→ 拉到的就是最新结果；判定被作废/不存在 → 丢弃预览并提示。
 const JUDGE_CACHE_KEY = 'gol_last_judgment'
+const previewStale = ref(false) // 恢复时发现缓存判定已失效
 
 function saveJudgeState() {
   try {
     if (result.value || clarifyEvent.value) {
       sessionStorage.setItem(JUDGE_CACHE_KEY, JSON.stringify({
-        result: result.value,
+        result: result.value && result.value.status === 'pure' ? result.value : null, // 纯享无判定直接存
+        judgmentId: result.value ? (result.value.judgment_id ?? result.value.id ?? null) : null, // v1.5 A3：判定只存 id（judge 响应键为 judgment_id，详情为 id）
         clarifyEvent: clarifyEvent.value,
         clarifyAnswer: clarifyAnswer.value,
       }))
@@ -77,13 +81,28 @@ function saveJudgeState() {
   } catch (e) { /* 忽略存储失败 */ }
 }
 
-function restoreJudgeState() {
+async function restoreJudgeState() {
   try {
     const saved = JSON.parse(sessionStorage.getItem(JUDGE_CACHE_KEY) || 'null')
-    if (saved) {
-      result.value = saved.result || null
-      clarifyEvent.value = saved.clarifyEvent || null
+    if (!saved) return
+    // 追问进行中的状态本地还原（尚未生成判定，无 DB 数据源）
+    if (saved.clarifyEvent) {
+      clarifyEvent.value = saved.clarifyEvent
       clarifyAnswer.value = saved.clarifyAnswer || ''
+    }
+    if (saved.judgmentId) {
+      // v1.5 A3：从 DB 拉现行判定（校验是否仍有效）
+      try {
+        const j = await api.getJudgment(saved.judgmentId)
+        if (j && j.status !== 'invalidated') {
+          result.value = j
+          return
+        }
+      } catch (e) { /* 判定不存在（已删除） */ }
+      previewStale.value = true
+      result.value = null
+    } else if (saved.result) {
+      result.value = saved.result // 纯享记录等无判定的结果
     }
   } catch (e) { /* 忽略损坏的缓存 */ }
 }
@@ -189,6 +208,7 @@ function reset() {
   result.value = null
   clarifyEvent.value = null
   clarifyAnswer.value = ''
+  previewStale.value = false
   clearDraft()
 }
 
@@ -197,6 +217,7 @@ function clearResult() {
   result.value = null
   clarifyEvent.value = null
   clarifyAnswer.value = ''
+  previewStale.value = false
 }
 </script>
 
@@ -278,6 +299,11 @@ function clearResult() {
     </div>
 
     <p v-if="error" class="muted" style="color: #d33">{{ error }}</p>
+
+    <!-- v1.5 A3：缓存的预览判定已失效（被重判/作废/删除），提示以判定中心为准 -->
+    <p v-if="previewStale && !result" class="muted" style="color: #b7791f">
+      ℹ️ 上次的判定已更新或已失效，以「判定中心」的现行判定为准。
+    </p>
 
     <!-- AI 追问区（日记信息不足时） -->
     <div v-if="clarifyEvent" class="card" style="margin-top: 12px">

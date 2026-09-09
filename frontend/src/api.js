@@ -51,6 +51,7 @@ export const api = {
 
   // 判定
   listJudgments: () => request('/judgments'),
+  getJudgment: (id) => request(`/judgments/${id}`),
   confirmJudgment: (id) => request(`/judgments/${id}/confirm`, { method: 'POST' }),
   supplementJudgment: (id, detail) =>
     request(`/judgments/${id}/supplement`, { method: 'POST', body: JSON.stringify({ detail }) }),

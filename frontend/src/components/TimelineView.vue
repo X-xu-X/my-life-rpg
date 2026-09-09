@@ -7,7 +7,7 @@ const judgments = ref([])
 const error = ref('')
 const searchText = ref('')
 
-const STATUS_LABEL = { pending: '待确认', adjusted: '已调整', confirmed: '已入账', rejected: '已驳回' }
+const STATUS_LABEL = { pending: '待确认', adjusted: '已调整', confirmed: '已入账', rejected: '已驳回', invalidated: '已作废' }
 
 async function load() {
   try {

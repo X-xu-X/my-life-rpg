@@ -214,11 +214,13 @@ def _parse_changes(raw_changes: list[dict]) -> list[dict]:
 # ============ 判定 ============
 
 def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgment:
-    """对事件触发 AI 判定，创建 pending 判定记录。
+    """对事件触发 AI 判定，生成判定记录。
 
-    幂等约束：
-    - 事件已入账（confirmed）：拒绝重复判定，避免判定中心出现"同事件双记录"（修复 bug）。
-    - 事件已有未确认判定（pending/adjusted）：先清除旧判定（连同审计）再新建，避免重复。
+    幂等约束（v1.5 A1 统一重判链路）：
+    - 事件已入账（confirmed）：拒绝重复判定，避免判定中心出现"同事件双记录"。
+    - 事件已有未确认判定（pending/adjusted）：**就地更新现行判定（id 不变）**，
+      与判定中心 supplement 链路行为一致——审计只增不删，前端 id 引用（审计面板/
+      sessionStorage 预览）不会失效，杜绝"重判后结果随机漂移 + 旧审计被连带删除"。
 
     v1.2：信息缺口追问——AI 认为描述不足且未提供 clarification 时抛 ClarifyNeededError；
     用户补充回答后带 clarification 重新判定。
@@ -237,19 +239,16 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
     )
     if existing_confirmed:
         raise ValueError("该事件已确认入账。如需重新判定，请删除该事件后重新记录，或用「补充信息」调整。")
-    stale = (
+    # v1.5 A1：现行判定（不删除，重判时就地更新）；invalidated 归档判定不参与
+    current = (
         db.query(AIJudgment)
         .filter(
             AIJudgment.event_id == event.id,
             AIJudgment.user_id == user.id,
             AIJudgment.status.in_(["pending", "adjusted"]),
         )
-        .all()
+        .first()
     )
-    for j in stale:
-        db.query(JudgmentLog).filter(JudgmentLog.judgment_id == j.id).delete()
-        db.delete(j)
-    db.flush()
 
     anchors_text = format_anchors_text(db)
     # 长期记忆：每天检查更新一次（失败不影响判定）
@@ -297,24 +296,43 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
     if config.quality_note:
         # v1.4：判定经降级路径（辅助模型）时，summary 末尾附质量标注（前端显示小标签）
         summary = (summary + "\n" + config.quality_note).strip()
-    judgment = AIJudgment(
-        event_id=event.id,
-        user_id=user.id,
-        suggested_changes=changes,
-        analysis=result.get("analysis", []),  # v1.1：AI 分析过程（推理链路）
-        summary=summary,
-        confidence=float(result.get("confidence", 0.0)),
-        confidence_reason=str(result.get("confidence_reason", "")),  # v1.4：置信度说明
-        status="pending",
-        final_changes=[],
-    )
-    db.add(judgment)
-    db.flush()
-    _log(
-        db, judgment.id, user.id, "create",
-        detail="AI 判定生成",
-        payload={"suggested_changes": changes, "analysis": judgment.analysis, "summary": judgment.summary},
-    )
+    if current is not None:
+        # v1.5 A1：就地更新现行判定（id 不变，审计追加 rejudge）
+        current.suggested_changes = changes
+        current.analysis = result.get("analysis", [])
+        current.summary = summary
+        current.confidence = float(result.get("confidence", 0.0))
+        current.confidence_reason = str(result.get("confidence_reason", ""))
+        current.status = "adjusted"
+        judgment = current
+        db.flush()
+        rejudge_detail = "追问补充后重新判定"
+        if clarification.strip():
+            rejudge_detail += f"（回答摘要：{clarification.strip()[:60]}）"
+        _log(
+            db, judgment.id, user.id, "rejudge",
+            detail=rejudge_detail,
+            payload={"suggested_changes": changes, "analysis": judgment.analysis, "summary": summary},
+        )
+    else:
+        judgment = AIJudgment(
+            event_id=event.id,
+            user_id=user.id,
+            suggested_changes=changes,
+            analysis=result.get("analysis", []),  # v1.1：AI 分析过程（推理链路）
+            summary=summary,
+            confidence=float(result.get("confidence", 0.0)),
+            confidence_reason=str(result.get("confidence_reason", "")),  # v1.4：置信度说明
+            status="pending",
+            final_changes=[],
+        )
+        db.add(judgment)
+        db.flush()
+        _log(
+            db, judgment.id, user.id, "create",
+            detail="AI 判定生成",
+            payload={"suggested_changes": changes, "analysis": judgment.analysis, "summary": judgment.summary},
+        )
     db.commit()
     db.refresh(judgment)
     return judgment

@@ -6,7 +6,7 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import AIJudgment, Event, JudgmentLog
+from app.models import AIJudgment, Event
 from app.schemas import EventCreate, EventOut, EventUpdate, JudgeIn
 from app import prompts
 from app.services import judge_service, llm_config
@@ -148,22 +148,28 @@ def get_event(event_id: int, db: Session = Depends(get_db)):
 
 @router.put("/events/{event_id}", response_model=EventOut)
 def update_event(event_id: int, body: EventUpdate, db: Session = Depends(get_db)):
-    """编辑事件。未确认的判定（pending/adjusted）一并删除（内容变了旧判定失效）；已入账判定保留。"""
+    """编辑事件。未确认的判定（pending/adjusted）作废归档（内容变了旧判定不再可信）；
+    已入账判定保留。v1.5 A1：作废不物理删除（status=invalidated + 审计记 invalidate），审计只增不删。"""
     event = db.get(Event, event_id)
     if event is None:
         raise HTTPException(status_code=404, detail="事件不存在")
     data = body.model_dump(exclude_unset=True)
     for k, v in data.items():
         setattr(event, k, v)
-    # 删除未确认判定：事件内容变化后，旧判定结果不再可信
+    # 作废未确认判定：事件内容变化后，旧判定结果不再可信（归档保留，可追溯）
     stale = (
         db.query(AIJudgment)
         .filter(AIJudgment.event_id == event.id, AIJudgment.status.in_(["pending", "adjusted"]))
         .all()
     )
     for j in stale:
-        db.query(JudgmentLog).filter(JudgmentLog.judgment_id == j.id).delete()
-        db.delete(j)
+        j.status = "invalidated"
+        db.flush()
+        judge_service._log(
+            db, j.id, event.user_id, "invalidate",
+            detail="事件被编辑，旧判定作废归档（判定结果不再可信，需重新判定）",
+            payload={"event_id": event.id},
+        )
     db.commit()
     db.refresh(event)
     return event

@@ -21,12 +21,15 @@ def _get_judgment(db: Session, judgment_id: int) -> AIJudgment:
 
 @router.get("/judgments")
 def list_judgments(db: Session = Depends(get_db)):
-    """判定列表（关联事件摘要），供判定中心展示。"""
+    """判定列表（关联事件摘要），供判定中心展示。
+
+    v1.5 A1/A3：只返回现行判定（排除 invalidated 归档），各展示端统一以本接口为唯一数据源。
+    """
     user = get_or_create_default_user(db)
     rows = (
         db.query(AIJudgment, Event)
         .join(Event, AIJudgment.event_id == Event.id)
-        .filter(AIJudgment.user_id == user.id)
+        .filter(AIJudgment.user_id == user.id, AIJudgment.status != "invalidated")
         .order_by(AIJudgment.created_at.desc())
         .all()
     )

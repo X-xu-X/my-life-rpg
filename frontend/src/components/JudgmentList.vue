@@ -66,6 +66,7 @@ const STATUS_LABEL = {
   adjusted: '已调整',
   confirmed: '已入账',
   rejected: '已驳回',
+  invalidated: '已作废',
 }
 
 async function confirm(id) {

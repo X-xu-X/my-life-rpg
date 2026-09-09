@@ -313,7 +313,12 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
         _log(
             db, judgment.id, user.id, "rejudge",
             detail=rejudge_detail,
-            payload={"suggested_changes": changes, "analysis": judgment.analysis, "summary": summary},
+            payload={
+                "suggested_changes": changes,
+                "analysis": judgment.analysis,
+                "summary": summary,
+                "clarification": clarification.strip(),  # v1.5 A4：完整回答入审计，供「我的补充」展示
+            },
         )
     else:
         judgment = AIJudgment(
@@ -441,12 +446,16 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
     anchors_text = format_anchors_text(db)
     # 在原事件描述上附加补充信息
     extra_desc = format_event_description(event) + f"\n\n【用户补充信息】\n{detail}"
+    # v1.5 A4 修复：补充重判同样注入追问历史，避免 AI"失忆"——
+    # 把此前追问中已回答的面当未提及，维度漂移、置信度虚低（实测 0.9→0.72 被拦截）
+    clarify_history = list((event.params or {}).get("_clarify_history") or [])
     messages = prompts.build_judge_messages(
         anchors_text=anchors_text,
         event_description=extra_desc,
         profile_context=_profile_context(db, user.id),
         recent_count=_recent_same_category_count(db, user.id, event),
         attribute_context=_attribute_context(db, user.id),
+        clarify_history=clarify_history,
         previous_changes=judgment.suggested_changes,  # v1.5 B2：重判不丢维度
         event_source=event.source,
     )

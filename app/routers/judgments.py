@@ -48,14 +48,26 @@ def list_judgments(db: Session = Depends(get_db)):
             .all()
         )
         for log in logs:
-            if log.action in ("supplement", "dispute") and log.judgment_id not in last_input:
-                last_input[log.judgment_id] = {
+            lid = log.judgment_id
+            if lid in last_input:
+                if log.action == "rejudge":
+                    rejudge_counts[lid] = rejudge_counts.get(lid, 0) + 1
+                continue
+            if log.action in ("supplement", "dispute"):
+                last_input[lid] = {
                     "action": log.action,
                     "detail": log.detail,
                     "created_at": log.created_at,
                 }
-            elif log.action == "rejudge":
-                rejudge_counts[log.judgment_id] = rejudge_counts.get(log.judgment_id, 0) + 1
+            elif log.action == "rejudge" and isinstance(log.payload, dict) and log.payload.get("clarification"):
+                # v1.5 A4：追问流程的用户回答存于 rejudge 日志 payload，同样视为「我的补充」
+                last_input[lid] = {
+                    "action": "supplement",
+                    "detail": str(log.payload["clarification"]),
+                    "created_at": log.created_at,
+                }
+            if log.action == "rejudge":
+                rejudge_counts[lid] = rejudge_counts.get(lid, 0) + 1
     return [
         {
             "id": j.id,

@@ -270,6 +270,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
         attribute_context=_attribute_context(db, user.id),
         clarification=clarification,
         clarify_history=clarify_history,
+        previous_changes=(current.suggested_changes if current is not None else None),  # v1.5 B2：重判不丢维度
         recent_events_context=_recent_events_context(db, user.id, event.id),
         memory_context=memory_text,
         disabled_attributes=sorted(disabled),
@@ -446,6 +447,7 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
         profile_context=_profile_context(db, user.id),
         recent_count=_recent_same_category_count(db, user.id, event),
         attribute_context=_attribute_context(db, user.id),
+        previous_changes=judgment.suggested_changes,  # v1.5 B2：重判不丢维度
         event_source=event.source,
     )
     # v1.4：按用户解析判定模型配置（BYOK）

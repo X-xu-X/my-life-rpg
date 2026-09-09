@@ -24,8 +24,9 @@ class Settings(BaseSettings):
     deepseek_api_key: str = ""  # 真实密钥仅从 .env 读取，默认空避免误提交
     deepseek_base_url: str = "https://api.deepseek.com"
     deepseek_model: str = "deepseek-chat"
-    # 判定要求口径稳定、低随机，温度默认 0.3（见 PRD 5 节）
-    llm_temperature: float = 0.3
+    # 判定要求口径稳定、低随机。v1.5 B2：0.3→0.2（实测 0.3 维度/加点漂移明显，
+    # 0=完全确定但措辞呆板，0.2 为平衡点；如需微调只改此处）
+    llm_temperature: float = 0.2
 
     # ---- 数据库 ----
     # V1 使用 SQLite；表结构已预留 MySQL/PostgreSQL 平滑迁移（见 models/models.py）

@@ -54,6 +54,11 @@ JUDGE_SYSTEM_PROMPT = """你是「游戏人生」的成长引导者——加点�
 - 对提及但未出现在 affected_attributes 的生活面，必须复核"确实无据可加"才可跳过——过一遍脑子，不要漏看；但无据的面不硬凑，这不是强行凑维度。
 - 也不可无限发散：只给确实有据的属性，无关属性不要硬凑。
 
+## 输出前维度硬校验（输出 JSON 前必须执行，v1.5 B2）
+- 对照「要素解析」列出的生活面清单逐面自检：每个识别到的生活面，要么在 affected_attributes 中有对应加点，要么在「要素解析」中明确说明"无据"理由——两者必居其一，禁止默默丢面。
+- 对照下方注入的「当前属性值」所列全部维度过一遍：有据的不要漏，无据的不要硬凑。
+- 同一事件多次判定时，维度数量不得明显缩水；补充/重判时若撤销此前已给出的某维度，必须在「要素解析」中说明撤销依据。
+
 ## 量化锚点库（判定的事实基准，务必遵守）
 {anchors}
 
@@ -141,6 +146,7 @@ def build_judge_messages(
     today_events_context: str = "",
     event_source: str = "",
     clarify_history: list[str] | None = None,
+    previous_changes: list[dict] | None = None,
 ) -> list[dict[str, str]]:
     """构建判定消息。
 
@@ -156,6 +162,7 @@ def build_judge_messages(
     :param today_events_context: 当天已记录的事件摘要（事件去重：不重复加事实分）
     :param event_source: 记录模式（journal=自由日记 / form=结构化打卡），决定追问触发规则
     :param clarify_history: 此前各轮追问中用户的补充回答（按时间序，v1.4 问过即止依据）
+    :param previous_changes: 重判时首判/原判已识别的维度清单（v1.5 B2：重判不得无故丢维度）
     """
     system = JUDGE_SYSTEM_PROMPT.format(anchors=anchors_text)
     mode_text = {"journal": "自由日记", "form": "结构化打卡"}.get(event_source, "")
@@ -182,6 +189,13 @@ def build_judge_messages(
         user_lines.append(f"\n【当前属性值】{attribute_context}")
     if clarification:
         user_lines.append(f"\n【用户对追问的补充回答】{clarification}")
+    if previous_changes:
+        prev_text = "、".join(f"{c.get('name', '')}({c.get('delta', 0):+g})" for c in previous_changes)
+        user_lines.append(
+            f"\n【此前判定已识别的维度】{prev_text}\n"
+            "本次重判不得丢失上述已识别维度，除非你能在「要素解析」中给出明确依据说明撤销理由；"
+            "各维度的点数可依据新信息调整。"
+        )
     if clarify_history:
         user_lines.append(
             "\n【此前追问与用户回答】以下是之前各轮追问中用户已给出的回答（均为引导想起）：\n"

@@ -8,6 +8,7 @@
 """
 import json
 import re
+import time
 from typing import TYPE_CHECKING, Any
 
 from openai import OpenAI
@@ -100,9 +101,29 @@ class LLMService:
         """发起对话并解析为 JSON 对象。
 
         对模型输出做容错：先尝试整体 json.loads，失败则提取首个 {...} 块再解析。
+        v1.5 A5：空 content / JSON 解析失败 / 解析结果无有效字段时自动重试 1 次
+        （指数退避 ~1s），重试仍失败才抛 LLMError。重试幂等安全（重判均为就地更新）。
         """
-        raw = self.chat(messages, temperature=temperature, json_mode=True, config=config)
-        return self._parse_json(raw)
+        last_error: Exception | None = None
+        for attempt in range(2):
+            if attempt == 1:
+                time.sleep(1.0)  # 指数退避：第 1 次重试前等待 ~1s
+            raw = self.chat(messages, temperature=temperature, json_mode=True, config=config)
+            if not raw or not raw.strip():
+                last_error = LLMError("模型返回内容为空")
+                continue
+            try:
+                result = self._parse_json(raw)
+            except LLMError as exc:
+                last_error = exc
+                continue
+            if not isinstance(result, dict) or not result:
+                last_error = LLMError("模型返回 JSON 无有效字段")
+                continue
+            return result
+        raise LLMError(
+            "AI 服务偶发抖动，已自动重试仍失败，请稍后重试。" f"（{last_error}）"
+        )
 
     @staticmethod
     def _repair_curly_quotes(text: str) -> str:

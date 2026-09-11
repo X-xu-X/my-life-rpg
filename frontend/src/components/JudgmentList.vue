@@ -1,6 +1,7 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { api } from '../api'
+import { useDateGroups } from '../composables/useDateGroups'
 
 const judgments = ref([])
 const busy = ref(false)
@@ -8,11 +9,10 @@ const error = ref('')
 const actionTarget = ref(null) // 正在操作的判定 id
 const inputText = ref('')
 const actionError = ref({ id: null, msg: '' }) // v1.4：操作失败的就近错误提示（不再只显示在卡片顶部）
-const actionSuccess = ref({ id: null, msg: '' }) // v1.5 A2：成功轻提示（2 秒自动消失）
+const actionSuccess = ref({ id: null, msg: '' }) // v1.6 B1：保留式成功状态（不自动消失，下次操作/刷新清除）
 const disputeResult = ref({ id: null, conclusion: '', explanation: '' }) // v1.5 A2：反驳复核结论就地展示
 const myInputOpen = ref(null) // v1.5 A2：「我的补充/反驳」折叠区展开的判定 id
 const notice = ref('') // v1.5 A2：卡片顶部轻提示（删除/保存成功等，2 秒消失）
-let successTimer = null
 let noticeTimer = null
 const auditTarget = ref(null) // 正在查看审计的判定 id
 const auditLogs = ref([])
@@ -30,18 +30,13 @@ const filteredJudgments = computed(() => {
   )
 })
 
-// ============ v1.5 B1：按日期分组折叠（今天/昨天/本周更早/更早） ============
-const GROUP_KEY = 'gol_judgment_group_expand'
-const groupExpanded = ref(JSON.parse(localStorage.getItem(GROUP_KEY) || 'null') || { today: true }) // 默认只展开「今天」
-watch(groupExpanded, () => {
-  try { localStorage.setItem(GROUP_KEY, JSON.stringify(groupExpanded.value)) } catch (e) { /* 忽略 */ }
-}, { deep: true })
+// ============ v1.5 B1 / v1.6 B2：按日期分组折叠（公共逻辑已抽到 useDateGroups） ============
+const { groups: groupedJudgments, expanded: groupExpanded, toggleGroup } = useDateGroups(filteredJudgments, {
+  storageKey: 'gol_judgment_group_expand',
+})
 
 const expandedItems = ref(new Set()) // 展开详情的判定（内存态，刷新复位）
 
-function toggleGroup(key) {
-  groupExpanded.value[key] = !groupExpanded.value[key]
-}
 function groupIsOpen(key) {
   if (searchText.value.trim()) return true // 搜索命中时自动展开所在组
   return !!groupExpanded.value[key]
@@ -56,41 +51,6 @@ function itemIsOpen(id) {
   if (searchText.value.trim()) return true // 搜索命中直接展开详情
   return expandedItems.value.has(id)
 }
-
-const groupedJudgments = computed(() => {
-  const now = new Date()
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const startOfYesterday = new Date(startOfToday.getTime() - 86400000)
-  const monday = new Date(startOfToday)
-  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7)) // 本周一 0 点
-  const buckets = { today: [], yesterday: [], thisweek: [], earlier: [] }
-  for (const j of filteredJudgments.value) {
-    const d = new Date(j.created_at)
-    if (d >= startOfToday) buckets.today.push(j)
-    else if (d >= startOfYesterday) buckets.yesterday.push(j)
-    else if (d >= monday) buckets.thisweek.push(j)
-    else buckets.earlier.push(j)
-  }
-  const fmt = (d) => `${`${d.getMonth() + 1}`.padStart(2, '0')}-${`${d.getDate()}`.padStart(2, '0')}`
-  const meta = [
-    { key: 'today', label: '今天' },
-    { key: 'yesterday', label: '昨天' },
-    { key: 'thisweek', label: '本周更早' },
-    { key: 'earlier', label: '更早' },
-  ]
-  return meta
-    .map((m) => {
-      const items = buckets[m.key]
-      if (!items.length) return null
-      // 组头日期：今天/昨天显示当天日期；范围组显示首尾日期（items 按时间倒序）
-      const dateRange =
-        m.key === 'today' || m.key === 'yesterday'
-          ? fmt(new Date(items[0].created_at))
-          : `${fmt(new Date(items[items.length - 1].created_at))} ~ ${fmt(new Date(items[0].created_at))}`
-      return { ...m, items, dateRange }
-    })
-    .filter(Boolean)
-})
 
 const ACTION_LABEL = {
   create: '生成判定',
@@ -121,6 +81,7 @@ async function refreshAudit(id) {
 }
 
 async function toggleAudit(id) {
+  clearSuccess(id) // v1.6 B1：下一个操作清除保留式成功状态
   if (auditTarget.value === id) {
     auditTarget.value = null
     return
@@ -139,7 +100,7 @@ const STATUS_LABEL = {
 }
 
 async function confirm(id) {
-  await runAction(id, () => api.confirmJudgment(id), '确认入账成功')
+  await runAction(id, () => api.confirmJudgment(id), '已确认入账')
 }
 
 async function supplement(id) {
@@ -149,7 +110,7 @@ async function supplement(id) {
 
 async function dispute(id) {
   if (!inputText.value.trim()) return alert('请填写反驳理由')
-  const res = await runAction(id, () => api.disputeJudgment(id, inputText.value.trim()))
+  const res = await runAction(id, () => api.disputeJudgment(id, inputText.value.trim()), '已提交反驳复核')
   if (res) {
     // v1.5 A2：复核结论就地展示（替代阻塞式 alert）
     disputeResult.value = { id, conclusion: res.conclusion, explanation: res.explanation || '' }
@@ -157,7 +118,8 @@ async function dispute(id) {
 }
 
 // v1.1：删除事件（误提交兜底，含点数回滚）
-async function removeEvent(eventId, confirmed) {
+async function removeEvent(jid, eventId, confirmed) {
+  clearSuccess(jid) // v1.6 B1
   const ok = window.confirm(
     confirmed
       ? '该事件已确认入账，删除将回滚对应点数。确认删除？'
@@ -188,10 +150,16 @@ function flash(msg) {
   noticeTimer = setTimeout(() => (notice.value = ''), 2000)
 }
 
+function clearSuccess(id) {
+  // v1.6 B1：用户在同一条判定上做下一个操作时，清除保留式成功状态
+  if (actionSuccess.value.id === id) actionSuccess.value = { id: null, msg: '' }
+}
+
 async function runAction(id, fn, okMsg) {
   busy.value = true
   error.value = ''
   actionError.value = { id: null, msg: '' }
+  clearSuccess(id)
   try {
     const res = await fn()
     await load()
@@ -200,11 +168,9 @@ async function runAction(id, fn, okMsg) {
     // v1.4：仅成功路径收起输入框并清空（失败时保留用户已输入内容）
     actionTarget.value = null
     inputText.value = ''
-    // v1.5 A2：成功轻提示（真正使用 okMsg，2 秒自动消失）
+    // v1.6 B1：保留式成功状态——不自动消失，保留至用户在同一条判定上做下一个操作
     if (okMsg) {
       actionSuccess.value = { id, msg: okMsg }
-      clearTimeout(successTimer)
-      successTimer = setTimeout(() => (actionSuccess.value = { id: null, msg: '' }), 2000)
     }
     return res
   } catch (e) {
@@ -216,7 +182,8 @@ async function runAction(id, fn, okMsg) {
 }
 
 // 编辑事件：回填事件详情
-async function openEdit(eventId) {
+async function openEdit(jid, eventId) {
+  clearSuccess(jid) // v1.6 B1
   try {
     const ev = await api.getEvent(eventId)
     editForm.value = {
@@ -258,6 +225,7 @@ function openAction(id, mode) {
   if (actionTarget.value !== id) actionError.value = { id: null, msg: '' }
   // v1.5 A2：切换目标时收起上一条的复核结论
   if (actionTarget.value !== id && disputeResult.value.id !== id) disputeResult.value = { id: null, conclusion: '', explanation: '' }
+  clearSuccess(id) // v1.6 B1
   actionTarget.value = id
   inputText.value = ''
 }
@@ -349,22 +317,27 @@ onMounted(load)
         <div class="evidence">依据：{{ a.evidence }}</div>
       </div>
 
-      <!-- 操作区 -->
+      <!-- 操作区（v1.6 B1：成功状态整体替换主操作区，保留至下一次操作） -->
       <div class="row" style="margin-top: 10px; align-items: center">
-        <div v-if="j.status !== 'confirmed'" class="row" style="gap: 8px; flex: 1">
-          <button
-            class="btn small primary"
-            :disabled="busy || (j.confidence || 0) < 0.8"
-            @click="confirm(j.id)"
-          >确认入账</button>
-          <button class="btn small" :disabled="busy" @click="openAction(j.id, 'supplement')">补充信息</button>
-          <button class="btn small danger" :disabled="busy" @click="openAction(j.id, 'dispute')">反驳</button>
-        </div>
-        <span v-else class="muted" style="flex: 1">✓ 已入账</span>
-        <button class="btn small" :disabled="busy" @click="openEdit(j.event_id)">编辑</button>
+        <template v-if="actionSuccess.id === j.id">
+          <span class="muted" style="flex: 1; color: #2f855a; font-weight: 600; font-size: 14px">✓ {{ actionSuccess.msg }}</span>
+        </template>
+        <template v-else>
+          <div v-if="j.status !== 'confirmed'" class="row" style="gap: 8px; flex: 1">
+            <button
+              class="btn small primary"
+              :disabled="busy || (j.confidence || 0) < 0.8"
+              @click="confirm(j.id)"
+            >确认入账</button>
+            <button class="btn small" :disabled="busy" @click="openAction(j.id, 'supplement')">补充信息</button>
+            <button class="btn small danger" :disabled="busy" @click="openAction(j.id, 'dispute')">反驳</button>
+          </div>
+          <span v-else class="muted" style="flex: 1">✓ 已入账</span>
+        </template>
+        <button class="btn small" :disabled="busy" @click="openEdit(j.id, j.event_id)">编辑</button>
         <button class="btn small" :disabled="busy" @click="toggleAudit(j.id)">审计</button>
         <!-- v1.1：误提交兜底，任何状态都可删除事件 -->
-        <button class="btn small danger" :disabled="busy" @click="removeEvent(j.event_id, j.status === 'confirmed')">
+        <button class="btn small danger" :disabled="busy" @click="removeEvent(j.id, j.event_id, j.status === 'confirmed')">
           删除事件
         </button>
       </div>
@@ -375,13 +348,6 @@ onMounted(load)
         class="muted"
         style="color: #d33; font-size: 12px; margin-top: 6px"
       >⚠️ {{ actionError.msg }}</p>
-
-      <!-- v1.5 A2：成功轻提示（2 秒消失） -->
-      <p
-        v-if="actionSuccess.id === j.id"
-        class="muted"
-        style="color: #2f855a; font-size: 12px; margin-top: 6px"
-      >✓ {{ actionSuccess.msg }}</p>
 
       <!-- v1.5 A2：反驳复核结论就地展示（替代 alert） -->
       <div

@@ -142,6 +142,8 @@ class AIJudgment(Base):
     confidence: Mapped[float] = mapped_column(Float, default=0.0)  # 置信度 0~1
     # 置信度说明（v1.4）：confidence < 0.95 时 AI 必填——哪里不确定/缺什么信息/建议补充什么
     confidence_reason: Mapped[str] = mapped_column(Text, default="")
+    # 本次修订说明（v1.6）：重判时逐条说明改了什么（新增/撤销/调整），无修订为 []
+    revision_notes: Mapped[list] = mapped_column(JSON, default=list)
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending/confirmed/adjusted/rejected
     # 最终生效的增减（反驳/补充后可能调整），确认入账时写入
     final_changes: Mapped[list] = mapped_column(JSON, default=list)

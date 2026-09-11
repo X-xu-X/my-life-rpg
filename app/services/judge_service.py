@@ -211,6 +211,24 @@ def _parse_changes(raw_changes: list[dict]) -> list[dict]:
     return cleaned
 
 
+def _parse_revision_notes(raw) -> list[str]:
+    """规范化 AI 返回的 revision_notes（字符串数组，v1.6）。"""
+    if not isinstance(raw, list):
+        return []
+    return [str(x).strip() for x in raw if str(x).strip()]
+
+
+def _prior_snapshot(judgment: AIJudgment) -> dict:
+    """基准判定快照（v1.6 增量修订契约：重判时注入，要求相干维度逐字保留）。"""
+    return {
+        "affected_attributes": judgment.suggested_changes or [],
+        "analysis": judgment.analysis or [],
+        "summary": judgment.summary or "",
+        "confidence": judgment.confidence,
+        "confidence_reason": judgment.confidence_reason or "",
+    }
+
+
 # ============ 判定 ============
 
 def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgment:
@@ -270,7 +288,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
         attribute_context=_attribute_context(db, user.id),
         clarification=clarification,
         clarify_history=clarify_history,
-        previous_changes=(current.suggested_changes if current is not None else None),  # v1.5 B2：重判不丢维度
+        prior_judgment=(_prior_snapshot(current) if current is not None else None),  # v1.6：增量修订基准
         recent_events_context=_recent_events_context(db, user.id, event.id),
         memory_context=memory_text,
         disabled_attributes=sorted(disabled),
@@ -304,6 +322,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
         current.summary = summary
         current.confidence = float(result.get("confidence", 0.0))
         current.confidence_reason = str(result.get("confidence_reason", ""))
+        current.revision_notes = _parse_revision_notes(result.get("revision_notes"))  # v1.6：本次修订说明
         current.status = "adjusted"
         judgment = current
         db.flush()
@@ -317,6 +336,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
                 "suggested_changes": changes,
                 "analysis": judgment.analysis,
                 "summary": summary,
+                "revision_notes": judgment.revision_notes,
                 "clarification": clarification.strip(),  # v1.5 A4：完整回答入审计，供「我的补充」展示
             },
         )
@@ -329,6 +349,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
             summary=summary,
             confidence=float(result.get("confidence", 0.0)),
             confidence_reason=str(result.get("confidence_reason", "")),  # v1.4：置信度说明
+            revision_notes=[],  # v1.6：首判无修订
             status="pending",
             final_changes=[],
         )
@@ -456,7 +477,7 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
         recent_count=_recent_same_category_count(db, user.id, event),
         attribute_context=_attribute_context(db, user.id),
         clarify_history=clarify_history,
-        previous_changes=judgment.suggested_changes,  # v1.5 B2：重判不丢维度
+        prior_judgment=_prior_snapshot(judgment),  # v1.6：增量修订基准（注入后只改受影响维度）
         event_source=event.source,
     )
     # v1.4：按用户解析判定模型配置（BYOK）
@@ -472,11 +493,16 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
     judgment.summary = summary
     judgment.confidence = float(result.get("confidence", 0.0))
     judgment.confidence_reason = str(result.get("confidence_reason", ""))  # v1.4：补充重判后同步更新
+    judgment.revision_notes = _parse_revision_notes(result.get("revision_notes"))  # v1.6：本次修订说明
     judgment.status = "adjusted"
     _log(
         db, judgment.id, user.id, "rejudge",
         detail="补充信息后重新判定",
-        payload={"suggested_changes": changes, "analysis": judgment.analysis},
+        payload={
+            "suggested_changes": changes,
+            "analysis": judgment.analysis,
+            "revision_notes": judgment.revision_notes,
+        },
     )
     db.commit()
     db.refresh(judgment)
@@ -500,6 +526,7 @@ def dispute(db: Session, judgment: AIJudgment, detail: str) -> dict:
         event_description=format_event_description(event),
         original_judgment={
             "affected_attributes": judgment.suggested_changes,
+            "analysis": judgment.analysis or [],  # v1.6：完整基准（增量修订底稿）
             "summary": judgment.summary,
             "confidence": judgment.confidence,
             "confidence_reason": judgment.confidence_reason or "",  # v1.4：让复核 AI 知道原判的不确定点
@@ -510,15 +537,23 @@ def dispute(db: Session, judgment: AIJudgment, detail: str) -> dict:
     config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_JUDGE)
     result = llm_service.chat_json(messages, config=config)
     conclusion = str(result.get("conclusion", "maintain"))
+    notes = _parse_revision_notes(result.get("revision_notes"))  # v1.6：本次修订说明
+    explanation = str(result.get("explanation", ""))
 
     if conclusion == "adjust":
         changes = _parse_changes(result.get("affected_attributes", []))
         if changes:  # 仅在模型给出有效调整结果时覆盖
             judgment.suggested_changes = changes
-            judgment.summary = str(result.get("explanation", "")) or judgment.summary
+            judgment.summary = explanation or judgment.summary
+            judgment.revision_notes = notes  # v1.6
             judgment.status = "adjusted"
         else:
             conclusion = "maintain"  # 无有效调整，保守维持原判
+    if conclusion == "maintain":
+        # v1.6：维持原判时也用修订说明承载"维持原判的理由"
+        judgment.revision_notes = notes or ([f"维持原判：{explanation}"] if explanation else [])
+
+    if conclusion == "adjust":
         _log(
             db, judgment.id, user.id, "rejudge",
             detail=f"复核结论：{conclusion}",

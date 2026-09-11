@@ -317,6 +317,12 @@ onMounted(load)
               💡 {{ j.confidence_reason }}
             </div>
 
+            <!-- v1.6：本次修订说明（重判改变了什么，无修订不显示） -->
+            <div v-if="j.revision_notes && j.revision_notes.length" class="muted" style="font-size: 12px; margin-bottom: 6px; color: #2b6cb0">
+              <span class="tag">本次修订</span>
+              <div v-for="(n, i) in j.revision_notes" :key="i" style="margin-top: 2px">{{ n }}</div>
+            </div>
+
             <!-- v1.5 A2：最近一次用户提交的补充/反驳（数据源=审计日志，默认收起） -->
             <div v-if="j.last_user_input" class="muted" style="font-size: 12px; margin-bottom: 6px">
               <span style="cursor: pointer; user-select: none" @click="toggleMyInput(j.id)">

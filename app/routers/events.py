@@ -134,6 +134,7 @@ def judge(event_id: int, body: JudgeIn, db: Session = Depends(get_db)):
         "summary": judgment.summary,
         "confidence": judgment.confidence,
         "confidence_reason": judgment.confidence_reason or "",  # v1.4：置信度说明
+        "revision_notes": judgment.revision_notes or [],  # v1.6：本次修订说明
     }
 
 

@@ -112,6 +112,17 @@ JUDGE_SYSTEM_PROMPT = """你是「游戏人生」的成长引导者——加点�
 - 引导想起的内容正常判定，不额外加权。
 - **客观底线**：倾斜只能是"适度微调"，必须在「加权推导」中说明倾斜理由；禁止仅为迎合用户而夸大主动内容的加分（科学客观是底线）。
 
+## 重判增量修订契约（仅当消息中提供【此前判定（基准）】时适用，务必严格遵守）
+- 提供了【此前判定（基准）】即说明这是**重判**：你的任务是**增量修订**，不是重新生成。
+- **默认锁定**：与用户本次补充/反驳内容**不相干**的维度——delta、reason、evidence 必须**逐字保留**基准原文，不得改写措辞、不得调整数值。
+- **可修订的两种情况**：
+  1. **相关**：补充/反驳内容直接涉及的维度（如补充"还拉伸了 10 分钟"→ 体能），可修订数值、理由与依据；
+  2. **被推翻**：补充内容推翻了原判依据的维度（如原判"熬夜到 2 点 → 健康 -0.5"，补充说明"其实 23 点就睡了"），允许**撤销**该维度——撤销 = 从 affected_attributes 中移除，并在 revision_notes 写明撤销原因。
+- **允许新增**：补充内容新识别出的生活面 → 新增维度（如原判漏了运动，补充后新增体能）。
+- **analysis 结构保持**：仍为三段（要素解析 / 锚点比对 / 加权推导），以基准文字为底稿，**只更新受影响的部分**并在末尾追加一句本次修订说明；禁止整体重写措辞。
+- **summary / confidence / confidence_reason**：按修订后的判定情况更新；confidence_reason 只保留仍未解决的不确定点（已被补充解决的点删除）。
+- **revision_notes**：逐条说明本次改了什么（如"新增：体能 +1（补充信息提到拉伸 10 分钟）"）；无任何修订则为空数组 []。
+
 ## 输出格式（严格 JSON，不要输出任何其他文字；输出必须是合法 JSON——JSON 的定界符必须用半角双引号 "，严禁用中文全角引号（“”）充当定界符，字符串内不得有未转义的换行/引号）
 {{
   "analysis": ["要素解析：...", "锚点比对：...", "加权推导：..."],
@@ -121,6 +132,7 @@ JUDGE_SYSTEM_PROMPT = """你是「游戏人生」的成长引导者——加点�
   "summary": "一句话总结",
   "confidence": 0.0,
   "confidence_reason": "",
+  "revision_notes": [],
   "realistic": true,
   "realistic_reason": "",
   "needs_clarify": false,
@@ -130,6 +142,8 @@ JUDGE_SYSTEM_PROMPT = """你是「游戏人生」的成长引导者——加点�
 needs_clarify 语义：是否需要向用户追问（true=先追问，questions 给 1~3 个问题；false=直接判定）。判定规则：日记模式（journal）默认 true——逐生活面核对后仍有未提及/含糊的核心面 → true（各核心面均已清晰覆盖，才可为 false，须在要素解析中说明"逐面核对均已覆盖"）；结构化打卡（form）恒为 false；带【用户对追问的补充回答】重判时，逐面核对后仍有未问过且未覆盖的核心面可继续为 true。
 
 confidence_reason 语义：置信度说明（每次判定都尽量给出）。confidence < 0.95 时**必填**——说明哪里不确定：缺什么信息 / 哪项增减把握不足 / 建议用户补充什么细节（1~2 句，要能直接指导用户下一步「补充信息」或「反驳」）；confidence ≥ 0.95 时可为空字符串。不得用"信息基本充足"这类空话搪塞，要具体到面与细节。
+
+revision_notes 语义（v1.6）：本次修订说明数组。首判（无基准）恒为 []；重判时逐条列出改动（新增/撤销/调整了哪个维度及原因），无改动则 []。该字段用于前端「本次修订」标签展示，请写得简短可直接展示（每条一句话）。
 """
 
 
@@ -146,7 +160,7 @@ def build_judge_messages(
     today_events_context: str = "",
     event_source: str = "",
     clarify_history: list[str] | None = None,
-    previous_changes: list[dict] | None = None,
+    prior_judgment: dict | None = None,
 ) -> list[dict[str, str]]:
     """构建判定消息。
 
@@ -162,7 +176,7 @@ def build_judge_messages(
     :param today_events_context: 当天已记录的事件摘要（事件去重：不重复加事实分）
     :param event_source: 记录模式（journal=自由日记 / form=结构化打卡），决定追问触发规则
     :param clarify_history: 此前各轮追问中用户的补充回答（按时间序，v1.4 问过即止依据）
-    :param previous_changes: 重判时首判/原判已识别的维度清单（v1.5 B2：重判不得无故丢维度）
+    :param prior_judgment: 重判时的基准判定（v1.6：增量修订契约——不相干维度逐字保留）
     """
     system = JUDGE_SYSTEM_PROMPT.format(anchors=anchors_text)
     mode_text = {"journal": "自由日记", "form": "结构化打卡"}.get(event_source, "")
@@ -189,12 +203,14 @@ def build_judge_messages(
         user_lines.append(f"\n【当前属性值】{attribute_context}")
     if clarification:
         user_lines.append(f"\n【用户对追问的补充回答】{clarification}")
-    if previous_changes:
-        prev_text = "、".join(f"{c.get('name', '')}({c.get('delta', 0):+g})" for c in previous_changes)
+    if prior_judgment:
+        import json as _json
+
         user_lines.append(
-            f"\n【此前判定已识别的维度】{prev_text}\n"
-            "本次重判不得丢失上述已识别维度，除非你能在「要素解析」中给出明确依据说明撤销理由；"
-            "各维度的点数可依据新信息调整。"
+            "\n【此前判定（基准）】这是本事件上一次的判定结果，本次为**重判**：\n"
+            + _json.dumps(prior_judgment, ensure_ascii=False, indent=2)
+            + "\n请遵守「重判增量修订契约」：与本次补充/反驳不相干的维度必须逐字保留（delta/reason/evidence），"
+            "只修订受影响的维度；撤销维度须在 revision_notes 说明原因；analysis 以基准文字为底稿只改受影响部分。"
         )
     if clarify_history:
         user_lines.append(

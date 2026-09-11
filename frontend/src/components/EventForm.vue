@@ -326,6 +326,11 @@ function clearResult() {
         <p class="muted">置信度 {{ (result.confidence * 100).toFixed(0) }}%</p>
         <!-- v1.4：置信度说明 -->
         <p v-if="result.confidence_reason" class="muted" style="font-size: 12px; color: #b7791f">💡 {{ result.confidence_reason }}</p>
+        <!-- v1.6：本次修订说明（重判改变了什么） -->
+        <div v-if="result.revision_notes && result.revision_notes.length" class="muted" style="font-size: 12px; color: #2b6cb0">
+          <span class="tag">本次修订</span>
+          <div v-for="(n, i) in result.revision_notes" :key="i" style="margin-top: 2px">{{ n }}</div>
+        </div>
         <!-- AI 分析过程 -->
         <div v-if="result.analysis && result.analysis.length" class="analysis-box">
           <div class="analysis-title">🤖 AI 分析过程</div>

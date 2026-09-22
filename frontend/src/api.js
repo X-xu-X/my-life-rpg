@@ -49,6 +49,20 @@ export const api = {
   deleteEvent: (eventId) => request(`/events/${eventId}`, { method: 'DELETE' }),
   getHeatmap: () => request('/events/heatmap'),
 
+  // 打卡项目（v1.7）
+  listItems: (params = {}) => {
+    const qs = new URLSearchParams()
+    if (params.enabled !== undefined) qs.set('enabled', params.enabled)
+    if (params.nature) qs.set('nature', params.nature)
+    const q = qs.toString()
+    return request(q ? `/items?${q}` : '/items')
+  },
+  getItemsStats: () => request('/items/stats'),
+  createItem: (payload) => request('/items', { method: 'POST', body: JSON.stringify(payload) }),
+  updateItem: (id, payload) => request(`/items/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  toggleItem: (id) => request(`/items/${id}/toggle`, { method: 'POST' }),
+  disableItem: (id) => request(`/items/${id}`, { method: 'DELETE' }),
+
   // 判定
   listJudgments: () => request('/judgments'),
   getJudgment: (id) => request(`/judgments/${id}`),

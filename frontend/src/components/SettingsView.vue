@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../api'
+import ItemManager from './ItemManager.vue'
 
 const settings = ref(null)
 const error = ref('')
@@ -346,6 +347,9 @@ onMounted(() => {
 
       <p v-if="llmHint" class="muted" style="color: #2a7f3e; font-size: 12px; margin-top: 6px">✓ {{ llmHint }}</p>
     </div>
+
+    <!-- v1.7 B2：打卡项目管理（最贴近日常使用的配置，放在属性开关之后、导出之前） -->
+    <ItemManager />
 
     <div class="card">
       <h3>数据导出（个人数据主权）</h3>

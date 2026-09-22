@@ -4,6 +4,7 @@ import { api } from './api'
 import Onboarding from './components/Onboarding.vue'
 import AttributePanel from './components/AttributePanel.vue'
 import EventForm from './components/EventForm.vue'
+import TodayCheckin from './components/TodayCheckin.vue'
 import TimelineView from './components/TimelineView.vue'
 import JournalView from './components/JournalView.vue'
 import JudgmentList from './components/JudgmentList.vue'
@@ -13,6 +14,7 @@ import SettingsView from './components/SettingsView.vue'
 
 const tabs = [
   { key: 'panel', label: '属性面板' },
+  { key: 'today', label: '今日盘点' },
   { key: 'event', label: '记录事件' },
   { key: 'timeline', label: '手账本' },
   { key: 'judgments', label: '判定中心' },
@@ -98,7 +100,12 @@ onMounted(() => {
 
   <Onboarding v-if="activeTab === 'onboarding'" @created="onProfileCreated" />
   <AttributePanel v-else-if="activeTab === 'panel'" />
-  <EventForm v-else-if="activeTab === 'event'" @go-judgments="activeTab = 'judgments'" />
+  <TodayCheckin v-else-if="activeTab === 'today'" @go-judgments="activeTab = 'judgments'" />
+  <EventForm
+    v-else-if="activeTab === 'event'"
+    @go-judgments="activeTab = 'judgments'"
+    @go-items="activeTab = 'settings'"
+  />
   <TimelineView v-else-if="activeTab === 'timeline'" />
   <JudgmentList v-else-if="activeTab === 'judgments'" />
   <GoalsView v-else-if="activeTab === 'goals'" />

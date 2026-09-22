@@ -15,6 +15,7 @@ AI 驱动的个人成长游戏化系统 —— 记录生活事件，AI 依据科
 - [x] M1：事件录入 + AI 判定闭环 + 属性面板 + Onboarding 问卷（MVP）
 - [x] M2：自由日记、目标系统结算、判定审计页、成长曲线
 - [x] M3：游戏化模块开关、月度热力图、数据导出
+- [x] M3+：打卡项目体系（自定义打卡项目 / 内容化录入 / 跨来源合并 / 今日盘点 / 目标进度展示，v1.7）
 - [ ] M4：上云部署 + 多用户
 - [ ] M5：APP（PWA）
 
@@ -45,11 +46,12 @@ app/
   main.py                 # FastAPI 入口（启动自动建表 + 写入内置锚点 + 默认用户）
   config.py               # 配置（模型名/base_url/密钥均从 .env 读取，可插拔）
   database.py             # SQLAlchemy 引擎与会话
-  models/                 # 10 张核心表 ORM 定义
+  models/                 # 11 张核心表 ORM 定义（v1.7 新增 checkin_items）
   schemas/                # Pydantic 请求/响应模型
   services/
     llm_service.py        # LLM 统一调用（唯一 LLM 出口，可插拔）
     judge_service.py      # AI 判定闭环（确认/补充/反驳 + 审计）
+    item_service.py       # 打卡项目周期统计与目标进度（v1.7）
     anchor_service.py     # 量化锚点库（内置基准 + 校准）
     onboarding_service.py # Onboarding 问卷流
     user_service.py       # V1 单用户

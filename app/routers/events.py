@@ -6,7 +6,7 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import AIJudgment, Event
+from app.models import AIJudgment, CheckinItem, Event
 from app.schemas import EventCreate, EventOut, EventUpdate, JudgeIn
 from app import prompts
 from app.services import judge_service, llm_config
@@ -19,9 +19,14 @@ router = APIRouter()
 
 @router.post("/events", response_model=EventOut)
 def create_event(body: EventCreate, db: Session = Depends(get_db)):
-    """录入事件。source=form 走结构化参数，source=journal 走日记原文（AI 提取要素）。
+    """录入事件。source=form 走打卡项目，source=journal 走日记原文（AI 提取要素）。
 
     is_pure=True 时为「纯享记录」：跳过 AI 要素提取与判定，仅保留原始记录。
+
+    v1.7 录入改造（决策 3）：打卡通道不再要求 event_type——
+    - 传了 item_id → 从打卡项目**派生** category / event_type / title；
+    - 未传 item_id（纯自由记一笔）→ event_type="positive"、category 取传入值或"其他"。
+    向后兼容：老前端直接传 event_type 时，仍以传入值为准。
     """
     user = get_or_create_default_user(db)
 
@@ -29,6 +34,21 @@ def create_event(body: EventCreate, db: Session = Depends(get_db)):
     category = body.category
     title = body.title
     params = body.params
+    item_id = body.item_id
+
+    # v1.7：打卡项目校验 + 派生（传了 item_id 就以其为准）
+    item = None
+    if item_id is not None:
+        item = db.get(CheckinItem, item_id)
+        if item is None or item.user_id != user.id:
+            raise HTTPException(status_code=404, detail="打卡项目不存在")
+        # 从项目派生：类别取项目生活面；负面项目映射为 negative，其余 positive
+        category = item.category or category or "其他"
+        event_type = "negative" if item.nature == "negative" else "positive"
+        # 标题取正文首行（≤40 字），无正文则用项目名
+        first_line = (body.content or "").strip().splitlines()
+        derived = first_line[0].strip() if first_line else ""
+        title = (derived[:40] if derived else item.name) or item.name
 
     # 自由日记：AI 从原文提取结构化要素（纯享记录跳过提取）
     if not body.is_pure and body.source == "journal" and body.content:
@@ -43,17 +63,20 @@ def create_event(body: EventCreate, db: Session = Depends(get_db)):
         title = result.get("title") or body.title or "自由日记"
         params = result.get("params") or {}
 
+    # 兜底：v1.7 起打卡通道不再强制事件类型（决策 3），缺省按正面事件处理
+    if not event_type:
+        event_type = "positive"
+    if not category:
+        category = "其他"
+    # 标题兜底：无项目、无标题时取正文首行（≤40 字），保证列表可读
+    if not title and body.content:
+        first_line = body.content.strip().splitlines()
+        title = (first_line[0].strip()[:40] if first_line else "") or ""
+
     # 纯享记录：直接以正文为内容，类型用默认值，不强制分类
     if body.is_pure:
-        event_type = event_type or "positive"
         title = title or "纯享记录"
         category = category or "生活"
-
-    # 兜底：结构化打卡未指定类型时报错；日记提取失败给默认值
-    if not event_type:
-        if body.source == "form":
-            raise HTTPException(status_code=400, detail="结构化打卡必须指定事件类型")
-        event_type = "positive"
 
     event = Event(
         user_id=user.id,
@@ -63,8 +86,9 @@ def create_event(body: EventCreate, db: Session = Depends(get_db)):
         title=title,
         params=params,
         content=body.content,
+        item_id=item_id,  # v1.7：所属打卡项目（可空）
         is_pure=body.is_pure,
-        occurred_at=body.occurred_at,
+        occurred_at=body.occurred_at or datetime.now(),
     )
     db.add(event)
     db.commit()
@@ -135,6 +159,7 @@ def judge(event_id: int, body: JudgeIn, db: Session = Depends(get_db)):
         "confidence": judgment.confidence,
         "confidence_reason": judgment.confidence_reason or "",  # v1.4：置信度说明
         "revision_notes": judgment.revision_notes or [],  # v1.6：本次修订说明
+        "merged_with": judgment.merged_with or [],  # v1.7：跨来源合并明细
     }
 
 

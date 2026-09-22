@@ -18,8 +18,8 @@ from sqlalchemy.orm import Session
 
 from app import prompts
 from app.constants import ATTRIBUTE_ALIASES
-from app.models import AIJudgment, Attribute, AttributeHistory, Event, JudgmentLog, Setting
-from app.services import llm_config, memory_service
+from app.models import AIJudgment, Attribute, AttributeHistory, CheckinItem, Event, JudgmentLog, Setting
+from app.services import item_service, llm_config, memory_service
 from app.services.anchor_service import format_anchors_text
 from app.services.llm_service import LLMError, llm_service
 from app.services.user_service import get_or_create_default_user
@@ -96,6 +96,37 @@ def _recent_events_context(db: Session, user_id: int, exclude_event_id: int, day
     return "；".join(parts)
 
 
+def _recent_24h_context(db: Session, user_id: int, exclude_event_id: int, limit: int = 10) -> str:
+    """近 24 小时记录（v1.7 跨来源合并专用）。
+
+    与 `_recent_events_context`（近 7 天，用于"理解连续状态"）区分：本块**仅用于判断
+    本条是否与已记录的某件事是同一件事**，不得当作"要一起判定的内容"给分——
+    注入文本里会明确标注这一用途，避免 AI 误用。
+    """
+    cutoff = datetime.now() - timedelta(hours=24)
+    events = (
+        db.query(Event)
+        .filter(
+            Event.user_id == user_id,
+            Event.created_at >= cutoff,
+            Event.id != exclude_event_id,
+            Event.is_pure.is_(False),
+        )
+        .order_by(Event.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    if not events:
+        return ""
+    parts = []
+    for e in events:
+        text = (e.content or e.title or "").strip()
+        if len(text) > 60:
+            text = text[:60] + "…"
+        parts.append(f"{e.created_at.strftime('%m-%d %H:%M')} {e.category}：{text}")
+    return "；".join(parts)
+
+
 def _get_disabled_attributes(db: Session, user_id: int) -> set[str]:
     """读取用户关闭判定的维度（AI 不分析不加点）。"""
     row = db.query(Setting).filter(Setting.user_id == user_id, Setting.key == "disabled_attributes").first()
@@ -135,20 +166,65 @@ class ClarifyNeededError(Exception):
         super().__init__("事件信息不足，需要追问补充")
 
 
-def format_event_description(event: Event) -> str:
-    """将事件转成可读文本，供 AI 判定。form 通道格式参数，journal 通道用原文。"""
+def item_context_text(db: Session, event: Event) -> str:
+    """v1.7：打卡项目上下文块（供判定 prompt 理解本条记录的"项目身份"）。
+
+    item_id 为 NULL（全部老数据、纯自由记录）时返回空串——整块不输出（兼容红线）。
+    """
+    item_id = getattr(event, "item_id", None)
+    if not item_id:
+        return ""
+    item = db.get(CheckinItem, item_id)
+    if item is None:
+        return ""  # 项目已被物理删除（理论不会，删=停用）——保守跳过
+    nature_label = {"planned": "规划内", "optional": "可选", "negative": "负面", "other": "其他"}.get(
+        item.nature, item.nature
+    )
+    freq_label = {"daily": "每天", "weekly": f"每周 {item.frequency_target} 次", "none": "不限频率"}.get(
+        item.frequency_type, "不限频率"
+    )
+    parts = [nature_label, freq_label]
+    if item.category:
+        parts.append(item.category)
+    lines = [f"打卡项目：{item.name}（{' · '.join(parts)}）"]
+    # 频率进度：本周/今日已完成几次（供 optional 判断"规划内是否已完成"、planned 判断是否达标）
+    if item.frequency_type in ("daily", "weekly"):
+        done = item_service.count_in_period(db, event.user_id, item)
+        target = item_service.item_target(item)
+        period = "今天" if item.frequency_type == "daily" else "本周"
+        if target:
+            lines.append(f"项目频率：{period}已完成 {done}/{target} 次")
+        else:
+            lines.append(f"项目频率：{period}已完成 {done} 次")
+    if item.related_attribute:
+        lines.append(f"主要影响维度：{item.related_attribute}")
+    return "\n".join(lines)
+
+
+def format_event_description(event: Event, item_context: str = "") -> str:
+    """将事件转成可读文本，供 AI 判定。form 通道用正文 + 数字键值对，journal 通道用原文。
+
+    v1.7：新增打卡项目上下文块（item_context 非空时插在"事件类型"之后）；
+    老数据 item_id 为 NULL → item_context 为空 → 整块不出现（兼容全部老数据）。
+    """
     lines = [f"事件类型：{event.event_type}"]
+    if item_context:
+        lines.append(item_context)
     if event.category:
         lines.append(f"类别：{event.category}")
     if event.title:
         lines.append(f"简述：{event.title}")
     if event.source == "journal" and event.content:
         lines.append(f"日记原文：{event.content}")
-    elif event.params:
-        # 结构化参数转可读文本（跳过 "_" 开头的内部键，如 _clarify_history）
-        for k, v in event.params.items():
-            if v is not None and v != "" and not k.startswith("_"):
-                lines.append(f"{k}：{v}")
+    else:
+        # v1.7：打卡正文（用户手写的正文，与 params 并存）
+        if event.content:
+            lines.append(f"记录正文：{event.content}")
+        if event.params:
+            # 结构化参数转可读文本（跳过 "_" 开头的内部键，如 _clarify_history）
+            for k, v in event.params.items():
+                if v is not None and v != "" and not k.startswith("_"):
+                    lines.append(f"{k}：{v}")
     return "\n".join(lines)
 
 
@@ -218,6 +294,25 @@ def _parse_revision_notes(raw) -> list[str]:
     return [str(x).strip() for x in raw if str(x).strip()]
 
 
+def _parse_merged_with(raw) -> list[dict]:
+    """规范化 AI 返回的 merged_with（v1.7 跨来源合并明细）。
+
+    期望 [{ref, note}]；容错处理模型可能的字符串数组（降级为 {ref, note:""}）。
+    """
+    if not isinstance(raw, list):
+        return []
+    out: list[dict] = []
+    for item in raw:
+        if isinstance(item, dict):
+            ref = str(item.get("ref", "")).strip()
+            note = str(item.get("note", "")).strip()
+            if ref or note:
+                out.append({"ref": ref, "note": note})
+        elif isinstance(item, str) and item.strip():
+            out.append({"ref": item.strip(), "note": ""})
+    return out
+
+
 def _prior_snapshot(judgment: AIJudgment) -> dict:
     """基准判定快照（v1.6 增量修订契约：重判时注入，要求相干维度逐字保留）。"""
     return {
@@ -282,7 +377,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
         db.flush()  # 立即持久化，下一轮追问可见
     messages = prompts.build_judge_messages(
         anchors_text=anchors_text,
-        event_description=format_event_description(event),
+        event_description=format_event_description(event, item_context_text(db, event)),
         profile_context=_profile_context(db, user.id),
         recent_count=_recent_same_category_count(db, user.id, event),
         attribute_context=_attribute_context(db, user.id),
@@ -293,6 +388,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
         memory_context=memory_text,
         disabled_attributes=sorted(disabled),
         today_events_context=_today_events_context(db, user.id, event.id),
+        recent_24h_context=_recent_24h_context(db, user.id, event.id),  # v1.7：合并判断专用
         event_source=event.source,
     )
     # v1.4：按用户解析判定模型配置（BYOK；降级用辅助模型时 quality_note 非空）
@@ -315,6 +411,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
     if config.quality_note:
         # v1.4：判定经降级路径（辅助模型）时，summary 末尾附质量标注（前端显示小标签）
         summary = (summary + "\n" + config.quality_note).strip()
+    merged_with = _parse_merged_with(result.get("merged_with"))  # v1.7：跨来源合并明细
     if current is not None:
         # v1.5 A1：就地更新现行判定（id 不变，审计追加 rejudge）
         current.suggested_changes = changes
@@ -323,6 +420,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
         current.confidence = float(result.get("confidence", 0.0))
         current.confidence_reason = str(result.get("confidence_reason", ""))
         current.revision_notes = _parse_revision_notes(result.get("revision_notes"))  # v1.6：本次修订说明
+        current.merged_with = merged_with  # v1.7
         current.status = "adjusted"
         judgment = current
         db.flush()
@@ -337,6 +435,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
                 "analysis": judgment.analysis,
                 "summary": summary,
                 "revision_notes": judgment.revision_notes,
+                "merged_with": merged_with,  # v1.7
                 "clarification": clarification.strip(),  # v1.5 A4：完整回答入审计，供「我的补充」展示
             },
         )
@@ -350,6 +449,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
             confidence=float(result.get("confidence", 0.0)),
             confidence_reason=str(result.get("confidence_reason", "")),  # v1.4：置信度说明
             revision_notes=[],  # v1.6：首判无修订
+            merged_with=merged_with,  # v1.7：跨来源合并明细
             status="pending",
             final_changes=[],
         )
@@ -358,7 +458,12 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
         _log(
             db, judgment.id, user.id, "create",
             detail="AI 判定生成",
-            payload={"suggested_changes": changes, "analysis": judgment.analysis, "summary": judgment.summary},
+            payload={
+                "suggested_changes": changes,
+                "analysis": judgment.analysis,
+                "summary": judgment.summary,
+                "merged_with": merged_with,  # v1.7
+            },
         )
     db.commit()
     db.refresh(judgment)
@@ -465,8 +570,9 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
 
     event = db.get(Event, judgment.event_id)
     anchors_text = format_anchors_text(db)
-    # 在原事件描述上附加补充信息
-    extra_desc = format_event_description(event) + f"\n\n【用户补充信息】\n{detail}"
+    # 在原事件描述上附加补充信息（v1.7：同样带打卡项目上下文）
+    item_ctx = item_context_text(db, event)
+    extra_desc = format_event_description(event, item_ctx) + f"\n\n【用户补充信息】\n{detail}"
     # v1.5 A4 修复：补充重判同样注入追问历史，避免 AI"失忆"——
     # 把此前追问中已回答的面当未提及，维度漂移、置信度虚低（实测 0.9→0.72 被拦截）
     clarify_history = list((event.params or {}).get("_clarify_history") or [])
@@ -479,6 +585,7 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
         clarify_history=clarify_history,
         prior_judgment=_prior_snapshot(judgment),  # v1.6：增量修订基准（注入后只改受影响维度）
         event_source=event.source,
+        today_events_context=_today_events_context(db, user.id, event.id),  # v1.7：合并判断依据
     )
     # v1.4：按用户解析判定模型配置（BYOK）
     config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_JUDGE)
@@ -494,6 +601,7 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
     judgment.confidence = float(result.get("confidence", 0.0))
     judgment.confidence_reason = str(result.get("confidence_reason", ""))  # v1.4：补充重判后同步更新
     judgment.revision_notes = _parse_revision_notes(result.get("revision_notes"))  # v1.6：本次修订说明
+    judgment.merged_with = _parse_merged_with(result.get("merged_with"))  # v1.7：跨来源合并明细
     judgment.status = "adjusted"
     _log(
         db, judgment.id, user.id, "rejudge",
@@ -502,6 +610,7 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
             "suggested_changes": changes,
             "analysis": judgment.analysis,
             "revision_notes": judgment.revision_notes,
+            "merged_with": judgment.merged_with,  # v1.7
         },
     )
     db.commit()
@@ -523,7 +632,7 @@ def dispute(db: Session, judgment: AIJudgment, detail: str) -> dict:
     anchors_text = format_anchors_text(db)
     messages = prompts.build_dispute_messages(
         anchors_text=anchors_text,
-        event_description=format_event_description(event),
+        event_description=format_event_description(event, item_context_text(db, event)),  # v1.7：带项目上下文
         original_judgment={
             "affected_attributes": judgment.suggested_changes,
             "analysis": judgment.analysis or [],  # v1.6：完整基准（增量修订底稿）
@@ -538,6 +647,7 @@ def dispute(db: Session, judgment: AIJudgment, detail: str) -> dict:
     result = llm_service.chat_json(messages, config=config)
     conclusion = str(result.get("conclusion", "maintain"))
     notes = _parse_revision_notes(result.get("revision_notes"))  # v1.6：本次修订说明
+    merged = _parse_merged_with(result.get("merged_with"))  # v1.7：跨来源合并明细
     explanation = str(result.get("explanation", ""))
 
     if conclusion == "adjust":
@@ -546,12 +656,15 @@ def dispute(db: Session, judgment: AIJudgment, detail: str) -> dict:
             judgment.suggested_changes = changes
             judgment.summary = explanation or judgment.summary
             judgment.revision_notes = notes  # v1.6
+            judgment.merged_with = merged  # v1.7
             judgment.status = "adjusted"
         else:
             conclusion = "maintain"  # 无有效调整，保守维持原判
     if conclusion == "maintain":
         # v1.6：维持原判时也用修订说明承载"维持原判的理由"
         judgment.revision_notes = notes or ([f"维持原判：{explanation}"] if explanation else [])
+        if merged:
+            judgment.merged_with = merged  # v1.7：维持原判也可能补充合并说明
 
     if conclusion == "adjust":
         _log(

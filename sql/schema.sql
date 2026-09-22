@@ -67,9 +67,12 @@ CREATE TABLE IF NOT EXISTS events (
     title       VARCHAR(200) DEFAULT '',
     params      JSON,
     content     TEXT,
+    item_id     INT,                            -- 所属打卡项目（v1.7，可空=老数据/自由记录）
+    is_pure     TINYINT(1) NOT NULL DEFAULT 0,  -- 纯享记录：只记录不判定（v1.1）
     occurred_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_event_user FOREIGN KEY (user_id) REFERENCES users(id)
+    CONSTRAINT fk_event_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_event_item FOREIGN KEY (item_id) REFERENCES checkin_items(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 6. AI 判定记录
@@ -83,6 +86,7 @@ CREATE TABLE IF NOT EXISTS ai_judgments (
     confidence       DOUBLE NOT NULL DEFAULT 0.0,
     confidence_reason TEXT,                     -- 置信度说明（v1.4：低置信度时 AI 给出不确定点）
     revision_notes   JSON,                      -- 本次修订说明（v1.6：重判时逐条说明改了什么）
+    merged_with      JSON,                      -- 跨来源合并明细（v1.7：[{ref, note}]）
     status           VARCHAR(20) NOT NULL DEFAULT 'pending',  -- pending/confirmed/adjusted/rejected
     final_changes    JSON,                     -- 最终生效增减
     created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -118,6 +122,26 @@ CREATE TABLE IF NOT EXISTS goals (
     created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_goal_user FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 8.1 打卡项目表（v1.7）
+-- 用户自建（系统不预置任何项目）；停用不删除（历史事件 item_id 引用它）
+CREATE TABLE IF NOT EXISTS checkin_items (
+    id               INT AUTO_INCREMENT PRIMARY KEY,
+    user_id          INT NOT NULL,
+    name             VARCHAR(100) NOT NULL,               -- 项目名，如"晨跑""背单词""久坐"
+    nature           VARCHAR(20) DEFAULT 'other',         -- planned/optional/negative/other
+    frequency_type   VARCHAR(20) DEFAULT 'none',          -- daily/weekly/none
+    frequency_target INT DEFAULT 0,                       -- weekly 时的每周目标次数
+    category         VARCHAR(50) DEFAULT '',              -- 生活面：学习/运动/作息/社交/饮食/情绪/其他
+    related_attribute VARCHAR(50) DEFAULT '',             -- 主要影响的属性维度（可空）
+    goal_id          INT,                                 -- 关联目标（可空）
+    enabled          TINYINT(1) NOT NULL DEFAULT 1,       -- 停用不删除
+    sort_order       INT DEFAULT 0,
+    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_item_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_item_goal FOREIGN KEY (goal_id) REFERENCES goals(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 9. 量化锚点库

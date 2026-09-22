@@ -1,7 +1,8 @@
-"""数据模型（SQLAlchemy ORM，共 10 张核心表）。
+"""数据模型（SQLAlchemy ORM，共 11 张核心表）。
 
 对应 PRD 6.3 节：users / user_profiles / attributes / attribute_history /
 events / ai_judgments / judgment_logs / goals / anchors / settings。
+v1.7 新增：checkin_items（打卡项目，用户自建）。
 
 设计原则：
 - 所有业务表外键关联 user_id，V1 单用户、M4 多用户平滑扩展。
@@ -107,8 +108,44 @@ class AttributeHistory(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
 
+class CheckinItem(Base):
+    """打卡项目（v1.7，用户自建，系统不预置任何项目）。
+
+    打卡体系的核心：用户先定义"我每天/每周要盯的事"（跑步、背单词、久坐…），
+    记录事件时选一个项目 + 写正文，而非填固定三件套（时长/距离/强度）。
+
+    nature 四类：
+    - planned  规划内（必做，未完成不单独扣分，进度页面如实提示）
+    - optional 可选（不机械加分，AI 视"是否额外主动投入"判断）
+    - negative 负面（每次出现都减分，绝不去重）
+    - other    其他/杂项兜底
+
+    停用不删除（enabled=False）：历史事件仍引用它，删了会让老记录丢失名称。
+    """
+
+    __tablename__ = "checkin_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)  # 项目名，如"晨跑""背单词""久坐"
+    nature: Mapped[str] = mapped_column(String(20), default="other")  # planned/optional/negative/other
+    frequency_type: Mapped[str] = mapped_column(String(20), default="none")  # daily/weekly/none
+    frequency_target: Mapped[int] = mapped_column(Integer, default=0)  # weekly 时的每周目标次数
+    category: Mapped[str] = mapped_column(String(50), default="")  # 生活面：学习/运动/作息/社交/饮食/情绪/其他
+    related_attribute: Mapped[str] = mapped_column(String(50), default="")  # 主要影响的属性维度（可空）
+    goal_id: Mapped[int | None] = mapped_column(ForeignKey("goals.id"), nullable=True)  # 关联目标（可空）
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)  # 停用不删除，保留历史引用
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)  # 手工排序
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
+
+
 class Event(Base):
-    """生活事件。类型 positive/negative/goal，来源 form/journal。"""
+    """生活事件。类型 positive/negative/goal，来源 form/journal。
+
+    v1.7：新增 item_id 关联打卡项目。老事件该列为 NULL（正常），
+    所有下游逻辑必须容忍 NULL（项目上下文块整块跳过）。
+    """
 
     __tablename__ = "events"
 
@@ -119,7 +156,9 @@ class Event(Base):
     source: Mapped[str] = mapped_column(String(20), default="form")  # form/journal
     title: Mapped[str] = mapped_column(String(200), default="")
     params: Mapped[dict] = mapped_column(JSON, default=dict)  # 结构化参数（时长/距离/配速/强度...）
-    content: Mapped[str] = mapped_column(Text, default="")  # 自由日记原文
+    content: Mapped[str] = mapped_column(Text, default="")  # 用户手写正文（打卡正文 / 日记原文）
+    # v1.7：所属打卡项目（可空——老数据一律 NULL，下游必须容忍）
+    item_id: Mapped[int | None] = mapped_column(ForeignKey("checkin_items.id"), nullable=True)
     # 纯享版记录：True 表示只记录不加点、不走 AI 判定（生活手账）
     is_pure: Mapped[bool] = mapped_column(Boolean, default=False)
     occurred_at: Mapped[datetime] = mapped_column(DateTime, default=_now)  # 事件发生时间
@@ -144,6 +183,8 @@ class AIJudgment(Base):
     confidence_reason: Mapped[str] = mapped_column(Text, default="")
     # 本次修订说明（v1.6）：重判时逐条说明改了什么（新增/撤销/调整），无修订为 []
     revision_notes: Mapped[list] = mapped_column(JSON, default=list)
+    # 跨来源合并明细（v1.7）：[{ref, note}]，与当天/近期记录是同一件事时列出；无合并为 []
+    merged_with: Mapped[list] = mapped_column(JSON, default=list)
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending/confirmed/adjusted/rejected
     # 最终生效的增减（反驳/补充后可能调整），确认入账时写入
     final_changes: Mapped[list] = mapped_column(JSON, default=list)

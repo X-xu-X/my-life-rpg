@@ -1,18 +1,23 @@
-"""目标路由：目标 CRUD + 结算（达成奖励 / 未达成扣分 / 修改取消记审计）。"""
+"""目标路由：目标 CRUD + 结算（达成奖励 / 未达成扣分 / 修改取消记审计）。
+
+v1.7 决策 7：目标进度 = 关联打卡项目本期的完成率（**查询时计算**，goals 表不加列）。
+进度只做展示，**不自动达成**——达成仍由用户手动点「达成」（避免系统替用户拍板）。
+"""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Goal
 from app.schemas import GoalCreate, GoalOut, GoalUpdate
-from app.services import goal_service
+from app.services import goal_service, item_service
 from app.services.user_service import get_or_create_default_user
 
 router = APIRouter()
 
 
-def _goal_out(goal: Goal) -> dict:
-    """序列化目标（含审计流水）。"""
+def _goal_out(goal: Goal, progress: list[dict] | None = None) -> dict:
+    """序列化目标（含审计流水 + v1.7 关联打卡项目进度）。"""
+    progress = progress or []
     return {
         "id": goal.id,
         "description": goal.description,
@@ -23,6 +28,9 @@ def _goal_out(goal: Goal) -> dict:
         "reward": goal.reward,
         "penalty": goal.penalty,
         "audit": goal.audit or [],
+        # v1.7：进度明细（无关联项目则为空数组，前端不展示进度块）
+        "progress": progress,
+        "progress_rate": item_service.progress_rate(progress),
         "created_at": goal.created_at,
     }
 
@@ -31,7 +39,7 @@ def _goal_out(goal: Goal) -> dict:
 def list_goals(db: Session = Depends(get_db)):
     user = get_or_create_default_user(db)
     goals = db.query(Goal).filter(Goal.user_id == user.id).order_by(Goal.created_at.desc()).all()
-    return [_goal_out(g) for g in goals]
+    return [_goal_out(g, item_service.goal_progress(db, user.id, g.id)) for g in goals]
 
 
 @router.post("/goals")

@@ -35,12 +35,14 @@ DISPUTE_SYSTEM_PROMPT = """你是「游戏人生」的客观复核员。用户�
   ],
   "explanation": "复核说明（若坚持原判，需明确说明为什么不采纳反驳）",
   "confidence": 0.0,
-  "revision_notes": []
+  "revision_notes": [],
+  "merged_with": []
 }}
 
 说明：
 - conclusion 为 "maintain" 时 affected_attributes 应与原判定**逐字一致**；为 "adjust" 时给出修订后的完整结果（未受影响维度逐字保留）。
 - revision_notes（v1.6）：逐条说明本次改了什么（新增/撤销/调整及原因）；维持原判时写一条说明"维持原判的理由"；无改动可为 []。
+- merged_with（v1.7）：跨来源合并明细；本条若与当天其他记录是同一件事，列 [{"ref": "...", "note": "..."}]；无合并为 []（绝大多数情况）。
 """
 
 

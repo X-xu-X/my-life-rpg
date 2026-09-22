@@ -83,6 +83,7 @@ def list_judgments(db: Session = Depends(get_db)):
             "confidence": j.confidence,
             "confidence_reason": j.confidence_reason or "",  # v1.4：置信度说明
             "revision_notes": j.revision_notes or [],  # v1.6：本次修订说明
+            "merged_with": j.merged_with or [],  # v1.7：跨来源合并明细
             "last_user_input": last_input.get(j.id),  # v1.5 A2：最近一次补充/反驳
             "rejudge_count": rejudge_counts.get(j.id, 0),  # v1.5 A3：重判次数
             "created_at": j.created_at,
@@ -106,6 +107,7 @@ def get_judgment(judgment_id: int, db: Session = Depends(get_db)):
         "confidence": j.confidence,
         "confidence_reason": j.confidence_reason or "",  # v1.4：置信度说明
         "revision_notes": j.revision_notes or [],  # v1.6：本次修订说明
+        "merged_with": j.merged_with or [],  # v1.7：跨来源合并明细
         "created_at": j.created_at,
         "updated_at": j.updated_at,
     }
@@ -161,6 +163,7 @@ def supplement(judgment_id: int, body: SupplementIn, db: Session = Depends(get_d
         "confidence": judgment.confidence,
         "confidence_reason": judgment.confidence_reason or "",  # v1.4：置信度说明
         "revision_notes": judgment.revision_notes or [],  # v1.6：本次修订说明
+        "merged_with": judgment.merged_with or [],  # v1.7：跨来源合并明细
     }
 
 
@@ -178,4 +181,5 @@ def dispute(judgment_id: int, body: DisputeIn, db: Session = Depends(get_db)):
         "status": result["judgment"].status,
         "suggested_changes": result["judgment"].suggested_changes,
         "revision_notes": result["judgment"].revision_notes or [],  # v1.6：本次修订说明
+        "merged_with": result["judgment"].merged_with or [],  # v1.7：跨来源合并明细
     }

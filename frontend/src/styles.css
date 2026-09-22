@@ -329,3 +329,61 @@ label {
 .audit-item:last-child {
   border-bottom: none;
 }
+
+/* v1.7 C1：「AI 正在分析…」spinner */
+.spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 6px;
+  vertical-align: -1px;
+  border: 2px solid var(--primary-soft);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: gol-spin 0.7s linear infinite;
+}
+
+@keyframes gol-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* v1.7 C3：目标关联打卡项目的进度展示 */
+.goal-progress {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--primary-soft);
+}
+
+.goal-progress-row + .goal-progress-row {
+  margin-top: 8px;
+}
+
+.goal-progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.goal-progress-name {
+  font-weight: 500;
+}
+
+.progress-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+  transition: width 0.3s ease;
+}

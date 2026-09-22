@@ -20,6 +20,37 @@ const editTarget = ref(null) // 正在编辑的事件 id
 const editForm = ref({ title: '', category: '', content: '' })
 const searchText = ref('')
 
+// ============ v1.7 C1：AI 正在分析状态 + 防重复点击 ============
+// busyId = 正在跑请求的判定 id（null 表示空闲）。整个请求周期（含 LLM 内部重试）保持，
+// 期间该卡片全部操作按钮 + 输入框 + 下拉禁用，按钮文案变「AI 正在分析…」并显示 spinner。
+const busyId = ref(null)
+const slowHintId = ref(null) // 超过 60 秒仍未返回时，提示"响应较慢"
+let slowTimer = null
+const SLOW_THRESHOLD_MS = 60000
+
+function startBusy(id) {
+  busyId.value = id
+  slowHintId.value = null
+  clearTimeout(slowTimer)
+  slowTimer = setTimeout(() => {
+    if (busyId.value === id) slowHintId.value = id
+  }, SLOW_THRESHOLD_MS)
+}
+
+function endBusy() {
+  busyId.value = null
+  slowHintId.value = null
+  clearTimeout(slowTimer)
+  slowTimer = null
+}
+
+/** 某条判定是否正在处理中 */
+function isBusy(id) {
+  return busyId.value === id
+}
+/** 是否有任意请求在跑（用于禁用全局性操作） */
+const anyBusy = computed(() => busyId.value !== null)
+
 const filteredJudgments = computed(() => {
   const kw = searchText.value.trim().toLowerCase()
   if (!kw) return judgments.value
@@ -156,7 +187,9 @@ function clearSuccess(id) {
 }
 
 async function runAction(id, fn, okMsg) {
+  if (isBusy(id)) return // v1.7 C1：防重复点击（同一条判定处理中直接忽略）
   busy.value = true
+  startBusy(id) // v1.7 C1：进入「AI 正在分析…」状态，覆盖整个请求周期
   error.value = ''
   actionError.value = { id: null, msg: '' }
   clearSuccess(id)
@@ -178,6 +211,7 @@ async function runAction(id, fn, okMsg) {
     actionError.value = { id, msg: e.message }
   } finally {
     busy.value = false
+    endBusy() // v1.7 C1：请求返回（成功或失败）才恢复
   }
 }
 
@@ -228,6 +262,14 @@ function openAction(id, mode) {
   clearSuccess(id) // v1.6 B1
   actionTarget.value = id
   inputText.value = ''
+}
+
+// v1.7 C2：输入型操作（补充/反驳）的「取消」——关闭输入区、清空输入、回到未操作态（不提交）
+function cancelAction() {
+  if (anyBusy.value) return // 处理中禁用取消（避免状态不一致）
+  actionTarget.value = null
+  inputText.value = ''
+  actionError.value = { id: null, msg: '' }
 }
 
 function toggleMyInput(id) {
@@ -285,6 +327,15 @@ onMounted(load)
               💡 {{ j.confidence_reason }}
             </div>
 
+            <!-- v1.7：跨来源合并明细（已与 N 条记录合并，可反驳撤销） -->
+            <div v-if="j.merged_with && j.merged_with.length" class="muted" style="font-size: 12px; margin-bottom: 6px; color: #7c5cbf">
+              <span class="tag">已与 {{ j.merged_with.length }} 条记录合并</span>
+              <div v-for="(m, i) in j.merged_with" :key="i" style="margin-top: 2px">
+                · {{ m.ref }}<template v-if="m.note">：{{ m.note }}</template>
+              </div>
+              <div style="margin-top: 2px">如认为不该合并，可点「反驳」撤销。</div>
+            </div>
+
             <!-- v1.6：本次修订说明（重判改变了什么，无修订不显示） -->
             <div v-if="j.revision_notes && j.revision_notes.length" class="muted" style="font-size: 12px; margin-bottom: 6px; color: #2b6cb0">
               <span class="tag">本次修订</span>
@@ -317,10 +368,16 @@ onMounted(load)
         <div class="evidence">依据：{{ a.evidence }}</div>
       </div>
 
-      <!-- 操作区（v1.6 B1：成功状态整体替换主操作区，保留至下一次操作） -->
+      <!-- 操作区（v1.6 B1：成功状态整体替换主操作区；v1.7 C1：处理中显示「AI 正在分析…」） -->
       <div class="row" style="margin-top: 10px; align-items: center">
         <template v-if="actionSuccess.id === j.id">
           <span class="muted" style="flex: 1; color: #2f855a; font-weight: 600; font-size: 14px">✓ {{ actionSuccess.msg }}</span>
+        </template>
+        <template v-else-if="isBusy(j.id)">
+          <!-- v1.7 C1：AI 正在分析中——整卡操作禁用，文案即时变化 -->
+          <span class="muted" style="flex: 1; color: var(--primary); font-weight: 600; font-size: 14px">
+            <span class="spinner"></span> AI 正在分析…
+          </span>
         </template>
         <template v-else>
           <div v-if="j.status !== 'confirmed'" class="row" style="gap: 8px; flex: 1">
@@ -334,13 +391,18 @@ onMounted(load)
           </div>
           <span v-else class="muted" style="flex: 1">✓ 已入账</span>
         </template>
-        <button class="btn small" :disabled="busy" @click="openEdit(j.id, j.event_id)">编辑</button>
-        <button class="btn small" :disabled="busy" @click="toggleAudit(j.id)">审计</button>
+        <button class="btn small" :disabled="anyBusy" @click="openEdit(j.id, j.event_id)">编辑</button>
+        <button class="btn small" :disabled="anyBusy" @click="toggleAudit(j.id)">审计</button>
         <!-- v1.1：误提交兜底，任何状态都可删除事件 -->
-        <button class="btn small danger" :disabled="busy" @click="removeEvent(j.id, j.event_id, j.status === 'confirmed')">
+        <button class="btn small danger" :disabled="anyBusy" @click="removeEvent(j.id, j.event_id, j.status === 'confirmed')">
           删除事件
         </button>
       </div>
+
+      <!-- v1.7 C1：响应较慢提示（超过 60 秒未返回；不自动清空状态） -->
+      <p v-if="slowHintId === j.id" class="muted" style="color: #b7791f; font-size: 12px; margin-top: 6px">
+        ⏳ AI 响应较慢，可继续等待或点「取消」。
+      </p>
 
       <!-- v1.4：操作失败的就近错误提示（在输入框上方 / 操作按钮下方，不再跑到卡片顶部） -->
       <p
@@ -356,13 +418,19 @@ onMounted(load)
         style="font-size: 12px; margin-top: 6px; padding: 6px 8px; background: #f7f7f9; border-radius: 6px"
       >⚖️ {{ disputeResult.conclusion === 'adjust' ? '复核已调整判定' : 'AI 坚持原判' }}<template v-if="disputeResult.explanation">：{{ disputeResult.explanation }}</template></div>
 
-      <!-- 补充/反驳输入框（v1.4：就近渲染在操作按钮行正下方，长卡片不再滚出视口） -->
+      <!-- 补充/反驳输入框（v1.4：就近渲染在操作按钮行正下方；v1.7 C2：加「取消」） -->
       <div v-if="actionTarget === j.id" class="field" style="margin-top: 10px">
-        <label>补充信息 / 反驳理由：</label>
-        <textarea v-model="inputText" rows="2" placeholder="说明你的补充或反驳理由…"></textarea>
+        <label>{{ j.status === 'confirmed' ? '反驳理由（已入账，仅可反驳）' : '补充信息 / 反驳理由：' }}</label>
+        <textarea v-model="inputText" rows="2" placeholder="说明你的补充或反驳理由…" :disabled="isBusy(j.id)"></textarea>
         <div class="row" style="margin-top: 8px">
-          <button class="btn small primary" :disabled="busy" @click="supplement(j.id)">提交补充</button>
-          <button class="btn small danger" :disabled="busy" @click="dispute(j.id)">提交反驳</button>
+          <button class="btn small primary" :disabled="isBusy(j.id)" @click="supplement(j.id)">
+            {{ isBusy(j.id) ? 'AI 正在分析…' : '提交补充' }}
+          </button>
+          <button class="btn small danger" :disabled="isBusy(j.id)" @click="dispute(j.id)">
+            {{ isBusy(j.id) ? 'AI 正在分析…' : '提交反驳' }}
+          </button>
+          <!-- v1.7 C2：取消（关闭输入区、清空输入、不提交）；处理中禁用 -->
+          <button class="btn small" :disabled="anyBusy" @click="cancelAction">取消</button>
         </div>
       </div>
 

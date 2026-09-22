@@ -9,6 +9,25 @@ const error = ref('')
 
 const STATUS_LABEL = { active: '进行中', achieved: '已达成', failed: '未达成', cancelled: '已取消' }
 
+// C3（v1.7）：目标进度展示。数据来自 GET /api/goals 的 progress 字段。
+// 老目标没有关联打卡项目 → progress 为空数组，此时整块进度不渲染（不显示 0%）。
+function periodLabel(frequencyType) {
+  if (frequencyType === 'daily') return '今日'
+  if (frequencyType === 'weekly') return '本周'
+  return ''
+}
+
+function progressText(p) {
+  const prefix = periodLabel(p.frequency_type)
+  if (!p.target) return `${prefix}已完成 ${p.this_period_count} 次`.trim()
+  return `${prefix} ${p.this_period_count}/${p.target}`.trim()
+}
+
+function progressPercent(p) {
+  if (!p.target) return 0
+  return Math.min(100, Math.round((p.this_period_count / p.target) * 100))
+}
+
 async function load() {
   try {
     goals.value = await api.listGoals()
@@ -113,6 +132,18 @@ onMounted(load)
         <div v-if="g.deadline" class="muted">期限：{{ new Date(g.deadline).toLocaleDateString('zh-CN') }}</div>
         <div v-if="g.audit && g.audit.length" class="muted" style="font-size: 12px; margin-top: 4px">
           最近操作：{{ g.audit[g.audit.length - 1].detail }}
+        </div>
+        <!-- C3（v1.7）：关联打卡项目的目标展示进度；无关联项目的老目标不显示此块 -->
+        <div v-if="g.progress && g.progress.length" class="goal-progress">
+          <div v-for="p in g.progress" :key="p.item_id" class="goal-progress-row">
+            <div class="goal-progress-head">
+              <span class="goal-progress-name">{{ p.name }}</span>
+              <span class="muted">{{ progressText(p) }}</span>
+            </div>
+            <div v-if="p.target" class="progress-track">
+              <div class="progress-fill" :style="{ width: progressPercent(p) + '%' }"></div>
+            </div>
+          </div>
         </div>
         <div v-if="g.status === 'active'" class="row" style="margin-top: 8px">
           <button class="btn small primary" @click="setStatus(g.id, 'achieve')">达成</button>

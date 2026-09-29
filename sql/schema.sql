@@ -193,6 +193,70 @@ CREATE TABLE IF NOT EXISTS settings (
     CONSTRAINT fk_setting_user FOREIGN KEY (user_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 11. 挑战表（v1.8）
+-- 状态机：candidate → accepted → settled；candidate/accepted 过期 → expired；
+--         candidate/accepted 主动放弃 → abandoned（押金没收 + 按难度扣点）
+CREATE TABLE IF NOT EXISTS challenges (
+    id                 INT AUTO_INCREMENT PRIMARY KEY,
+    user_id            INT NOT NULL,
+    scope              VARCHAR(10) NOT NULL DEFAULT 'daily',   -- daily/weekly
+    period_key         VARCHAR(20) DEFAULT '',                 -- 日=2026-09-28，周=2026-W40
+    title              VARCHAR(120) DEFAULT '',
+    description        TEXT,
+    difficulty         INT NOT NULL DEFAULT 1,                 -- 1~5，AI 按事件自定
+    coin_reward        INT NOT NULL DEFAULT 0,                 -- 完成可得（接受前展示）
+    deposit            INT NOT NULL DEFAULT 0,                 -- 押金
+    related_attributes JSON,                                   -- AI 预期影响的维度（不预览给用户）
+    ai_reason          TEXT,                                   -- 为什么给你这个挑战（展示）
+    status             VARCHAR(20) NOT NULL DEFAULT 'candidate',
+    accepted_at        DATETIME,
+    resolved_at        DATETIME,
+    expires_at         DATETIME,
+    event_id           INT,                                    -- 完成时创建的记录（复用判定链路）
+    judgment_id        INT,                                    -- 完成判定
+    outcome            VARCHAR(20) DEFAULT '',                 -- done/partial/excused/retreated
+    outcome_note       TEXT,                                   -- AI 判定说明（展示）
+    created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_challenge_user  FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_challenge_event FOREIGN KEY (event_id) REFERENCES events(id),
+    CONSTRAINT fk_challenge_judge FOREIGN KEY (judgment_id) REFERENCES ai_judgments(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 12. 商店物品表（v1.8）
+-- 只做现实奖励：preset 常驻预置（首次访问商店时幂等写入）+ custom 用户自录。
+-- coin_price 由 AI 直接定价，必须带 pricing_reason 与"值不值得买"的 worth_note。
+CREATE TABLE IF NOT EXISTS shop_items (
+    id             INT AUTO_INCREMENT PRIMARY KEY,
+    user_id        INT NOT NULL,
+    name           VARCHAR(120) DEFAULT '',
+    kind           VARCHAR(10) NOT NULL DEFAULT 'custom',      -- preset/custom
+    price_yuan     DOUBLE,                                     -- 现实价格（元）
+    coin_price     INT NOT NULL DEFAULT 0,                     -- AI 定出的金币价（用户可改）
+    pricing_reason TEXT,                                       -- AI 定价理由（必须展示）
+    worth_note     TEXT,                                       -- 值不值得买（必须展示）
+    enabled        TINYINT(1) NOT NULL DEFAULT 1,              -- 停用不删除
+    sort_order     INT DEFAULT 0,
+    created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_shop_user FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 13. 兑换券表（v1.8）
+-- coin_spent 为快照，防止物品后续改价影响历史账目。
+CREATE TABLE IF NOT EXISTS redemptions (
+    id           INT AUTO_INCREMENT PRIMARY KEY,
+    user_id      INT NOT NULL,
+    shop_item_id INT,
+    coin_spent   INT NOT NULL DEFAULT 0,
+    status       VARCHAR(10) NOT NULL DEFAULT 'pending',       -- pending/fulfilled
+    redeemed_at  DATETIME,
+    fulfilled_at DATETIME,
+    note         TEXT,
+    CONSTRAINT fk_redeem_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_redeem_item FOREIGN KEY (shop_item_id) REFERENCES shop_items(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ============================================================
 -- 内置量化锚点种子数据（PRD 6.4 节基准表）
 -- 由应用启动时通过 anchor_service 自动写入（幂等），此处仅供文档/手动迁移参考。

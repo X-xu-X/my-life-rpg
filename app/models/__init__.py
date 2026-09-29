@@ -309,3 +309,90 @@ class CoinLedger(Base):
     ref_type: Mapped[str | None] = mapped_column(String(30), nullable=True)  # challenge/event/shop_item/redemption
     ref_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+class Challenge(Base):
+    """AI 定制挑战（v1.8）。
+
+    主闭环：AI 生成候选 → 用户接受（押金币承诺）→ 完成（自报 + AI 判定）→
+    加点 + 退回押金 + 金币奖励 → 用户确认结算。
+
+    状态机（严格，勿绕过）：
+        candidate ──接受(扣押金)──> accepted ──完成并确认结算──> settled
+            │                          │
+            │过期未接受                 │过期未处理
+            v                          v
+         expired                    expired   （押金没收 + 按难度扣点，无需 LLM）
+            │                          │
+            └──────(abandon 主动放弃)──> abandoned（押金没收 + 按难度扣点）
+
+    金币与属性点**完全隔离**；`related_attributes` 仅供内部结算用，**不预览给用户**。
+    """
+
+    __tablename__ = "challenges"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    scope: Mapped[str] = mapped_column(String(10), default="daily")  # daily/weekly
+    period_key: Mapped[str] = mapped_column(String(20), default="")  # 日=2026-09-28，周=2026-W40
+    title: Mapped[str] = mapped_column(String(120), default="")
+    description: Mapped[str] = mapped_column(Text, default="")
+    difficulty: Mapped[int] = mapped_column(Integer, default=1)  # 1~5，AI 按事件自定
+    coin_reward: Mapped[int] = mapped_column(Integer, default=0)  # 完成可得（接受前展示）
+    deposit: Mapped[int] = mapped_column(Integer, default=0)  # 押金
+    related_attributes: Mapped[list] = mapped_column(JSON, default=list)  # AI 预期影响的维度（不预览）
+    ai_reason: Mapped[str] = mapped_column(Text, default="")  # 为什么给你这个挑战（展示）
+    status: Mapped[str] = mapped_column(String(20), default="candidate")
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    event_id: Mapped[int | None] = mapped_column(ForeignKey("events.id"), nullable=True)
+    judgment_id: Mapped[int | None] = mapped_column(ForeignKey("ai_judgments.id"), nullable=True)
+    outcome: Mapped[str] = mapped_column(String(20), default="")  # done/partial/excused/retreated
+    outcome_note: Mapped[str] = mapped_column(Text, default="")  # AI 判定说明（展示）
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
+
+
+class ShopItem(Base):
+    """现实奖励商店物品（v1.8）。
+
+    只做**现实奖励**（决策 14）：常驻物资（`kind='preset'`，首次访问商店时幂等预置）
+    + 用户自录物品（`kind='custom'`）。
+    `coin_price` 由 AI 定价（决策 15：不设固定基准，但必须输出 `pricing_reason`
+    与"值不值得买"的 `worth_note`，会因近期兑换频率浮动以劝导健康生活）。
+    """
+
+    __tablename__ = "shop_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String(120), default="")
+    kind: Mapped[str] = mapped_column(String(10), default="custom")  # preset/custom
+    price_yuan: Mapped[float | None] = mapped_column(Float, nullable=True)  # 现实价格（元）
+    coin_price: Mapped[int] = mapped_column(Integer, default=0)  # AI 定出的金币价（用户可改）
+    pricing_reason: Mapped[str] = mapped_column(Text, default="")  # AI 定价理由（必须展示）
+    worth_note: Mapped[str] = mapped_column(Text, default="")  # "值不值得买"判断（必须展示）
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)  # 停用不删除
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
+
+
+class Redemption(Base):
+    """兑换券（v1.8）。
+
+    兑换生成一张待兑现的"奖励券"，用户线下真正兑现后手动打勾「已兑现」。
+    `coin_spent` 为**快照**，防止物品后续改价影响历史账目。
+    """
+
+    __tablename__ = "redemptions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    shop_item_id: Mapped[int | None] = mapped_column(ForeignKey("shop_items.id"), nullable=True)
+    coin_spent: Mapped[int] = mapped_column(Integer, default=0)  # 兑换消耗（快照）
+    status: Mapped[str] = mapped_column(String(10), default="pending")  # pending/fulfilled
+    redeemed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    fulfilled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    note: Mapped[str] = mapped_column(Text, default="")  # 用户备注

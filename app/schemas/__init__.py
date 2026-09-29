@@ -235,3 +235,117 @@ class LLMConfigIn(BaseModel):
     base_url: str | None = None
     model: str | None = None
     enabled: bool | None = None
+
+
+# ============ 挑战（v1.8） ============
+
+class ChallengeOut(BaseModel):
+    """挑战输出。
+
+    注意：`related_attributes`（AI 预期影响的维度）**仅内部与结算使用，不预览给用户**
+    ——决策 10「金币提前显示、加点不预览」。前端若需要它，仅可用于结算后展示。
+    """
+
+    id: int
+    scope: str
+    period_key: str
+    title: str
+    description: str
+    difficulty: int
+    coin_reward: int
+    deposit: int
+    ai_reason: str
+    status: str
+    accepted_at: datetime | None
+    expires_at: datetime | None
+    outcome: str
+    outcome_note: str
+    related_attributes: list
+    event_id: int | None
+    judgment_id: int | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ChallengeGenerateIn(BaseModel):
+    """生成挑战候选。force=True 为「再来一批」（仅补空缺，不覆盖进行中的）。"""
+
+    scope: Literal["daily", "weekly"] = "daily"
+    force: bool = False
+
+
+class ChallengeResolveIn(BaseModel):
+    """完成 / 放弃挑战时的一句话自述（complete 必填，abandon 可空）。"""
+
+    note: str = ""
+
+
+# ============ 商店与兑换（v1.8） ============
+
+class ShopItemIn(BaseModel):
+    """新建商店物品：只填名称与现实价格，金币价由 AI 定价。"""
+
+    name: str = Field(..., description="物品名，如「奶茶（大杯）」")
+    price_yuan: float | None = Field(None, description="现实价格（元）；0 元为时间型奖励")
+
+
+class ShopItemUpdateIn(BaseModel):
+    """局部修改商店物品（用户手动改价 / 停用）。字段全部可选。"""
+
+    name: str | None = None
+    price_yuan: float | None = None
+    coin_price: int | None = None
+    enabled: bool | None = None
+    sort_order: int | None = None
+
+
+class ShopItemOut(BaseModel):
+    id: int
+    name: str
+    kind: str
+    price_yuan: float | None
+    coin_price: int
+    pricing_reason: str
+    worth_note: str
+    enabled: bool
+    sort_order: int
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class RedemptionOut(BaseModel):
+    id: int
+    shop_item_id: int | None
+    item_name: str = ""
+    coin_spent: int
+    status: str
+    redeemed_at: datetime | None
+    fulfilled_at: datetime | None
+    note: str
+
+
+class RedeemIn(BaseModel):
+    """兑换（可附备注）。"""
+
+    note: str = ""
+
+
+class FulfillIn(BaseModel):
+    """兑现奖励券（可附备注）。"""
+
+    note: str = ""
+
+
+# ============ 停滞觉察（v1.8） ============
+
+class StagnationAnswerIn(BaseModel):
+    """回答停滞问询。
+
+    - stopped=True  确实停了 → 小幅扣分（−0.3）+ 生成补课挑战
+    - stopped=False 在学只是没记 → 不扣分，引导补记并重置该维度停滞计时
+    """
+
+    stopped: bool
+    note: str = ""

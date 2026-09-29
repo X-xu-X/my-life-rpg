@@ -33,3 +33,30 @@ ATTRIBUTE_ALIASES = {
     "诚信": "诚信", "诚实": "诚信", "诚实度": "诚信", "诚信度": "诚信", "可信": "诚信", "正直": "诚信",
     "integrity": "诚信", "honesty": "诚信", "trustworthy": "诚信",
 }
+
+
+# 段位（v1.8 A2-6）：0~100 分 5 档，用于回答"我的点数算多还是少"。
+# 属性值封顶 100、下限 0，故最高档上界取 101 以包含 100.0 本身。
+ATTRIBUTE_TIERS = [
+    (0, 20, "入门"),
+    (20, 40, "见习"),
+    (40, 60, "熟练"),
+    (60, 80, "精通"),
+    (80, 101, "大师"),
+]
+
+
+def tier_of(value: float) -> str:
+    """按当前值返回段位名（0~100 分 5 档）。
+
+    边界归属：左闭右开（如 20.0 → 见习），仅最高档包含 100.0。
+    """
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return ATTRIBUTE_TIERS[0][2]
+    for low, high, name in ATTRIBUTE_TIERS:
+        if low <= v < high:
+            return name
+    # 越界兜底：低于 0 归入门，高于等于上界归大师
+    return ATTRIBUTE_TIERS[0][2] if v < 0 else ATTRIBUTE_TIERS[-1][2]

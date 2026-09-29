@@ -47,6 +47,20 @@ def _clamp_delta(delta: float) -> float:
     return max(-DELTA_LIMIT, min(DELTA_LIMIT, delta))
 
 
+def _clamp_attribute_value(value: float, max_value: float) -> float:
+    """将属性值钳制到 [0, max_value]（v1.8 A2-5：封顶 100 / 下限 0）。
+
+    **全项目统一的属性值写入夹取工具**——所有写 `Attribute.current_value` 的地方
+    都必须调用它，不要各写各的（v1.5 B-03「多入口必须同一写入语义」教训）。
+
+    背景：属性面板是 100 分制，但置信度加权/累积加成/多维度叠加后可能算出
+    超过 100 或低于 0 的值；靠既有的「边际递减」机制让越接近 100 越难涨，
+    但那是"涨幅打折"，不能替代硬性封顶。
+    """
+    upper = float(max_value) if max_value is not None else 100.0
+    return max(0.0, min(upper, float(value)))
+
+
 def _recent_same_category_count(db: Session, user_id: int, event: Event) -> int:
     """近 30 天同类别事件次数（累积效应：坚持上浮 / 频繁加重）。"""
     cutoff = datetime.now() - timedelta(days=30)
@@ -488,15 +502,18 @@ def _handle_unrealistic(db: Session, user_id: int, event: Event, reason: str) ->
     msg = f"AI 认为该事件不符合常理：{reason}。请修正后重新提交。"
     if count >= UNREALISTIC_HONESTY_THRESHOLD:
         attr = _ensure_attribute(db, user_id, "诚信")
-        attr.current_value = round(attr.current_value + UNREALISTIC_HONESTY_DELTA, 2)
+        before = attr.current_value
+        after = round(_clamp_attribute_value(before + UNREALISTIC_HONESTY_DELTA, attr.max_value), 2)
+        actual_delta = round(after - before, 2)
+        attr.current_value = after
         db.add(
             AttributeHistory(
                 user_id=user_id,
                 attribute_id=attr.id,
                 event_id=event.id,
                 judgment_id=None,
-                delta=UNREALISTIC_HONESTY_DELTA,
-                value_after=attr.current_value,
+                delta=actual_delta,
+                value_after=after,
                 reason=f"连续 {count} 次提交不实事件，诚信减分",
                 evidence=f"AI 真实性甄别：事件明显不符合科学常理（{reason}）。",
             )
@@ -535,20 +552,27 @@ def confirm(db: Session, judgment: AIJudgment) -> AIJudgment:
         if delta == 0:
             continue  # 加权后为 0，不入账
         attr = _ensure_attribute(db, user.id, name)
-        attr.current_value = round(attr.current_value + delta, 2)
+        before = attr.current_value
+        # 封顶 100 / 下限 0：夹取后以**实际变动量**记账，保证
+        # 「初始值 + Σ流水 = 当前值」的账目自洽（若仍记名义 delta，账目会对不上）
+        after = round(_clamp_attribute_value(before + delta, attr.max_value), 2)
+        actual_delta = round(after - before, 2)
+        if actual_delta == 0:
+            continue  # 已封顶/已触底，本次实际无变化 → 不写流水
+        attr.current_value = after
         db.add(
             AttributeHistory(
                 user_id=user.id,
                 attribute_id=attr.id,
                 event_id=judgment.event_id,
                 judgment_id=judgment.id,
-                delta=delta,
-                value_after=attr.current_value,
+                delta=actual_delta,
+                value_after=after,
                 reason=f"{item.get('reason', '')}（置信度 {conf:.0%} 加权）",
                 evidence=item.get("evidence", ""),
             )
         )
-        applied_changes.append({**item, "delta": delta})
+        applied_changes.append({**item, "delta": actual_delta})
     judgment.status = "confirmed"
     judgment.final_changes = applied_changes
     _log(
@@ -718,15 +742,21 @@ def delete_event(db: Session, event: Event) -> None:
                 if delta == 0 or not name:
                     continue
                 attr = _ensure_attribute(db, user.id, name)
-                attr.current_value = round(attr.current_value - delta, 2)
+                before = attr.current_value
+                after = round(_clamp_attribute_value(before - delta, attr.max_value), 2)
+                actual_delta = round(after - before, 2)
+                if actual_delta == 0:
+                    # 已封顶/已触底导致回滚无实际变化 → 不写空流水
+                    continue
+                attr.current_value = after
                 db.add(
                     AttributeHistory(
                         user_id=user.id,
                         attribute_id=attr.id,
                         event_id=None,
                         judgment_id=None,
-                        delta=-delta,
-                        value_after=attr.current_value,
+                        delta=actual_delta,
+                        value_after=after,
                         reason=f"事件删除回滚（原判定：{item.get('reason', '')}）",
                         evidence="误提交兜底，删除事件",
                     )

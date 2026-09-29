@@ -10,6 +10,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from app.models import Attribute, AttributeHistory, Goal
+from app.services.judge_service import _clamp_attribute_value as clamp_attribute_value
 from app.services.user_service import get_or_create_default_user
 
 
@@ -24,24 +25,33 @@ def _ensure_attribute(db: Session, user_id: int, name: str) -> Attribute:
 
 
 def _apply_delta(db: Session, user_id: int, name: str, delta: float, reason: str, evidence: str) -> dict | None:
-    """对某属性应用增减，写属性流水。返回应用结果（无增减则返回 None）。"""
+    """对某属性应用增减，写属性流水。返回应用结果（无增减则返回 None）。
+
+    v1.8：统一走 `judge_service._clamp_attribute_value` 封顶 100 / 下限 0，
+    并以**实际变动量**记账（保证「初始值 + Σ流水 = 当前值」账目自洽）。
+    """
     if delta == 0 or not name:
         return None
     attr = _ensure_attribute(db, user_id, name)
-    attr.current_value = round(attr.current_value + delta, 2)
+    before = attr.current_value
+    after = round(clamp_attribute_value(before + delta, attr.max_value), 2)
+    actual_delta = round(after - before, 2)
+    if actual_delta == 0:
+        return None  # 已封顶/已触底，本次实际无变化
+    attr.current_value = after
     db.add(
         AttributeHistory(
             user_id=user_id,
             attribute_id=attr.id,
             event_id=None,
             judgment_id=None,
-            delta=delta,
-            value_after=attr.current_value,
+            delta=actual_delta,
+            value_after=after,
             reason=reason,
             evidence=evidence,
         )
     )
-    return {"name": name, "delta": delta, "value_after": attr.current_value}
+    return {"name": name, "delta": actual_delta, "value_after": after}
 
 
 def _append_audit(goal: Goal, action: str, detail: str) -> None:

@@ -14,6 +14,7 @@ from app import prompts
 from app.models import Attribute, AttributeHistory, UserProfile
 from app.prompts.onboarding import CONFIDENCE_THRESHOLD
 from app.services import llm_config
+from app.services.judge_service import _clamp_attribute_value as clamp_attribute_value
 from app.services.llm_service import llm_service
 from app.services.user_service import get_or_create_default_user
 
@@ -241,20 +242,26 @@ def confirm_adjustment(db: Session) -> dict:
             attr = Attribute(user_id=user.id, name=name, current_value=50.0)
             db.add(attr)
             db.flush()
-        attr.current_value = round(attr.current_value + delta, 2)
+        # v1.8：封顶 100 / 下限 0，以实际变动量记账
+        before = attr.current_value
+        after = round(clamp_attribute_value(before + delta, attr.max_value), 2)
+        actual_delta = round(after - before, 2)
+        if actual_delta == 0:
+            continue  # 已封顶/已触底，本次实际无变化
+        attr.current_value = after
         db.add(
             AttributeHistory(
                 user_id=user.id,
                 attribute_id=attr.id,
                 event_id=None,
                 judgment_id=None,
-                delta=delta,
-                value_after=attr.current_value,
+                delta=actual_delta,
+                value_after=after,
                 reason=item.get("reason", ""),
                 evidence=item.get("evidence", ""),
             )
         )
-        applied.append({"name": name, "delta": delta, "value_after": attr.current_value})
+        applied.append({"name": name, "delta": actual_delta, "value_after": after})
 
     profile.pending_adjustment = {}
     db.commit()

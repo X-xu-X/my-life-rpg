@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.constants import tier_of
 from app.database import get_db
 from app.models import Attribute, AttributeHistory, Setting, UserProfile
 from app.services.user_service import get_or_create_default_user
@@ -14,6 +15,7 @@ def get_attributes(db: Session = Depends(get_db)):
     """当前属性面板（含等级/经验，游戏化字段 M3 启用）。
 
     v1.2：每个属性带 visibility 标记——show 正常显示 / hidden 隐藏（AI 照判）/ disabled 关闭判定。
+    v1.8：新增 tier 段位（0~100 分 5 档），回答"点数算多还是少"；**不新增 group 字段**（分组方案已作废）。
     """
     user = get_or_create_default_user(db)
     attrs = (
@@ -43,6 +45,7 @@ def get_attributes(db: Session = Depends(get_db)):
                 "max_value": a.max_value,
                 "description": a.description,
                 "visibility": visibility(a.name),
+                "tier": tier_of(a.current_value),
             }
             for a in attrs
         ],

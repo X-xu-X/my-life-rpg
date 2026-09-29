@@ -1,0 +1,131 @@
+"""挑战路由（v1.8）：生成 / 列表 / 接受 / 完成 / 结算 / 放弃。"""
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.models import Challenge
+from app.schemas import ChallengeGenerateIn, ChallengeResolveIn
+from app.services import challenge_service, coin_service
+from app.services.llm_service import LLMError
+from app.services.user_service import get_or_create_default_user
+
+router = APIRouter()
+
+
+def _out(ch: Challenge) -> dict:
+    return {
+        "id": ch.id,
+        "scope": ch.scope,
+        "period_key": ch.period_key,
+        "title": ch.title,
+        "description": ch.description,
+        "difficulty": ch.difficulty,
+        "coin_reward": ch.coin_reward,
+        "deposit": ch.deposit,
+        "ai_reason": ch.ai_reason,
+        "status": ch.status,
+        "accepted_at": ch.accepted_at,
+        "expires_at": ch.expires_at,
+        "resolved_at": ch.resolved_at,
+        "outcome": ch.outcome,
+        "outcome_note": ch.outcome_note,
+        # related_attributes 仅用于结算后展示（决策 10：加点不预览）
+        "related_attributes": ch.related_attributes or [],
+        "event_id": ch.event_id,
+        "judgment_id": ch.judgment_id,
+        "created_at": ch.created_at,
+    }
+
+
+def _get(db: Session, user, challenge_id: int) -> Challenge:
+    ch = db.get(Challenge, challenge_id)
+    if ch is None or ch.user_id != user.id:
+        raise HTTPException(status_code=404, detail="挑战不存在")
+    return ch
+
+
+@router.get("/challenges")
+def list_challenges(scope: str | None = None, db: Session = Depends(get_db)):
+    """当前全部挑战（返回前先做惰性过期处理）。"""
+    user = get_or_create_default_user(db)
+    rows = challenge_service.list_challenges(db, user, scope=scope)
+    return {"challenges": [_out(c) for c in rows]}
+
+
+@router.get("/challenges/current")
+def current_challenges(db: Session = Depends(get_db)):
+    """本期（日 / 周）挑战，供前端分组展示。"""
+    user = get_or_create_default_user(db)
+    grouped = challenge_service.current_period(db, user)
+    return {
+        "daily": [_out(c) for c in grouped["daily"]],
+        "weekly": [_out(c) for c in grouped["weekly"]],
+        "period_key": {
+            "daily": challenge_service.period_key("daily"),
+            "weekly": challenge_service.period_key("weekly"),
+        },
+    }
+
+
+@router.post("/challenges/generate")
+def generate_challenges(body: ChallengeGenerateIn, db: Session = Depends(get_db)):
+    """生成挑战候选（幂等；force=True 为「再来一批」，仅补空缺）。"""
+    user = get_or_create_default_user(db)
+    try:
+        rows = challenge_service.generate(db, user, scope=body.scope, force=body.force)
+    except LLMError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    return {"challenges": [_out(c) for c in rows]}
+
+
+@router.post("/challenges/{challenge_id}/accept")
+def accept_challenge(challenge_id: int, db: Session = Depends(get_db)):
+    """接受挑战（扣除押金）。余额不足返回 400。"""
+    user = get_or_create_default_user(db)
+    ch = _get(db, user, challenge_id)
+    try:
+        ch = challenge_service.accept(db, user, ch)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"challenge": _out(ch), "balance": coin_service.balance(db, user)}
+
+
+@router.post("/challenges/{challenge_id}/complete")
+def complete_challenge(challenge_id: int, body: ChallengeResolveIn, db: Session = Depends(get_db)):
+    """提交一句话自述 → AI 判定是否达成（生成待确认判定，尚未入账）。"""
+    user = get_or_create_default_user(db)
+    ch = _get(db, user, challenge_id)
+    try:
+        result = challenge_service.complete(db, user, ch, body.note)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except LLMError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    return result
+
+
+@router.post("/challenges/{challenge_id}/settle")
+def settle_challenge(challenge_id: int, db: Session = Depends(get_db)):
+    """确认结算：加点入账 + 押金/奖励发放。"""
+    user = get_or_create_default_user(db)
+    ch = _get(db, user, challenge_id)
+    try:
+        result = challenge_service.settle(db, user, ch)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return result
+
+
+@router.post("/challenges/{challenge_id}/abandon")
+def abandon_challenge(challenge_id: int, body: ChallengeResolveIn | None = None, db: Session = Depends(get_db)):
+    """放弃挑战。带说明 → 交 AI 判定（可能 excused 退押金）；不带 → 直接按未完成处理。"""
+    user = get_or_create_default_user(db)
+    ch = _get(db, user, challenge_id)
+    note = (body.note if body else "") or ""
+    try:
+        result = challenge_service.abandon(db, user, ch, note)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except LLMError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    return result

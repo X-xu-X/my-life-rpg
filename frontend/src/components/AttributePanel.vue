@@ -168,6 +168,8 @@ onBeforeUnmount(() => {
           <div class="head">
             <span>
               <b>{{ a.name }}</b>
+              <!-- v1.8 C3：段位徽章（只加不改，不调整任何图表配置） -->
+              <span v-if="a.tier" class="tier-badge" style="margin-left: 6px">{{ a.tier }}</span>
               <span v-if="a.visibility === 'disabled'" class="tag" style="margin-left: 6px">已关闭判定</span>
             </span>
             <span>{{ a.value }} / {{ a.max_value }}</span>

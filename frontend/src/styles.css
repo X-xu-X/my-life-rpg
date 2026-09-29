@@ -387,3 +387,268 @@ label {
   background: var(--primary);
   transition: width 0.3s ease;
 }
+
+/* ============================================================
+   v1.8 挑战 / 金币 / 商店 / 段位
+   注意：本项目属性增减沿用「涨红跌绿」习惯（--positive 为红、--negative 为绿）；
+   但金币不是股票，**刻意避开红绿歧义**——获得用绿色正向色，消耗用灰色。
+   ============================================================ */
+:root {
+  --coin-in: #1f9e6a;   /* 金币获得：正向绿 */
+  --coin-out: #8a8f9c;  /* 金币消耗：中性灰 */
+}
+
+/* ---- 金币条 ---- */
+.coin-bar {
+  position: sticky;
+  top: 8px;
+  z-index: 5;
+}
+.coin-bar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.coin-amount {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 20px;
+}
+.coin-amount b {
+  font-size: 24px;
+  color: var(--primary);
+}
+.coin-icon {
+  font-size: 18px;
+}
+.coin-hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+}
+
+/* ---- 金币流水 ---- */
+.ledger {
+  margin-top: 10px;
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.ledger-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--border);
+  font-size: 13px;
+}
+.ledger-row:last-child {
+  border-bottom: none;
+}
+.ledger-delta {
+  min-width: 44px;
+  text-align: right;
+  font-weight: 600;
+}
+.ledger-delta.in {
+  color: var(--coin-in);
+}
+.ledger-delta.out {
+  color: var(--coin-out);
+}
+.ledger-reason {
+  flex: 1;
+}
+.ledger-tag {
+  margin-left: 6px;
+  font-size: 11px;
+}
+.ledger-time {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* ---- 分段控件 ---- */
+.segmented {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  margin-bottom: 12px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+}
+.seg-btn {
+  border: none;
+  background: transparent;
+  padding: 6px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--text-sub);
+  font-size: 14px;
+}
+.seg-btn.active {
+  background: var(--card);
+  color: var(--primary);
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}
+
+/* ---- 挑战卡 ---- */
+.challenge-card.finished {
+  opacity: 0.62;
+}
+.challenge-card.highlight {
+  animation: gol-highlight 1.6s ease 2;
+}
+@keyframes gol-highlight {
+  0%, 100% { box-shadow: none; }
+  50% { box-shadow: 0 0 0 3px var(--primary-soft), 0 0 12px rgba(79, 110, 247, 0.35); }
+}
+.challenge-meta {
+  margin-top: 8px;
+  gap: 12px;
+}
+.reward {
+  color: var(--coin-in);
+  font-weight: 600;
+}
+.difficulty {
+  color: var(--warn);
+  letter-spacing: 1px;
+  font-size: 13px;
+}
+.ai-reason {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--primary-soft);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.self-report {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  resize: vertical;
+}
+.self-report:disabled {
+  background: #f4f5f8;
+}
+.slow-hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+}
+
+/* ---- outcome 徽章 ---- */
+.outcome-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+.outcome-badge.ok {
+  background: #e6f7ef;
+  color: var(--coin-in);
+}
+.outcome-badge.warn {
+  background: #fdf1e0;
+  color: var(--warn);
+}
+.outcome-badge.info {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.outcome-badge.bad {
+  background: #fdeceb;
+  color: var(--positive);
+}
+.chip {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--bg);
+  font-size: 12px;
+}
+
+/* ---- 商店 ---- */
+.pricing-reason {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.worth-note {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 13px;
+  line-height: 1.6;
+}
+/* 有劝阻语义时给醒目但不刺眼的提示色 */
+.worth-note.warn {
+  background: #fdf6e8;
+  border-left: 3px solid var(--warn);
+}
+
+/* ---- 奖励券 ---- */
+.voucher-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 720px) {
+  .voucher-cols {
+    grid-template-columns: 1fr;
+  }
+}
+.voucher-title {
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.voucher {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--card);
+}
+.voucher.done {
+  opacity: 0.6;
+}
+
+/* ---- 停滞提示卡（中性、不指责） ---- */
+.stagnation-card {
+  border-left: 3px solid var(--primary);
+}
+.stagnation-row + .stagnation-row {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+.stagnation-bad {
+  border-left: 3px solid var(--warn);
+}
+.stagnation-ok {
+  border-left: 3px solid var(--coin-in);
+}
+
+/* ---- 段位徽章（v1.8 C3） ---- */
+.tier-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 500;
+  vertical-align: 1px;
+}

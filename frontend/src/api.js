@@ -121,4 +121,44 @@ export const api = {
 
   // 成长报告
   getReport: (period) => request(`/report?period=${period}`),
+
+  // ===== 金币（v1.8） =====
+  getCoins: (limit = 50) => request(`/coins?limit=${limit}`),
+
+  // ===== 挑战（v1.8） =====
+  getCurrentChallenges: () => request('/challenges/current'),
+  listChallenges: (scope) => request(scope ? `/challenges?scope=${scope}` : '/challenges'),
+  generateChallenges: (scope, force = false) =>
+    request('/challenges/generate', {
+      method: 'POST',
+      body: JSON.stringify({ scope, force }),
+    }),
+  acceptChallenge: (id) => request(`/challenges/${id}/accept`, { method: 'POST' }),
+  completeChallenge: (id, note) =>
+    request(`/challenges/${id}/complete`, { method: 'POST', body: JSON.stringify({ note }) }),
+  settleChallenge: (id) => request(`/challenges/${id}/settle`, { method: 'POST' }),
+  abandonChallenge: (id, note = '') =>
+    request(`/challenges/${id}/abandon`, { method: 'POST', body: JSON.stringify({ note }) }),
+
+  // ===== 商店与奖励券（v1.8） =====
+  listShopItems: () => request('/shop/items'),
+  createShopItem: (payload) =>
+    request('/shop/items', { method: 'POST', body: JSON.stringify(payload) }),
+  updateShopItem: (id, payload) =>
+    request(`/shop/items/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  repriceShopItem: (id) => request(`/shop/items/${id}/reprice`, { method: 'POST' }),
+  disableShopItem: (id) => request(`/shop/items/${id}`, { method: 'DELETE' }),
+  redeemShopItem: (id, note = '') =>
+    request(`/shop/items/${id}/redeem`, { method: 'POST', body: JSON.stringify({ note }) }),
+  listRedemptions: () => request('/redemptions'),
+  fulfillRedemption: (id, note = '') =>
+    request(`/redemptions/${id}/fulfill`, { method: 'POST', body: JSON.stringify({ note }) }),
+
+  // ===== 停滞问询（v1.8） =====
+  getStagnation: () => request('/stagnation'),
+  answerStagnation: (name, stopped, note = '') =>
+    request(`/stagnation/${encodeURIComponent(name)}/answer`, {
+      method: 'POST',
+      body: JSON.stringify({ stopped, note }),
+    }),
 }

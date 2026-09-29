@@ -9,6 +9,7 @@ import TimelineView from './components/TimelineView.vue'
 import JournalView from './components/JournalView.vue'
 import JudgmentList from './components/JudgmentList.vue'
 import GoalsView from './components/GoalsView.vue'
+import ChallengeView from './components/ChallengeView.vue'
 import AnchorsView from './components/AnchorsView.vue'
 import SettingsView from './components/SettingsView.vue'
 
@@ -19,6 +20,7 @@ const tabs = [
   { key: 'timeline', label: '手账本' },
   { key: 'judgments', label: '判定中心' },
   { key: 'goals', label: '目标' },
+  { key: 'challenge', label: '挑战' },
   { key: 'anchors', label: '锚点库' },
   { key: 'onboarding', label: '角色档案' },
   { key: 'journal', label: '纯享记录' },
@@ -109,6 +111,7 @@ onMounted(() => {
   <TimelineView v-else-if="activeTab === 'timeline'" />
   <JudgmentList v-else-if="activeTab === 'judgments'" />
   <GoalsView v-else-if="activeTab === 'goals'" />
+  <ChallengeView v-else-if="activeTab === 'challenge'" />
   <AnchorsView v-else-if="activeTab === 'anchors'" />
   <JournalView v-else-if="activeTab === 'journal'" />
   <SettingsView v-else-if="activeTab === 'settings'" />

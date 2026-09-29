@@ -134,6 +134,12 @@ export const api = {
       body: JSON.stringify({ scope, force }),
     }),
   acceptChallenge: (id) => request(`/challenges/${id}/accept`, { method: 'POST' }),
+  // v1.9 F3：候选期切换难度档位（接受后档位锁定，会返回 400）
+  switchChallengeVariant: (id, variantIndex) =>
+    request(`/challenges/${id}/variant`, {
+      method: 'PUT',
+      body: JSON.stringify({ variant_index: variantIndex }),
+    }),
   completeChallenge: (id, note) =>
     request(`/challenges/${id}/complete`, { method: 'POST', body: JSON.stringify({ note }) }),
   settleChallenge: (id) => request(`/challenges/${id}/settle`, { method: 'POST' }),

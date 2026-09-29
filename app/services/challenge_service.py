@@ -160,8 +160,22 @@ def generate(db: Session, user: User, scope: str = "daily", force: bool = False)
         title = str(item.get("title", "")).strip()
         if not title:
             continue
-        difficulty = max(1, min(5, int(item.get("difficulty") or 1)))
-        reward, deposit = coin_params(scope, difficulty)
+        raw_difficulty = max(1, min(5, int(item.get("difficulty") or 1)))
+        raw_description = str(item.get("description", "")).strip()
+
+        # v1.9 F3：解析多档位。档位非法就丢；丢完只剩 ≤1 档 → 退回单档（等价旧行为）
+        variants = _parse_variants(item.get("variants"))
+        if len(variants) > 1:
+            # 顶层字段对齐「与 AI 给的顶层 difficulty 最接近」的那一档（无则第一档）
+            chosen = min(variants, key=lambda v: abs(v["difficulty"] - raw_difficulty))
+            difficulty = chosen["difficulty"]
+            description = chosen["description"]
+        else:
+            variants = []
+            difficulty = raw_difficulty
+            description = raw_description
+
+        reward, deposit = coin_params(scope, difficulty)  # 数字一律由参数表派生
         related = [
             judge_service._normalize_attribute_name(str(n))
             for n in (item.get("related_attributes") or [])
@@ -172,12 +186,13 @@ def generate(db: Session, user: User, scope: str = "daily", force: bool = False)
             scope=scope,
             period_key=pkey,
             title=title[:120],
-            description=str(item.get("description", "")).strip(),
+            description=description,
             difficulty=difficulty,
             coin_reward=reward,
             deposit=deposit,
             related_attributes=related,
             ai_reason=str(item.get("reason", "")).strip(),
+            variants=variants,
             status="candidate",
             expires_at=expires,
         )
@@ -188,6 +203,67 @@ def generate(db: Session, user: User, scope: str = "daily", force: bool = False)
     for row in created:
         db.refresh(row)
     return existing + created
+
+
+VARIANT_MAX_COUNT = 5
+VARIANT_LABEL_MAX = 6
+
+
+def _parse_variants(raw) -> list[dict]:
+    """解析 AI 给的 variants（v1.9 F3）。
+
+    逐档校验：label 非空且 ≤ 6 字（超长截断）、description 非空（空则丢弃该档）、
+    difficulty 夹到 [1, 5]。丢弃非法档后剩 ≤ 1 档由调用方退回单档（此处原样返回）。
+
+    **不接受 AI 给的任何金币/押金数字**——只保留 label/description/difficulty 三个键，
+    金额一律由 `coin_params()` 派生，从源头杜绝模型自由发明数字。
+    """
+    if not isinstance(raw, list):
+        return []
+    out: list[dict] = []
+    seen_difficulty: set[int] = set()
+    for v in raw[:VARIANT_MAX_COUNT]:
+        if not isinstance(v, dict):
+            continue
+        label = str(v.get("label", "")).strip()[:VARIANT_LABEL_MAX]
+        description = str(v.get("description", "")).strip()
+        if not label or not description:
+            continue
+        try:
+            difficulty = int(v.get("difficulty") or 0)
+        except (TypeError, ValueError):
+            continue
+        difficulty = max(1, min(5, difficulty))
+        if difficulty in seen_difficulty:  # 档位难度必须递增/互不相同
+            continue
+        seen_difficulty.add(difficulty)
+        out.append({"label": label, "description": description, "difficulty": difficulty})
+    out.sort(key=lambda x: x["difficulty"])
+    return out
+
+
+def switch_variant(db: Session, user: User, challenge: Challenge, variant_index: int) -> Challenge:
+    """候选期切换难度档位（v1.9 F3）。
+
+    - 只有 `candidate` 可切；`accepted` 及之后档位锁定（用户已按该档押了钱）
+    - 切换后把该档的 description/difficulty 写回顶层，并**重算**金币与押金
+    - 不写审计（候选期的选择不是关键操作，此时也还没有 judgment_id）
+    """
+    if challenge.status != "candidate":
+        raise ValueError("挑战已接受，档位已锁定。")
+    variants = challenge.variants or []
+    if not variants:
+        raise ValueError("该挑战只有一档，无需切换。")
+    if not (0 <= variant_index < len(variants)):
+        raise ValueError(f"档位序号越界（有效范围 0~{len(variants) - 1}）。")
+
+    chosen = variants[variant_index]
+    challenge.description = chosen["description"]
+    challenge.difficulty = chosen["difficulty"]
+    challenge.coin_reward, challenge.deposit = coin_params(challenge.scope, chosen["difficulty"])
+    db.commit()
+    db.refresh(challenge)
+    return challenge
 
 
 def _long_term_memory(db: Session, user_id: int) -> str:
@@ -300,6 +376,7 @@ def complete(db: Session, user: User, challenge: Challenge, note: str) -> dict:
         title=f"挑战：{challenge.title}",
         content=note or "",
         params={"_challenge_id": challenge.id},
+        origin="challenge",  # v1.9 F5：标记为挑战来源（前端显示「挑战」徽章）
         occurred_at=datetime.now(),
     )
     db.add(event)
@@ -466,7 +543,9 @@ def _make_retreat_judgment(db: Session, user: User, challenge: Challenge, note_t
     event = Event(
         user_id=user.id, event_type="negative", category="目标", source="form",
         title=f"挑战：{challenge.title}", content=note_text,
-        params={"_challenge_id": challenge.id}, occurred_at=datetime.now(),
+        params={"_challenge_id": challenge.id},
+        origin="challenge",  # v1.9 F5：标记为挑战来源（abandon / 过期两条路径共用此处）
+        occurred_at=datetime.now(),
     )
     db.add(event)
     db.flush()

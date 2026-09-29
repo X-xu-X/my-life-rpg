@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { api } from '../api'
+import { toast } from '../composables/useToast'
 
 // ============================================================
 // v1.8 挑战 tab：挑战区 + 商店区
@@ -98,6 +99,8 @@ const stagnationResult = ref(null)
 // ============================================================
 // 「AI 正在分析…」+ 防重复 + 可取消（复用 v1.7 C 的做法）
 // ============================================================
+// v1.9 F3：正在切换中的档位下标（仅用于给被点的那颗按钮显示「切换中…」）
+const variantTarget = ref(null)
 const busyId = ref(null)
 const slowHintId = ref(null)
 const SLOW_THRESHOLD_MS = 60000 // 判定常见 20~60s，超过 60s 给一句提示
@@ -145,7 +148,10 @@ async function runAction(id, fn) {
     if (!stillCurrent(token)) return // 已被取消
     return res
   } catch (e) {
-    if (stillCurrent(token)) error.value = e.message
+    if (stillCurrent(token)) {
+      error.value = e.message
+      toast.error(e.message) // v1.9 F2：失败既留顶部横幅，也浮一次提示
+    }
   } finally {
     if (stillCurrent(token)) endBusy()
   }
@@ -162,6 +168,7 @@ async function loadCoins() {
     ledger.value = data.ledger || []
   } catch (e) {
     error.value = e.message
+    toast.error(e.message) // F2-2：横幅 + 浮一次提示
   }
 }
 
@@ -172,6 +179,7 @@ async function loadChallenges() {
     weekly.value = data.weekly || []
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   }
 }
 
@@ -184,6 +192,7 @@ async function loadShop() {
     redemptions.value = rd.redemptions || []
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   }
 }
 
@@ -193,6 +202,7 @@ async function loadStagnation() {
     stagnation.value = data.items || []
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   }
 }
 
@@ -212,19 +222,62 @@ async function loadAll() {
 // ============================================================
 
 async function generate(scope, force) {
-  await runAction(`gen-${scope}`, async () => {
-    await api.generateChallenges(scope, force)
+  const label = scope === 'weekly' ? '周挑战' : '日挑战'
+  // v1.9 F2 修正：force 补位为 0 时后端会把**已有的**挑战原样返回，
+  // 只看 res.challenges.length 会把"没生成"误报成"已生成 N 条"。
+  // 因此先记下调用前已有的 id，用差集判断真正新增了哪几条。
+  const before = new Set([...daily.value, ...weekly.value].map((c) => c.id))
+  const res = await runAction(`gen-${scope}`, async () => {
+    const data = await api.generateChallenges(scope, force)
     await loadChallenges()
     await loadCoins()
+    return data
   })
+  if (res) {
+    const n = (res.challenges || []).filter((c) => !before.has(c.id)).length
+    // v1.9 F2：generate 原先"按钮禁用但文案不变 + 成功静默"，是本轮第一个修复点
+    if (n > 0) toast.success(`已生成 ${n} 条新${label}`)
+    else toast.info(`${label}已是最新，没有空缺位置需要补充`)
+  }
+}
+
+// ============================================================
+// v1.9 F3：一卡多档
+// ============================================================
+
+/** 当前选中的档位下标：难度与顶层 difficulty 一致的那一档（档位难度唯一，可安全比对） */
+function activeVariantIndex(c) {
+  const vs = c.variants || []
+  if (!vs.length) return -1
+  return vs.findIndex((v) => v.difficulty === c.difficulty)
+}
+
+/** 只读文案：已接受 / 已结算的卡片显示「档位：5 项」 */
+function activeVariantLabel(c) {
+  const i = activeVariantIndex(c)
+  return i >= 0 ? (c.variants[i].label || '') : ''
+}
+
+async function pickVariant(c, index) {
+  variantTarget.value = index
+  const label = c.variants[index]?.label || ''
+  const res = await runAction(`variant-${c.id}`, async () => {
+    const data = await api.switchChallengeVariant(c.id, index)
+    await loadChallenges()
+    return data
+  })
+  variantTarget.value = null
+  if (res) toast.success(`已切换到「${label}」档`)
 }
 
 async function accept(c) {
-  await runAction(`accept-${c.id}`, async () => {
-    await api.acceptChallenge(c.id)
+  const res = await runAction(`accept-${c.id}`, async () => {
+    const data = await api.acceptChallenge(c.id)
     await loadChallenges()
     await loadCoins()
+    return data
   })
+  if (res) toast.success(`已接受「${c.title}」，扣除押金 ${c.deposit} 币`)
 }
 
 async function complete(c) {
@@ -239,6 +292,7 @@ async function complete(c) {
   if (res) {
     settled.value = { ...settled.value, [c.id]: res }
     await loadChallenges()
+    toast.info('AI 判定完成，请在卡片下方确认结算')
   }
 }
 
@@ -248,6 +302,8 @@ async function settle(c) {
     settled.value = { ...settled.value, [c.id]: { ...(settled.value[c.id] || {}), ...res } }
     await loadChallenges()
     await loadCoins()
+    const d = res.coins_delta || 0
+    toast.success(d ? `结算完成，金币 ${d > 0 ? '+' : ''}${d}` : '结算完成')
   }
 }
 
@@ -262,6 +318,7 @@ async function abandon(c) {
     settled.value = { ...settled.value, [c.id]: res }
     await loadChallenges()
     await loadCoins()
+    toast.info(res.outcome === 'excused' ? '已放弃：属意外情况，押金已退回' : '已放弃：押金不退')
   }
 }
 
@@ -279,21 +336,25 @@ async function addItem() {
   pricingBusy.value = true
   error.value = ''
   try {
-    await api.createShopItem({ name, price_yuan: price })
+    const created = await api.createShopItem({ name, price_yuan: price })
     newItem.value = { name: '', price_yuan: '' }
     await loadShop()
+    toast.success(`已添加「${created.name}」，AI 定价 ${created.coin_price} 币`)
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   } finally {
     pricingBusy.value = false
   }
 }
 
 async function reprice(it) {
-  await runAction(`reprice-${it.id}`, async () => {
-    await api.repriceShopItem(it.id)
+  const res = await runAction(`reprice-${it.id}`, async () => {
+    const data = await api.repriceShopItem(it.id)
     await loadShop()
+    return data
   })
+  if (res) toast.success(`已重新定价：${it.coin_price} → ${res.coin_price} 币`)
 }
 
 async function redeem(it) {
@@ -303,19 +364,23 @@ async function redeem(it) {
   }
   const rest = coins.value - it.coin_price
   if (!confirm(`兑换「${it.name}」？\n将消耗 ${it.coin_price} 币，余额将剩 ${rest} 币。`)) return
-  await runAction(`redeem-${it.id}`, async () => {
-    await api.redeemShopItem(it.id, '')
+  const res = await runAction(`redeem-${it.id}`, async () => {
+    const data = await api.redeemShopItem(it.id, '')
     await loadShop()
     await loadCoins()
     segment.value = 'shop'
+    return data
   })
+  if (res) toast.success(`已兑换「${it.name}」，奖励券已放入「待兑现」`)
 }
 
 async function fulfill(r) {
-  await runAction(`fulfill-${r.id}`, async () => {
+  const res = await runAction(`fulfill-${r.id}`, async () => {
     await api.fulfillRedemption(r.id, '')
     await loadShop()
+    return true
   })
+  if (res) toast.success(`「${r.item_name}」已标记为兑现`)
 }
 
 async function changePrice(it) {
@@ -326,10 +391,12 @@ async function changePrice(it) {
     error.value = '金币价必须为正整数'
     return
   }
-  await runAction(`price-${it.id}`, async () => {
+  const res = await runAction(`price-${it.id}`, async () => {
     await api.updateShopItem(it.id, { coin_price: Math.round(val) })
     await loadShop()
+    return true
   })
+  if (res) toast.success(`已把「${it.name}」的价格改为 ${Math.round(val)} 币`)
 }
 
 // ============================================================
@@ -352,6 +419,7 @@ async function answerStagnation(item, stopped) {
     }
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   } finally {
     stagnationBusy.value = false
   }
@@ -457,7 +525,10 @@ onMounted(loadAll)
           <div class="row" style="align-items: center; justify-content: space-between">
             <h3 style="margin: 0">{{ group.label }}</h3>
             <button class="btn small" :disabled="anyBusy" @click="generate(group.scope, true)">
-              {{ group.list.length ? '再来一批' : '生成挑战' }}
+              <template v-if="isBusy(`gen-${group.scope}`)">
+                <span class="spinner"></span>AI 正在生成…
+              </template>
+              <template v-else>{{ group.list.length ? '再来一批' : '生成挑战' }}</template>
             </button>
           </div>
           <p v-if="group.list.length === 0" class="muted" style="margin-top: 8px">
@@ -481,8 +552,33 @@ onMounted(loadAll)
 
             <div class="muted">{{ c.description }}</div>
 
+            <!-- C4-2：已接受 / 已结算的挑战只读显示档位（不可点，档位已锁定） -->
+            <div
+              v-if="c.status !== 'candidate' && (c.variants || []).length > 1"
+              class="muted variant-note"
+            >
+              档位：{{ activeVariantLabel(c) }}
+            </div>
+
             <!-- 候选期：金币提前显示、加点不预览 -->
             <template v-if="c.status === 'candidate'">
+              <!-- C4-1：候选期的档位切换按钮组（只 1 档或旧挑战不渲染，行为与改造前一致） -->
+              <div v-if="(c.variants || []).length > 1" class="variant-row">
+                <button
+                  v-for="(v, i) in c.variants"
+                  :key="`${c.id}-v${i}`"
+                  class="seg-btn"
+                  :class="{ active: activeVariantIndex(c) === i }"
+                  :disabled="anyBusy"
+                  :title="v.description"
+                  @click="pickVariant(c, i)"
+                >
+                  <template v-if="isBusy(`variant-${c.id}`) && variantTarget === i">
+                    <span class="spinner"></span>切换中…
+                  </template>
+                  <template v-else>{{ v.label }}</template>
+                </button>
+              </div>
               <div class="row challenge-meta">
                 <span class="reward">完成可得 +{{ c.coin_reward }} 币</span>
                 <span class="muted">押金 {{ c.deposit }} 币</span>

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import AIJudgment, Challenge
-from app.schemas import ChallengeGenerateIn, ChallengeResolveIn
+from app.schemas import ChallengeGenerateIn, ChallengeResolveIn, ChallengeVariantIn
 from app.services import challenge_service, coin_service
 from app.services.llm_service import LLMError
 from app.services.user_service import get_or_create_default_user
@@ -40,6 +40,8 @@ def _out(ch: Challenge, jmap: dict[int, AIJudgment] | None = None) -> dict:
         "outcome_note": ch.outcome_note,
         # related_attributes 仅用于结算后展示（决策 10：加点不预览）
         "related_attributes": ch.related_attributes or [],
+        # v1.9 F3：多档位（空 = 单档）；前端据此渲染候选期的档位按钮组
+        "variants": ch.variants or [],
         "event_id": ch.event_id,
         "judgment_id": ch.judgment_id,
         # 判定明细：刷新后仍可展示（suggested=建议加点；final=实际入账）
@@ -106,6 +108,24 @@ def accept_challenge(challenge_id: int, db: Session = Depends(get_db)):
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     return {"challenge": _out(ch), "balance": coin_service.balance(db, user)}
+
+
+@router.put("/challenges/{challenge_id}/variant")
+def switch_variant(challenge_id: int, body: ChallengeVariantIn, db: Session = Depends(get_db)):
+    """候选期切换难度档位（v1.9 F3）。
+
+    - 挑战不存在 / 不属于当前用户 → 404
+    - 已接受或已结算 → 400「挑战已接受，档位已锁定」
+    - `variant_index` 越界 → 400
+    切换后 description / difficulty 写回顶层，coin_reward / deposit 按新难度重算。
+    """
+    user = get_or_create_default_user(db)
+    ch = _get(db, user, challenge_id)
+    try:
+        ch = challenge_service.switch_variant(db, user, ch, body.variant_index)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"challenge": _out(ch)}
 
 
 @router.post("/challenges/{challenge_id}/complete")

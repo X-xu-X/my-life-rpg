@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import AIJudgment, Event, JudgmentLog
 from app.schemas import DisputeIn, SupplementIn
-from app.services import judge_service
+from app.services import coin_service, judge_service
 from app.services.llm_service import LLMError
 from app.services.user_service import get_or_create_default_user
 
@@ -137,7 +137,10 @@ def get_logs(judgment_id: int, db: Session = Depends(get_db)):
 
 @router.post("/judgments/{judgment_id}/confirm")
 def confirm(judgment_id: int, db: Session = Depends(get_db)):
-    """确认入账：写属性流水 + 更新属性值。低置信度会被拦截。"""
+    """确认入账：写属性流水 + 更新属性值。低置信度会被拦截。
+
+    v1.8：入账成功后按净 delta 发放日常金币（净 delta ≤ 0 不给币也不扣币）。
+    """
     judgment = _get_judgment(db, judgment_id)
     if judgment.status == "confirmed":
         raise HTTPException(status_code=409, detail="该判定已确认入账，请勿重复操作。")
@@ -145,7 +148,26 @@ def confirm(judgment_id: int, db: Session = Depends(get_db)):
         judgment = judge_service.confirm(db, judgment)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    return {"status": judgment.status, "final_changes": judgment.final_changes}
+
+    # v1.8 A3-1：日常事件赚币（幂等——已 confirmed 的判定上面已 409 拦掉，不会重复发币）
+    user = get_or_create_default_user(db)
+    event = db.get(Event, judgment.event_id)
+    coins_gained = None
+    try:
+        coins_gained = coin_service.reward_event_confirm(
+            db, user, judgment, event_title=(event.title if event else "") or ""
+        )
+        if coins_gained is not None:
+            db.commit()
+    except Exception:  # 金币发放失败不应影响判定入账这一主流程
+        db.rollback()
+
+    return {
+        "status": judgment.status,
+        "final_changes": judgment.final_changes,
+        "coins_gained": coin_service.EVENT_CONFIRM_REWARD if coins_gained is not None else 0,
+        "balance": coin_service.balance(db, user),
+    }
 
 
 @router.post("/judgments/{judgment_id}/supplement")

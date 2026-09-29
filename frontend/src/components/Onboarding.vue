@@ -1,6 +1,7 @@
 <script setup>
 import { ref, nextTick, onMounted, watch } from 'vue'
 import { api } from '../api'
+import { toast } from '../composables/useToast'
 
 const emit = defineEmits(['created'])
 
@@ -11,6 +12,9 @@ const currentQuestions = ref([])
 const answerInputs = ref({})
 const panel = ref(null)
 const summary = ref('')
+// v1.9 F1：启动资金（老档案快照里没有该键 → 为 null，模板据此不渲染该行）
+const initialCoins = ref(null)
+const initialCoinsReason = ref('')
 const confidence = ref(0)
 const busy = ref(false)
 const error = ref('')
@@ -52,12 +56,15 @@ async function loadStatus() {
       const attr = await api.getAttributes()
       panel.value = attr.attributes || []
       summary.value = '你已完成首次属性建档，可随时补充长期信息。'
+      initialCoins.value = st.initial_coins ?? null
+      initialCoinsReason.value = st.initial_coins_reason || ''
     } else if (st.in_progress) {
       await resume()
     }
     // 否则保持 init，等待用户点「开始」
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   }
 }
 
@@ -77,6 +84,8 @@ async function start() {
     if (data.done && data.panel) {
       panel.value = data.panel
       summary.value = data.summary || ''
+      initialCoins.value = data.initial_coins ?? null
+      initialCoinsReason.value = data.initial_coins_reason || ''
       phase.value = 'done'
     } else {
       phase.value = 'asking'
@@ -87,6 +96,7 @@ async function start() {
     }
     await scrollToBottom()
   } catch (e) {
+    toast.error(e.message)
     error.value = e.message
   } finally {
     busy.value = false
@@ -107,6 +117,8 @@ async function resume() {
     if (data.done && data.panel) {
       panel.value = data.panel
       summary.value = data.summary || ''
+      initialCoins.value = data.initial_coins ?? null
+      initialCoinsReason.value = data.initial_coins_reason || ''
       phase.value = 'done'
       return
     }
@@ -118,6 +130,7 @@ async function resume() {
     await scrollToBottom()
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   } finally {
     busy.value = false
   }
@@ -143,9 +156,12 @@ async function submit() {
       // 把握度达标，自动生成面板
       panel.value = data.panel
       summary.value = data.summary || ''
+      initialCoins.value = data.initial_coins ?? null
+      initialCoinsReason.value = data.initial_coins_reason || ''
       confidence.value = data.confidence || 100
       phase.value = 'done'
       messages.value.push({ role: 'ai', text: `信息够了（把握度 ${data.confidence}%），已为你生成初始属性面板。` })
+      toast.success('初始属性面板已生成')
       emit('created')
     } else {
       phase.value = 'asking'
@@ -156,6 +172,7 @@ async function submit() {
     await scrollToBottom()
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   } finally {
     busy.value = false
   }
@@ -170,8 +187,10 @@ async function submitSupplement() {
     pendingAdjustment.value = data
     supplementNote.value = data.explanation || ''
     supplementText.value = ''
+    toast.info('AI 已给出调整建议，请确认或忽略')
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   } finally {
     busy.value = false
   }
@@ -186,9 +205,11 @@ async function confirmSupplement() {
     supplementNote.value = data.message || '调整已生效。'
     const attr = await api.getAttributes()
     panel.value = attr.attributes || []
+    toast.success('调整已生效')
     emit('created')
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   } finally {
     busy.value = false
   }
@@ -213,9 +234,11 @@ async function resetProfile() {
     summary.value = ''
     pendingAdjustment.value = null
     supplementNote.value = ''
+    toast.info('角色档案已重置，可以重新走问卷')
     emit('created')
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   } finally {
     busy.value = false
   }
@@ -233,7 +256,8 @@ onMounted(loadStatus)
 
     <!-- 未开始 -->
     <button v-if="phase === 'init'" class="btn primary" :disabled="busy" @click="start">
-      开始建立角色档案
+      <template v-if="busy"><span class="spinner"></span>AI 正在准备问题…</template>
+      <template v-else>开始建立角色档案</template>
     </button>
 
     <!-- 对话流 -->
@@ -255,7 +279,10 @@ onMounted(loadStatus)
         <label>{{ q }}</label>
         <input v-model="answerInputs[q]" placeholder="你的回答…" @keyup.enter="submit" />
       </div>
-      <button class="btn primary" :disabled="busy" @click="submit">提交</button>
+      <button class="btn primary" :disabled="busy" @click="submit">
+        <template v-if="busy"><span class="spinner"></span>AI 正在评估…</template>
+        <template v-else>提交</template>
+      </button>
     </div>
 
     <!-- 属性面板展示（首次生成 / 已完成） -->
@@ -269,11 +296,20 @@ onMounted(loadStatus)
         <div class="track"><div class="fill" :style="{ width: a.value + '%' }"></div></div>
         <div class="muted">{{ a.reason || a.description }}</div>
       </div>
+      <!-- v1.9 F1：启动资金（老档案无 initial_coins 键时不显示） -->
+      <div v-if="initialCoins" class="coins-grant">
+        <b>🎁 启动资金 +{{ initialCoins }} 币</b>
+        <div v-if="initialCoinsReason" class="muted">为什么给你这个数：{{ initialCoinsReason }}</div>
+      </div>
+
       <p v-if="summary" class="muted">{{ summary }}</p>
 
       <!-- 重置角色档案（测试/重新建档用） -->
       <div class="row" style="margin-top: 12px">
-        <button class="btn small danger" :disabled="busy" @click="resetProfile">重置角色档案（重新走问卷）</button>
+        <button class="btn small danger" :disabled="busy" @click="resetProfile">
+          <template v-if="busy">处理中…</template>
+          <template v-else>重置角色档案（重新走问卷）</template>
+        </button>
       </div>
 
       <!-- 补充长期信息入口（仅首次完成后） -->
@@ -283,7 +319,10 @@ onMounted(loadStatus)
         <div class="field">
           <textarea v-model="supplementText" rows="2" placeholder="例如：我性格偏内向，但自控力其实比看起来强…"></textarea>
         </div>
-        <button class="btn primary" :disabled="busy" @click="submitSupplement">提交补充</button>
+        <button class="btn primary" :disabled="busy" @click="submitSupplement">
+          <template v-if="busy"><span class="spinner"></span>AI 正在评估…</template>
+          <template v-else>提交补充</template>
+        </button>
 
         <!-- 调整建议 -->
         <div v-if="pendingAdjustment" class="card" style="margin-top: 12px">
@@ -296,7 +335,10 @@ onMounted(loadStatus)
             <div class="evidence">依据：{{ adj.evidence }}</div>
           </div>
           <div v-if="pendingAdjustment.adjustments.length" class="row" style="margin-top: 8px">
-            <button class="btn primary" :disabled="busy" @click="confirmSupplement">确认调整</button>
+            <button class="btn primary" :disabled="busy" @click="confirmSupplement">
+              <template v-if="busy">应用中…</template>
+              <template v-else>确认调整</template>
+            </button>
             <button class="btn" :disabled="busy" @click="ignoreSupplement">忽略</button>
           </div>
           <div v-else class="row" style="margin-top: 8px">

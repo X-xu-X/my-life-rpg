@@ -12,8 +12,11 @@ from sqlalchemy.orm import Session
 
 from app.models import CoinLedger, Event, User, UserProfile
 
-# 启动资金：解决"新用户 0 币无法接受挑战"的押金死锁（决策 8）
-STARTUP_BONUS = 50
+# 启动资金兜底值（v1.8 起：解决"新用户 0 币无法接受挑战"的押金死锁）
+# v1.9（F1）：正常路径改由 onboarding 的 AI 按问卷给出 80~200 并直接发放；
+# 本值上调为 80（与新保底一致）作为**兜底**——万一 onboarding 路径异常未发放，
+# 用户仍能拿到保底并走通「周挑战押金 35 + 中档奖励 40」的闭环。
+STARTUP_BONUS = 80
 
 # 日常事件确认入账的固定奖励（决策 12）
 EVENT_CONFIRM_REWARD = 2

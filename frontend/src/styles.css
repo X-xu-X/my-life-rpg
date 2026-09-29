@@ -652,3 +652,153 @@ label {
   font-weight: 500;
   vertical-align: 1px;
 }
+
+/* v1.9 F1：角色档案页的启动资金展示 */
+.coins-grant {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--primary-soft);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.coins-grant b {
+  color: var(--primary);
+}
+
+/* ============================================================
+   v1.9 F2：全局轻提示 toast
+   亮色主题、圆角卡片、左侧色条区分成功/失败/信息。
+   刻意不用涨跌红绿语义（金币与股票无关）。
+   ============================================================ */
+.toast-host {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none; /* 容器不拦截点击 */
+  max-width: min(380px, calc(100vw - 32px));
+}
+.toast {
+  pointer-events: auto; /* 单条可点（关闭按钮） */
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: 0 4px 18px rgba(30, 40, 80, 0.14);
+  border-left: 4px solid var(--text-sub);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.toast-success { border-left-color: #1f9e6a; }
+.toast-error   { border-left-color: #d94b3d; }
+.toast-info    { border-left-color: #5b76d8; }
+.toast-icon {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--text-sub);
+}
+.toast-success .toast-icon { background: #1f9e6a; }
+.toast-error   .toast-icon { background: #d94b3d; }
+.toast-info    .toast-icon { background: #5b76d8; }
+.toast-msg {
+  flex: 1;
+  word-break: break-word;
+}
+.toast-close {
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-sub);
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.toast-close:hover { color: var(--text); }
+
+/* 进出场动画 */
+.toast-enter-active, .toast-leave-active { transition: all 0.22s ease; }
+.toast-enter-from, .toast-leave-to { opacity: 0; transform: translateX(16px); }
+
+/* ---- v1.9 F3：一卡多档的档位按钮组（复用 .seg-btn 外观）---- */
+.variant-row {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 3px;
+  margin: 10px 0 2px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  max-width: 100%;
+}
+.variant-row .seg-btn {
+  padding: 4px 14px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.variant-row .seg-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+.variant-row .spinner {
+  margin-right: 4px;
+}
+.variant-note {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+/* ============================================================
+   v1.9 F4：手账本搜索的命中片段
+   关键词前后各约 20 字 + <mark> 高亮 + 来源标签。
+   仅在有关键词时渲染，避免常态噪音。
+   ============================================================ */
+.hit-snippet {
+  margin: 4px 0 2px 0;
+  padding: 5px 9px;
+  border-left: 3px solid var(--primary);
+  border-radius: 6px;
+  background: var(--bg);
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--text-sub);
+  word-break: break-word;
+}
+.hit-src {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.hit-snippet mark {
+  padding: 0 1px;
+  border-radius: 3px;
+  background: #ffe9a8;
+  color: inherit;
+  font-weight: 600;
+}
+.seg-count {
+  align-self: center;
+  margin-left: 6px;
+  font-size: 12px;
+}

@@ -11,9 +11,9 @@
 from sqlalchemy.orm import Session
 
 from app import prompts
-from app.models import Attribute, AttributeHistory, UserProfile
+from app.models import Attribute, AttributeHistory, User, UserProfile
 from app.prompts.onboarding import CONFIDENCE_THRESHOLD
-from app.services import llm_config
+from app.services import coin_service, llm_config
 from app.services.judge_service import _clamp_attribute_value as clamp_attribute_value
 from app.services.llm_service import llm_service
 from app.services.user_service import get_or_create_default_user
@@ -30,15 +30,22 @@ def _get_profile(db: Session, user) -> UserProfile:
 
 
 def get_status(db: Session) -> dict:
-    """查询首次引导状态（是否完成、是否有进行中会话）。"""
+    """查询首次引导状态（是否完成、是否有进行中会话）。
+
+    v1.9（F1）：附带启动资金与其理由（从快照读取）。
+    **老档案的快照里没有这两个键 → 返回 None / 空串，前端据此不显示该行**（优雅降级）。
+    """
     user = get_or_create_default_user(db)
     profile = _get_profile(db, user)
     state = profile.onboarding_state or {}
+    snapshot = profile.initial_attributes_snapshot or {}
     return {
         "onboarding_completed": bool(profile.onboarding_completed),
         "in_progress": bool(state.get("conversation")),
         "question_count": len(state.get("conversation", [])),
         "confidence": state.get("confidence", 0),
+        "initial_coins": snapshot.get("initial_coins"),
+        "initial_coins_reason": snapshot.get("initial_coins_reason", "") or "",
     }
 
 
@@ -113,25 +120,49 @@ def submit_answer(db: Session, answers: list[dict]) -> dict:
     result = _evaluate(db, profile, conversation)
     if result["confidence"] >= CONFIDENCE_THRESHOLD:
         panel, summary = _generate_panel(db, profile, conversation)
+        snapshot = profile.initial_attributes_snapshot or {}
         return {
             "completed": True,
             "done": True,
             "panel": panel,
             "summary": summary,
             "confidence": result["confidence"],
+            # v1.9 F1：启动资金（展示用；前端若拿不到则不显示该行）
+            "initial_coins": snapshot.get("initial_coins"),
+            "initial_coins_reason": snapshot.get("initial_coins_reason", "") or "",
         }
     return {"completed": False, "done": False, **result}
 
 
 def _generate_panel(db: Session, profile: UserProfile, conversation: list[dict]) -> tuple[list, str]:
-    """AI 生成初始属性面板，持久化到画像快照与 attributes 表。"""
+    """AI 生成初始属性面板，持久化到画像快照与 attributes 表。
+
+    v1.9（F1）：启动资金改为**由 AI 依据问卷一并给出**（同一次调用新增输出字段
+    `initial_coins` / `initial_coins_reason`，不额外增加 LLM 调用）。
+    代码**只做区间夹取**，不实现任何"按短板数计算"之类的兜底公式
+    （那是用户在访谈中明确否决的方案）。
+    """
     # v1.4：走判定模型组（judge）
     config = llm_config.resolve_llm_config(db, profile.user_id, llm_config.PURPOSE_JUDGE)
     result = llm_service.chat_json(prompts.build_panel_messages(conversation), config=config)
     panel = result.get("attributes", [])
     summary = result.get("summary", "")
 
-    profile.initial_attributes_snapshot = {"attributes": panel, "summary": summary}
+    # v1.9 F1：解析并夹取启动资金（80~200，整数；非法/缺失取保底 80）
+    initial_coins = _clamp_initial_coins(result.get("initial_coins"))
+    reason_raw = result.get("initial_coins_reason")
+    initial_coins_reason = (
+        str(reason_raw).strip()
+        if reason_raw and str(reason_raw).strip()
+        else "按你的问卷情况给出的启动资金，够你走通一次挑战与兑换。"
+    )
+
+    profile.initial_attributes_snapshot = {
+        "attributes": panel,
+        "initial_coins": initial_coins,
+        "initial_coins_reason": initial_coins_reason,
+        "summary": summary,
+    }
     # 沉淀画像：原始问答 + 空的补充信息列表（后续补充长期信息追加到这里）
     profile.basic_profile = {"conversation": conversation, "supplements": []}
     profile.onboarding_completed = True
@@ -153,7 +184,37 @@ def _generate_panel(db: Session, profile: UserProfile, conversation: list[dict])
         attr.description = item.get("reason", "")
 
     db.commit()
+
+    # v1.9 F1：发放启动资金（唯一写入口 coin_service.grant）
+    # 幂等由 grant_startup_bonus_if_needed 的"ledger 是否已有 onboarding_bonus"判断兜底，
+    # 故此处发放后，GET /api/coins 不会再补发一次。
+    user = db.get(User, profile.user_id)
+    if user is not None:
+        coin_service.grant(
+            db,
+            user,
+            initial_coins,
+            source="onboarding_bonus",
+            reason=f"角色档案建立，获得启动资金 {initial_coins} 币 —— {initial_coins_reason}",
+        )
+        db.commit()
+
     return panel, summary
+
+
+# 启动资金区间（v1.9 F1：保底 80 保证能走通「周挑战押金 35 + 中档奖励 40」闭环；
+# 上限 200 ≈ 一周满打满算收入，再高会削弱挑战动力）
+INITIAL_COINS_MIN = 80
+INITIAL_COINS_MAX = 200
+
+
+def _clamp_initial_coins(raw) -> int:
+    """把 AI 给出的启动资金夹到 [80, 200] 的整数；非法/缺失取保底 80。"""
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return INITIAL_COINS_MIN
+    return max(INITIAL_COINS_MIN, min(INITIAL_COINS_MAX, value))
 
 
 def supplement_profile(db: Session, detail: str) -> dict:

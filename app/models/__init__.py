@@ -166,6 +166,10 @@ class Event(Base):
     item_id: Mapped[int | None] = mapped_column(ForeignKey("checkin_items.id"), nullable=True)
     # 纯享版记录：True 表示只记录不加点、不走 AI 判定（生活手账）
     is_pure: Mapped[bool] = mapped_column(Boolean, default=False)
+    # v1.9（F5）：事件来源标记。None=普通记录（默认，老数据一律 NULL）；
+    # "challenge"=挑战结算生成。**只由 challenge_service 的两处写入**，
+    # 用户录入的事件永远不可能是挑战来源（EventCreate 不提供该字段）。
+    origin: Mapped[str | None] = mapped_column(String(20), nullable=True)
     occurred_at: Mapped[datetime] = mapped_column(DateTime, default=_now)  # 事件发生时间
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
@@ -342,6 +346,10 @@ class Challenge(Base):
     deposit: Mapped[int] = mapped_column(Integer, default=0)  # 押金
     related_attributes: Mapped[list] = mapped_column(JSON, default=list)  # AI 预期影响的维度（不预览）
     ai_reason: Mapped[str] = mapped_column(Text, default="")  # 为什么给你这个挑战（展示）
+    # v1.9：同主题的多难度档位 [{label, description, difficulty}]。
+    # 空列表 = 单档挑战（等价旧行为）；difficulty/description/coin_reward/deposit
+    # 四个字段始终表示「当前选中的档位」。
+    variants: Mapped[list] = mapped_column(JSON, default=list)
     status: Mapped[str] = mapped_column(String(20), default="candidate")
     accepted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

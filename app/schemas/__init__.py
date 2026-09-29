@@ -47,6 +47,9 @@ class EventOut(BaseModel):
     content: str
     item_id: int | None = None
     is_pure: bool
+    # v1.9（F5）：None=普通记录；"challenge"=挑战结算生成。
+    # 注意 EventCreate / EventUpdate **不提供**该字段（不给前端写入口）。
+    origin: str | None = None
     occurred_at: datetime | None
     created_at: datetime
 
@@ -261,6 +264,8 @@ class ChallengeOut(BaseModel):
     outcome: str
     outcome_note: str
     related_attributes: list
+    # v1.9：多档位 [{label, description, difficulty}]；空列表 = 单档（旧行为）
+    variants: list = []
     event_id: int | None
     judgment_id: int | None
     created_at: datetime
@@ -273,6 +278,15 @@ class ChallengeGenerateIn(BaseModel):
 
     scope: Literal["daily", "weekly"] = "daily"
     force: bool = False
+
+
+class ChallengeVariantIn(BaseModel):
+    """候选期切换难度档位（v1.9 F3）。
+
+    `variant_index` 为 `variants` 数组下标；越界或挑战已接受都会被拒。
+    """
+
+    variant_index: int
 
 
 class ChallengeResolveIn(BaseModel):

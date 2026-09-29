@@ -75,6 +75,7 @@ def list_judgments(db: Session = Depends(get_db)):
             "event_title": e.title or e.content[:40],
             "event_type": e.event_type,
             "category": e.category,
+            "origin": e.origin,  # v1.9 F5：事件来源（"challenge" → 前端显示「挑战」徽章）
             "status": j.status,
             "suggested_changes": j.suggested_changes,
             "analysis": j.analysis,

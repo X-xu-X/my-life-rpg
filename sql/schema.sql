@@ -208,6 +208,7 @@ CREATE TABLE IF NOT EXISTS challenges (
     deposit            INT NOT NULL DEFAULT 0,                 -- 押金
     related_attributes JSON,                                   -- AI 预期影响的维度（不预览给用户）
     ai_reason          TEXT,                                   -- 为什么给你这个挑战（展示）
+    variants           JSON,                                   -- v1.9 多档位 [{label,description,difficulty}]；空=单档
     status             VARCHAR(20) NOT NULL DEFAULT 'candidate',
     accepted_at        DATETIME,
     resolved_at        DATETIME,

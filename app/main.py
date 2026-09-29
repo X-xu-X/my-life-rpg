@@ -15,6 +15,7 @@ from app.routers import (
     attributes,
     goals,
     items,
+    coins,
     anchors,
     export,
     report,
@@ -43,6 +44,7 @@ app.include_router(judgments.router, prefix="/api", tags=["judgments"])
 app.include_router(attributes.router, prefix="/api", tags=["attributes"])
 app.include_router(goals.router, prefix="/api", tags=["goals"])
 app.include_router(items.router, prefix="/api", tags=["items"])
+app.include_router(coins.router, prefix="/api", tags=["coins"])
 app.include_router(anchors.router, prefix="/api", tags=["anchors"])
 app.include_router(settings_router.router, prefix="/api", tags=["settings"])
 app.include_router(export.router, prefix="/api", tags=["export"])

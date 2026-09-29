@@ -1,8 +1,10 @@
-"""数据模型（SQLAlchemy ORM，共 11 张核心表）。
+"""数据模型（SQLAlchemy ORM，共 15 张核心表）。
 
 对应 PRD 6.3 节：users / user_profiles / attributes / attribute_history /
 events / ai_judgments / judgment_logs / goals / anchors / settings。
 v1.7 新增：checkin_items（打卡项目，用户自建）。
+v1.8 新增：coin_ledger（金币流水）/ challenges（挑战）/ shop_items（商店物品）/
+          redemptions（兑换券）。
 
 设计原则：
 - 所有业务表外键关联 user_id，V1 单用户、M4 多用户平滑扩展。
@@ -65,6 +67,9 @@ class UserProfile(Base):
     # 游戏化字段（M3 实现曲线逻辑，此处预留）
     level: Mapped[int] = mapped_column(Integer, default=1)
     exp: Mapped[float] = mapped_column(Float, default=0.0)
+    # 金币余额（v1.8）。唯一写入口是 coin_service.grant()，任何地方不得直接改此列。
+    # 与属性点完全隔离（金币不能换点数）；负面事件不扣金币，避免双重惩罚。
+    coins: Mapped[int] = mapped_column(Integer, default=0)
     # 长期记忆（智能体式）：LLM 压缩历史事件成的五类摘要（长期目标/关键经历/性格/偏好/当前状态），JSON 字符串
     long_term_memory: Mapped[str | None] = mapped_column(Text, nullable=True)
     memory_updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -231,6 +236,11 @@ class Anchor(Base):
 
     base_value 为基准量（如 30 表示 30 分钟），unit 为单位（分钟/小时/次）。
     calibrated_value 为用户校准后的基准量（NULL 表示未校准，使用 base_value）。
+
+    v1.8 升级（A2-2）：单属性 → **多属性 + 强度分档**。
+    - `targets` 非空时**以它为准**，忽略旧的 `target_attribute` / `base_delta`；
+      `targets IS NULL` 的老锚点仍按单属性处理，行为与升级前完全一致。
+    - `intensity_note` 为人可读的强度梯度指引，直接注入 prompt。
     """
 
     __tablename__ = "anchors"
@@ -239,10 +249,14 @@ class Anchor(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)  # 标准事件名
     description: Mapped[str] = mapped_column(Text, default="")
     category: Mapped[str] = mapped_column(String(50), default="")  # 锻炼/学习/作息/目标
-    target_attribute: Mapped[str] = mapped_column(String(50), default="")  # 影响属性
+    target_attribute: Mapped[str] = mapped_column(String(50), default="")  # 影响属性（单属性，兼容保留）
     base_value: Mapped[float] = mapped_column(Float, default=0.0)  # 基准量
     unit: Mapped[str] = mapped_column(String(20), default="")  # 单位
-    base_delta: Mapped[float] = mapped_column(Float, default=0.0)  # 基准增减点数
+    base_delta: Mapped[float] = mapped_column(Float, default=0.0)  # 基准增减点数（单属性，兼容保留）
+    # v1.8 多属性目标：[{"name": "健康", "base_delta": -0.5}, {"name": "智力", "base_delta": -0.4}]
+    targets: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    # v1.8 强度梯度指引（人类可读，注入 prompt）
+    intensity_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     evidence: Mapped[str] = mapped_column(Text, default="")  # 科学依据（ACSM 指南/学习科学/睡眠研究）
     is_builtin: Mapped[bool] = mapped_column(Boolean, default=True)
     calibrated_value: Mapped[float | None] = mapped_column(Float, nullable=True)  # 用户校准值
@@ -261,3 +275,37 @@ class Setting(Base):
     key: Mapped[str] = mapped_column(String(100), nullable=False)
     value: Mapped[dict] = mapped_column(JSON, default=dict)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
+
+
+class CoinLedger(Base):
+    """金币流水（v1.8）。append-only，与 attributes/attribute_history 同构。
+
+    设计原则：**当前值 + append-only 流水** —— `user_profiles.coins` 存当前余额，
+    本表存每一次变动，两者配合保证账目永远可对（余额可由流水求和复原）。
+
+    **唯一写入口是 `app/services/coin_service.grant()`**，任何地方不得直接改
+    `profile.coins`（v1.5 B-03「多入口必须同一写入语义」教训）。
+
+    source 枚举（前端按它分组展示与配色）：
+    - onboarding_bonus  启动资金            +
+    - event_confirm     日常事件确认入账     +
+    - journal_streak    连续写日记里程碑     +
+    - challenge_reward  挑战完成奖励        +
+    - challenge_deposit 接受挑战押金        −
+    - challenge_refund  挑战完成退回押金     +
+    - challenge_forfeit 挑战未完成没收押金   −（押金在 accept 时已扣，此处仅留痕）
+    - shop_redeem       商店兑换            −
+    - achievement       成就奖励（v1.9 预留） +
+    """
+
+    __tablename__ = "coin_ledger"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    delta: Mapped[int] = mapped_column(Integer, nullable=False)  # 本次变动，正=获得，负=消耗
+    balance_after: Mapped[int] = mapped_column(Integer, nullable=False)  # 变动后余额（对账用）
+    source: Mapped[str] = mapped_column(String(40), nullable=False)  # 见类 docstring
+    reason: Mapped[str] = mapped_column(Text, default="")  # 人类可读说明（前端直接展示）
+    ref_type: Mapped[str | None] = mapped_column(String(30), nullable=True)  # challenge/event/shop_item/redemption
+    ref_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)

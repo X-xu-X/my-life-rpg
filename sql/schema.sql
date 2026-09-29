@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     initial_attributes_snapshot JSON,
     level                       INT  NOT NULL DEFAULT 1,
     exp                         DOUBLE NOT NULL DEFAULT 0.0,
+    coins                       INT  NOT NULL DEFAULT 0,  -- 金币余额（v1.8；唯一写入口 coin_service.grant）
     created_at                  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at                  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_profile_user FOREIGN KEY (user_id) REFERENCES users(id)
@@ -157,8 +158,28 @@ CREATE TABLE IF NOT EXISTS anchors (
     evidence         TEXT,
     is_builtin       TINYINT(1) NOT NULL DEFAULT 1,
     calibrated_value DOUBLE,
+    targets          JSON,                      -- 多属性目标（v1.8）：[{"name","base_delta"}]，非空时以它为准
+    intensity_note   TEXT,                      -- 强度梯度指引（v1.8）：注入 prompt 的人类可读说明
     created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 9.1 金币流水表（v1.8）
+-- 与 attributes/attribute_history 同构：当前值 + append-only 流水，保证账目可对。
+-- 唯一写入口为 coin_service.grant()，禁止任何地方直改 user_profiles.coins。
+CREATE TABLE IF NOT EXISTS coin_ledger (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    user_id       INT NOT NULL,
+    delta         INT NOT NULL,                  -- 本次变动，正=获得，负=消耗/押金/没收
+    balance_after INT NOT NULL,                  -- 变动后余额（对账用）
+    source        VARCHAR(40) NOT NULL,          -- onboarding_bonus/event_confirm/journal_streak/
+                                                 -- challenge_reward/challenge_deposit/challenge_refund/
+                                                 -- challenge_forfeit/shop_redeem/achievement
+    reason        TEXT,
+    ref_type      VARCHAR(30),                   -- challenge/event/shop_item/redemption
+    ref_id        INT,
+    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_coin_user FOREIGN KEY (user_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 10. 系统配置表

@@ -16,6 +16,9 @@ from app.routers import (
     goals,
     items,
     coins,
+    challenges,
+    shop,
+    stagnation,
     anchors,
     export,
     report,
@@ -45,6 +48,9 @@ app.include_router(attributes.router, prefix="/api", tags=["attributes"])
 app.include_router(goals.router, prefix="/api", tags=["goals"])
 app.include_router(items.router, prefix="/api", tags=["items"])
 app.include_router(coins.router, prefix="/api", tags=["coins"])
+app.include_router(challenges.router, prefix="/api", tags=["challenges"])
+app.include_router(shop.router, prefix="/api", tags=["shop"])
+app.include_router(stagnation.router, prefix="/api", tags=["stagnation"])
 app.include_router(anchors.router, prefix="/api", tags=["anchors"])
 app.include_router(settings_router.router, prefix="/api", tags=["settings"])
 app.include_router(export.router, prefix="/api", tags=["export"])

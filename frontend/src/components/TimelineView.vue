@@ -1,12 +1,21 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { api } from '../api'
+import { toast } from '../composables/useToast'
 import { useDateGroups } from '../composables/useDateGroups'
 
 const events = ref([])
 const judgments = ref([])
 const error = ref('')
 const searchText = ref('')
+// v1.9 F4-3：三态类型筛选（事件 = source='form'，含挑战来源；日记 = source='journal'）
+const typeFilter = ref('all')
+
+const TYPE_FILTERS = [
+  { key: 'all', label: '全部' },
+  { key: 'form', label: '只看事件' },
+  { key: 'journal', label: '只看日记' },
+]
 
 const STATUS_LABEL = { pending: '待确认', adjusted: '已调整', confirmed: '已入账', rejected: '已驳回', invalidated: '已作废' }
 
@@ -16,6 +25,7 @@ async function load() {
     judgments.value = await api.listJudgments()
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   }
 }
 
@@ -23,14 +33,109 @@ function judgmentFor(eventId) {
   return judgments.value.find((j) => j.event_id === eventId)
 }
 
+// ============================================================
+// v1.9 F4：手账本搜索重构
+// 覆盖范围 = 事件自身字段 + 关联判定内容（分析/总结/加点理由与依据/重判说明/
+// 置信度说明/合并说明）。全部在本地做（复用已加载的 events + judgments），
+// 不新增后端接口。
+// ============================================================
+
+/** 参数摘要（跳过 "_" 前缀的内部键，与后端 format_event_description 一致） */
+function paramsSummary(e) {
+  const p = e.params || {}
+  return Object.entries(p)
+    .filter(([k]) => !String(k).startsWith('_'))
+    .map(([k, v]) => `${k}：${v}`)
+    .join('，')
+}
+
+/** 文本化一条可能为字符串 / 对象 / 数组的字段 */
+function asText(v) {
+  if (v === null || v === undefined) return ''
+  if (typeof v === 'string') return v
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v)
+  if (Array.isArray(v)) return v.map(asText).filter(Boolean).join('；')
+  if (typeof v === 'object') {
+    return Object.entries(v)
+      .map(([k, x]) => `${k}：${asText(x)}`)
+      .join('；')
+  }
+  return ''
+}
+
+/**
+ * 构造一条记录的「可搜索字段」列表，每项带来源标签。
+ * 顺序即命中优先级——用户最可能想看到"命中在哪"的地方排在前面。
+ */
+function searchFields(e) {
+  const out = []
+  const push = (label, text) => {
+    const t = asText(text).trim()
+    if (t) out.push({ label, text: t })
+  }
+  push('标题', e.title)
+  push('正文', e.content)
+  push('类别', e.category)
+  push('参数', paramsSummary(e))
+
+  const j = judgmentFor(e.id)
+  if (j) {
+    push('AI 总结', j.summary)
+    if (Array.isArray(j.analysis) && j.analysis.length) push('AI 分析', j.analysis.join(' '))
+    for (const c of j.suggested_changes || []) {
+      push('加点理由', c.reason ? `${c.name}：${c.reason}` : '')
+      push('加点依据', c.evidence ? `${c.name}：${c.evidence}` : '')
+    }
+    for (const c of j.final_changes || []) {
+      push('入账理由', c.reason ? `${c.name}：${c.reason}` : '')
+    }
+    push('重判说明', j.revision_notes)
+    push('置信度说明', j.confidence_reason)
+    push('合并说明', j.merged_with)
+  }
+  return out
+}
+
+const searchKw = computed(() => searchText.value.trim().toLowerCase())
+
+/** 首个命中的字段 → 命中片段（关键词前后各约 20 字） */
+function matchOf(e, kw) {
+  for (const f of searchFields(e)) {
+    const idx = f.text.toLowerCase().indexOf(kw)
+    if (idx < 0) continue
+    const start = Math.max(0, idx - 20)
+    const end = Math.min(f.text.length, idx + kw.length + 20)
+    return {
+      label: f.label,
+      before: (start > 0 ? '…' : '') + f.text.slice(start, idx),
+      hit: f.text.slice(idx, idx + kw.length),
+      after: f.text.slice(idx + kw.length, end) + (end < f.text.length ? '…' : ''),
+    }
+  }
+  return null
+}
+
+/** 类型筛选 + 关键词搜索（两者与日期分组折叠同时生效） */
 const filteredEvents = computed(() => {
-  const kw = searchText.value.trim().toLowerCase()
-  if (!kw) return events.value
-  return events.value.filter((e) =>
-    (e.title || '').toLowerCase().includes(kw) ||
-    (e.content || '').toLowerCase().includes(kw) ||
-    (e.category || '').toLowerCase().includes(kw)
-  )
+  const kw = searchKw.value
+  return events.value.filter((e) => {
+    if (typeFilter.value === 'form' && e.source !== 'form') return false
+    if (typeFilter.value === 'journal' && e.source !== 'journal') return false
+    if (!kw) return true
+    return searchFields(e).some((f) => f.text.toLowerCase().includes(kw))
+  })
+})
+
+/** 命中片段表：仅在有关键词时构建（搜索词为空不显示片段，避免常态噪音） */
+const snippets = computed(() => {
+  const m = new Map()
+  const kw = searchKw.value
+  if (!kw) return m
+  for (const e of filteredEvents.value) {
+    const hit = matchOf(e, kw)
+    if (hit) m.set(e.id, hit)
+  }
+  return m
 })
 
 // ============ v1.6 B2：与判定中心一致的四组日期折叠（公共逻辑 useDateGroups） ============
@@ -41,7 +146,7 @@ const { groups: groupedEvents, expanded: groupExpanded, toggleGroup } = useDateG
 const expandedItems = ref(new Set()) // 展开详情的记录（内存态，刷新复位）
 
 function groupIsOpen(key) {
-  if (searchText.value.trim()) return true // 搜索命中自动展开所在组
+  if (searchKw.value) return true // 搜索命中自动展开所在组
   return !!groupExpanded.value[key]
 }
 function toggleItem(id) {
@@ -51,7 +156,7 @@ function toggleItem(id) {
   expandedItems.value = s
 }
 function itemIsOpen(id) {
-  if (searchText.value.trim()) return true // 搜索命中直接展开详情
+  if (searchKw.value) return true // 搜索命中直接展开详情
   return expandedItems.value.has(id)
 }
 
@@ -73,6 +178,7 @@ async function remove(id) {
     await load()
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   }
 }
 
@@ -87,11 +193,36 @@ onMounted(load)
     <p v-if="error" class="muted" style="color: #d33">{{ error }}</p>
     <p v-if="events.length === 0 && !error" class="muted">还没有记录，去「记录事件」写第一条吧。</p>
 
-    <div class="field" v-if="events.length > 0">
-      <input v-model="searchText" placeholder="🔍 搜索记录…" />
-    </div>
+    <template v-if="events.length > 0">
+      <div class="field">
+        <input v-model="searchText" placeholder="🔍 搜索记录（含 AI 分析与加点理由）…" />
+      </div>
 
-    <p v-if="events.length > 0" class="muted" style="font-size: 12px">点击记录行展开详情；组头可折叠（搜索时自动展开命中项）。</p>
+      <!-- v1.9 F4-3：三态类型筛选 -->
+      <div class="segmented" role="group" aria-label="记录类型筛选">
+        <button
+          v-for="f in TYPE_FILTERS"
+          :key="f.key"
+          class="seg-btn"
+          :class="{ active: typeFilter === f.key }"
+          @click="typeFilter = f.key"
+        >
+          {{ f.label }}
+        </button>
+        <span class="muted seg-count">{{ filteredEvents.length }} / {{ events.length }} 条</span>
+      </div>
+
+      <p class="muted" style="font-size: 12px">
+        点击记录行展开详情；组头可折叠（搜索时自动展开命中项）。搜索范围含正文、参数与 AI 判定内容。
+      </p>
+
+      <p v-if="searchKw && filteredEvents.length === 0" class="muted" style="margin-top: 8px">
+        没有找到包含「{{ searchText.trim() }}」的记录。
+      </p>
+      <p v-else-if="!searchKw && filteredEvents.length === 0" class="muted" style="margin-top: 8px">
+        该筛选下暂无记录。
+      </p>
+    </template>
 
     <div v-for="g in groupedEvents" :key="g.key" style="margin-bottom: 12px">
       <div
@@ -111,9 +242,16 @@ onMounted(load)
           <div class="row" style="align-items: center; cursor: pointer" @click="toggleItem(e.id)">
             <span class="muted" style="font-size: 12px">{{ fmtTime(e.created_at) }}</span>
             <b>{{ e.title || '未命名记录' }}</b>
+            <span v-if="e.origin === 'challenge'" class="tag" title="由挑战结算生成">挑战</span>
             <span class="tag">{{ e.category }}</span>
             <span class="muted" style="font-size: 12px">{{ changeSummary(e.id) }}</span>
             <span class="muted" style="margin-left: auto">{{ itemIsOpen(e.id) ? '▾' : '▸' }}</span>
+          </div>
+
+          <!-- v1.9 F4-4：命中片段（仅搜索时出现；关键词高亮 + 标注命中来源） -->
+          <div v-if="snippets.get(e.id)" class="hit-snippet">
+            <span class="hit-src">{{ snippets.get(e.id).label }}</span>
+            <span>{{ snippets.get(e.id).before }}</span><mark>{{ snippets.get(e.id).hit }}</mark><span>{{ snippets.get(e.id).after }}</span>
           </div>
 
           <template v-if="itemIsOpen(e.id)">

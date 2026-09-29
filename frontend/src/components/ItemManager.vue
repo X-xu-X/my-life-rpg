@@ -8,6 +8,7 @@
  */
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../api'
+import { toast } from '../composables/useToast'
 
 const items = ref([])
 const goals = ref([])
@@ -60,9 +61,11 @@ function freqText(it) {
 }
 
 function flash(msg) {
+  // v1.9 F2：保留表单旁的内联提示（近场），同时接入全局 toast（统一规范）
   hint.value = msg
   clearTimeout(hintTimer)
   hintTimer = setTimeout(() => (hint.value = ''), 2500)
+  toast.success(msg)
 }
 
 async function load() {
@@ -72,6 +75,7 @@ async function load() {
     error.value = ''
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   }
 }
 
@@ -101,9 +105,9 @@ function cancelEdit() {
 }
 
 async function save() {
-  if (!form.value.name.trim()) return alert('请填写项目名')
+  if (!form.value.name.trim()) return toast.error('请填写项目名')
   if (form.value.frequency_type === 'weekly' && (!form.value.frequency_target || form.value.frequency_target < 1)) {
-    return alert('每周频率需填写目标次数（≥1）')
+    return toast.error('每周频率需填写目标次数（≥1）')
   }
   busy.value = true
   error.value = ''
@@ -130,6 +134,7 @@ async function save() {
     await load()
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   } finally {
     busy.value = false
   }
@@ -144,6 +149,7 @@ async function toggleEnabled(it) {
     await load()
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   } finally {
     busy.value = false
   }
@@ -226,7 +232,10 @@ onMounted(load)
       </div>
 
       <div class="row" style="margin-top: 6px">
-        <button class="btn primary" :disabled="busy" @click="save">{{ editingId ? '保存修改' : '新建项目' }}</button>
+        <button class="btn primary" :disabled="busy" @click="save">
+          <template v-if="busy">保存中…</template>
+          <template v-else>{{ editingId ? '保存修改' : '新建项目' }}</template>
+        </button>
         <button class="btn" @click="cancelEdit" v-if="editingId">取消</button>
         <button class="btn" @click="startCreate" v-else>重置</button>
       </div>

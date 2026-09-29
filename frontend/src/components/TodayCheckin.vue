@@ -11,6 +11,7 @@
  */
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../api'
+import { toast } from '../composables/useToast'
 
 const emit = defineEmits(['go-judgments'])
 
@@ -82,13 +83,16 @@ async function load() {
     error.value = ''
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   }
 }
 
 function flash(msg) {
+  // v1.9 F2：保留页内提示（近场），同时接入全局 toast（统一规范）
   hint.value = msg
   clearTimeout(hintTimer)
   hintTimer = setTimeout(() => (hint.value = ''), 2500)
+  toast.success(msg)
 }
 
 function setRow(id, patch) {
@@ -121,6 +125,7 @@ async function submitOne(it) {
     return true
   } catch (e) {
     setRow(it.id, { busy: false, err: e.message, ok: false })
+    toast.error(`「${it.name}」${e.message}`)
     return false
   }
 }
@@ -128,7 +133,7 @@ async function submitOne(it) {
 /** 批量提交：所有填了一句话的项目逐个提交（各自独立事件 + 独立判定） */
 async function submitAll() {
   const targets = allItems.value.filter((it) => (drafts.value[it.id] || '').trim())
-  if (!targets.length) return alert('还没有填写任何记录')
+  if (!targets.length) return toast.error('还没有填写任何记录')
   busy.value = true
   error.value = ''
   let okCount = 0

@@ -12,6 +12,7 @@ import GoalsView from './components/GoalsView.vue'
 import ChallengeView from './components/ChallengeView.vue'
 import AnchorsView from './components/AnchorsView.vue'
 import SettingsView from './components/SettingsView.vue'
+import ToastHost from './components/ToastHost.vue'
 
 const tabs = [
   { key: 'panel', label: '属性面板' },
@@ -66,6 +67,9 @@ onMounted(() => {
 </script>
 
 <template>
+  <!-- v1.9 F2：全局轻提示（右上角，约 3 秒自动消失，不阻塞操作） -->
+  <ToastHost />
+
   <header>
     <h1>游戏人生 <span class="muted">· Game of Life</span></h1>
     <p class="muted">记录真实生活事件，AI 依据科学标准判定属性点增减，把成长变成一场可量化的 RPG。</p>

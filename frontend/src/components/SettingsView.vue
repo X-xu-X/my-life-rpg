@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../api'
+import { toast } from '../composables/useToast'
 import ItemManager from './ItemManager.vue'
 
 const settings = ref(null)
@@ -8,6 +9,7 @@ const error = ref('')
 const exporting = ref(false)
 const backups = ref([])
 const backingUp = ref(false)
+const resetting = ref(false)   // v1.9 F2：重置全部数据期间禁用+文案
 
 // 属性维度开关
 const attributes = ref([])
@@ -30,6 +32,7 @@ async function load() {
     attributes.value = (attrData.attributes || []).map((a) => a.name)
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   }
 }
 
@@ -54,8 +57,10 @@ async function setState(name, state) {
     saveHint.value = `已保存「${name}」设置`
     clearTimeout(hintTimer)
     hintTimer = setTimeout(() => (saveHint.value = ''), 2000)
+    toast.success(`已保存「${name}」设置`)
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   }
 }
 
@@ -109,6 +114,7 @@ async function loadLLMConfig() {
     }
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   }
 }
 
@@ -121,11 +127,11 @@ async function saveLLM(group) {
   const f = llmForm.value[group]
   const src = llmRaw.value?.[group] || {}
   if (!f.api_key.trim() && !src.configured) {
-    alert('请先填写 API Key')
+    toast.error('请先填写 API Key')
     return
   }
   if (!f.base_url.trim() || !f.model.trim()) {
-    alert('请填写 Base URL 和模型名')
+    toast.error('请填写 Base URL 和模型名')
     return
   }
   // 口径变化确认（仅判定组）：模型端点/key 与旧值有差异时弹确认
@@ -156,8 +162,10 @@ async function saveLLM(group) {
     clearTimeout(hintTimer)
     hintTimer = setTimeout(() => (llmHint.value = ''), 2500)
     await loadLLMConfig()
+    toast.success(`已保存「${GROUP_META[group].label}」`)
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   } finally {
     llmBusy.value = false
   }
@@ -168,6 +176,7 @@ async function loadBackups() {
     backups.value = await api.listBackups()
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   }
 }
 
@@ -176,10 +185,12 @@ async function doBackup() {
   error.value = ''
   try {
     const res = await api.backup()
-    alert(res.backup_file ? `备份完成：${res.backup_file}` : '备份失败')
+    if (res.backup_file) toast.success(`备份完成：${res.backup_file}`)
+    else toast.error('备份失败')
     await loadBackups()
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   } finally {
     backingUp.value = false
   }
@@ -189,11 +200,15 @@ async function resetAll() {
   if (!window.confirm('⚠️ 重置全部数据？将清空所有事件/判定/属性流水/目标，属性回中性值，并解锁角色档案。此操作不可恢复！')) return
   if (!window.confirm('再次确认：真的要清空所有数据重新开始吗？（建议先备份）')) return
   error.value = ''
+  resetting.value = true
   try {
     await api.resetAllData()
-    alert('已重置，可重新开始（请刷新页面）。')
+    toast.success('已重置，可重新开始（请刷新页面）')
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
+  } finally {
+    resetting.value = false
   }
 }
 
@@ -205,8 +220,10 @@ async function genReport(period) {
   error.value = ''
   try {
     reportData.value = await api.getReport(period)
+    toast.success('报告已生成')
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   } finally {
     reportBusy.value = false
   }
@@ -218,8 +235,10 @@ async function toggleModule(key) {
   try {
     await api.updateSetting('gamification_modules', mods)
     settings.value.gamification_modules = mods
+    toast.info(`「${MODULES[key]?.label || key}」已${mods[key] ? '开启' : '关闭'}`)
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   }
 }
 
@@ -228,8 +247,10 @@ async function exportData(format) {
   error.value = ''
   try {
     await api.exportData(format)
+    toast.success('导出已开始下载')
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   } finally {
     exporting.value = false
   }
@@ -341,7 +362,10 @@ onMounted(() => {
           <input type="password" v-model="llmForm[group].api_key" :placeholder="keyPlaceholder(group)" autocomplete="new-password" />
         </div>
         <div class="row" style="margin-top: 6px">
-          <button class="btn small primary" :disabled="llmBusy" @click="saveLLM(group)">保存{{ meta.label }}</button>
+          <button class="btn small primary" :disabled="llmBusy" @click="saveLLM(group)">
+            <template v-if="llmBusy">保存中…</template>
+            <template v-else>保存{{ meta.label }}</template>
+          </button>
         </div>
       </div>
 
@@ -355,7 +379,10 @@ onMounted(() => {
       <h3>数据导出（个人数据主权）</h3>
       <p class="muted">导出你的全部数据，随时可以带走。</p>
       <div class="row">
-        <button class="btn primary" :disabled="exporting" @click="exportData('json')">导出 JSON（全部数据）</button>
+        <button class="btn primary" :disabled="exporting" @click="exportData('json')">
+          <template v-if="exporting">导出中…</template>
+          <template v-else>导出 JSON（全部数据）</template>
+        </button>
         <button class="btn" :disabled="exporting" @click="exportData('csv')">导出事件 CSV</button>
       </div>
     </div>
@@ -379,7 +406,10 @@ onMounted(() => {
       <p class="muted">AI 基于近期数据生成成长总结与建议。</p>
       <div class="row">
         <button class="btn primary" :disabled="reportBusy" @click="genReport('week')">{{ reportBusy ? '生成中…' : '生成周报' }}</button>
-        <button class="btn" :disabled="reportBusy" @click="genReport('month')">生成月报</button>
+        <button class="btn" :disabled="reportBusy" @click="genReport('month')">
+          <template v-if="reportBusy">生成中…</template>
+          <template v-else>生成月报</template>
+        </button>
       </div>
       <div v-if="reportData" style="margin-top: 12px">
         <div class="muted" style="margin-bottom: 6px">{{ reportData.start }} ~ {{ reportData.end }}</div>
@@ -398,7 +428,10 @@ onMounted(() => {
     <div class="card">
       <h3>测试 / 重置</h3>
       <p class="muted">⚠️ 清空所有数据（事件/判定/流水/目标），属性回中性值，解锁角色档案。用于测试，操作前建议先备份。</p>
-      <button class="btn danger" @click="resetAll">重置全部数据</button>
+      <button class="btn danger" :disabled="resetting" @click="resetAll">
+        <template v-if="resetting">重置中…</template>
+        <template v-else>重置全部数据</template>
+      </button>
     </div>
 
     <p v-if="error" class="muted" style="color: #d33">{{ error }}</p>

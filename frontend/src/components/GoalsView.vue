@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { api } from '../api'
+import { toast } from '../composables/useToast'
 
 const goals = ref([])
 const form = ref({ description: '', metric: '', deadline: '', related_attribute: '' })
@@ -33,11 +34,12 @@ async function load() {
     goals.value = await api.listGoals()
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   }
 }
 
 async function create() {
-  if (!form.value.metric.trim()) return alert('请填写量化指标')
+  if (!form.value.metric.trim()) return toast.error('请填写量化指标')
   busy.value = true
   error.value = ''
   try {
@@ -49,8 +51,10 @@ async function create() {
     })
     form.value = { description: '', metric: '', deadline: '', related_attribute: '' }
     await load()
+    toast.success('目标已创建')
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   } finally {
     busy.value = false
   }
@@ -65,25 +69,27 @@ async function setStatus(id, action) {
       const applied = res.applied || []
       if (applied.length) {
         const msg = applied.map((a) => `${a.name} ${a.delta >= 0 ? '+' : ''}${a.delta}`).join('、')
-        alert(`目标达成，奖励已入账：${msg}`)
+        toast.success(`目标达成，奖励已入账：${msg}`)
       } else {
-        alert('目标已标记达成')
+        toast.success('目标已标记达成')
       }
     } else if (action === 'fail') {
       const res = await api.failGoal(id)
       const applied = res.applied || []
       if (applied.length) {
         const msg = applied.map((a) => `${a.name} ${a.delta >= 0 ? '+' : ''}${a.delta}`).join('、')
-        alert(`目标未达成，扣分已入账：${msg}`)
+        toast.info(`目标未达成，扣分已入账：${msg}`)
       } else {
-        alert('目标已标记未达成')
+        toast.info('目标已标记未达成')
       }
     } else if (action === 'cancel') {
       await api.cancelGoal(id)
+      toast.info('目标已取消')
     }
     await load()
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   } finally {
     busy.value = false
   }
@@ -116,7 +122,10 @@ onMounted(load)
           <input v-model="form.related_attribute" placeholder="例如：体能" />
         </div>
       </div>
-      <button class="btn primary" :disabled="busy" @click="create">创建目标</button>
+      <button class="btn primary" :disabled="busy" @click="create">
+        <template v-if="busy">创建中…</template>
+        <template v-else>创建目标</template>
+      </button>
       <p class="muted" style="margin-top: 8px">达成奖励规划力 +2 及关联属性，未达成扣规划力 -1，修改/取消均记审计。</p>
     </div>
 
@@ -146,9 +155,12 @@ onMounted(load)
           </div>
         </div>
         <div v-if="g.status === 'active'" class="row" style="margin-top: 8px">
-          <button class="btn small primary" @click="setStatus(g.id, 'achieve')">达成</button>
-          <button class="btn small" @click="setStatus(g.id, 'fail')">未达成</button>
-          <button class="btn small danger" @click="setStatus(g.id, 'cancel')">取消</button>
+          <button class="btn small primary" :disabled="busy" @click="setStatus(g.id, 'achieve')">
+            <template v-if="busy">处理中…</template>
+            <template v-else>达成</template>
+          </button>
+          <button class="btn small" :disabled="busy" @click="setStatus(g.id, 'fail')">未达成</button>
+          <button class="btn small danger" :disabled="busy" @click="setStatus(g.id, 'cancel')">取消</button>
         </div>
       </div>
     </div>

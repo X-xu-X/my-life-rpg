@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { api } from '../api'
+import { toast } from '../composables/useToast'
 
 const anchors = ref([])
 const busy = ref(false)
@@ -13,6 +14,7 @@ async function load() {
     anchors.value = await api.getAnchors()
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   }
 }
 
@@ -28,16 +30,27 @@ async function saveCalibrate(a) {
     await api.calibrateAnchor(a.id, isNaN(val) ? null : val)
     editingId.value = null
     await load()
+    toast.success(`已保存「${a.name}」的校准值`)
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   } finally {
     busy.value = false
   }
 }
 
 async function resetCalibrate(a) {
-  await api.calibrateAnchor(a.id, null)
-  await load()
+  busy.value = true
+  try {
+    await api.calibrateAnchor(a.id, null)
+    await load()
+    toast.success(`已恢复「${a.name}」的默认基准`)
+  } catch (e) {
+    error.value = e.message
+    toast.error(e.message)
+  } finally {
+    busy.value = false
+  }
 }
 
 onMounted(load)
@@ -84,11 +97,14 @@ onMounted(load)
           <td class="muted" style="max-width: 260px">{{ a.evidence }}</td>
           <td>
             <template v-if="editingId === a.id">
-              <button class="btn small primary" :disabled="busy" @click="saveCalibrate(a)">保存</button>
+              <button class="btn small primary" :disabled="busy" @click="saveCalibrate(a)">
+                <template v-if="busy">保存中…</template>
+                <template v-else>保存</template>
+              </button>
             </template>
             <template v-else>
               <button class="btn small" @click="startEdit(a)">校准</button>
-              <button v-if="a.calibrated_value != null" class="btn small" @click="resetCalibrate(a)">恢复</button>
+              <button v-if="a.calibrated_value != null" class="btn small" :disabled="busy" @click="resetCalibrate(a)">恢复</button>
             </template>
           </td>
         </tr>

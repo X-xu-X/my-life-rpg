@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../api'
+import { toast } from '../composables/useToast'
 
 const records = ref([])
 const error = ref('')
@@ -21,6 +22,7 @@ async function load() {
     records.value = await api.listEvents(true)
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   }
 }
 
@@ -29,8 +31,10 @@ async function remove(id) {
   try {
     await api.deleteEvent(id)
     await load()
+    toast.success('已删除该条纯享记录')
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   }
 }
 
@@ -47,8 +51,10 @@ async function saveEdit() {
     })
     editTarget.value = null
     await load()
+    toast.success('已保存修改')
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   }
 }
 

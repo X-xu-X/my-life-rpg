@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { api } from '../api'
+import { toast } from '../composables/useToast'
 
 const emit = defineEmits(['judged', 'go-judgments', 'go-items'])
 
@@ -54,6 +55,7 @@ async function loadItems() {
     itemsError.value = ''
   } catch (e) {
     itemsError.value = e.message
+    toast.error(e.message)
   }
 }
 
@@ -254,14 +256,17 @@ async function submitClarify() {
     if (res.needs_clarify) {
       clarifyEvent.value.questions = res.questions || []
       clarifyAnswer.value = ''
+      toast.info('AI 还想再确认几点')
       return
     }
+    toast.success('已按补充信息重新判定')
     result.value = res
     clarifyEvent.value = null
     clarifyAnswer.value = ''
     emit('judged')
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   } finally {
     busy.value = false
   }
@@ -274,8 +279,13 @@ async function submit() {
   try {
     if (mode.value === 'form') await submitForm()
     else await submitJournal()
+    // v1.9 F2：提交后的统一反馈（纯享保存 / 判定完成 / AI 还想追问）
+    if (clarifyEvent.value) toast.info('AI 想再确认几点，请回答下方的追问')
+    else if (result.value?.status === 'pure') toast.success('已保存为纯享记录')
+    else if (result.value) toast.success('已提交并完成 AI 判定')
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   } finally {
     busy.value = false
   }
@@ -319,6 +329,7 @@ async function loadList() {
     listError.value = ''
   } catch (e) {
     listError.value = e.message
+    toast.error(e.message)
   }
 }
 
@@ -595,6 +606,7 @@ onMounted(loadList)
                 <div class="row" style="align-items: center; cursor: pointer" @click="toggleDetail(e.id)">
                   <span class="muted" style="font-size: 12px">{{ fmtTime(e.created_at) }}</span>
                   <b>{{ e.title || '未命名事件' }}</b>
+                  <span v-if="e.origin === 'challenge'" class="tag" title="由挑战结算生成">挑战</span>
                   <span class="muted" style="font-size: 12px">{{ eventSummary(e) }}</span>
                   <span class="muted" style="font-size: 12px">{{ changeSummary(e.id) }}</span>
                   <span class="muted" style="margin-left: auto">{{ isDetailOpen(e.id) ? '▾' : '▸' }}</span>

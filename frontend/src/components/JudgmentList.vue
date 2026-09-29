@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../api'
+import { toast } from '../composables/useToast'
 import { useDateGroups } from '../composables/useDateGroups'
 
 const judgments = ref([])
@@ -99,6 +100,7 @@ async function load() {
     judgments.value = await api.listJudgments()
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   }
 }
 
@@ -108,6 +110,7 @@ async function refreshAudit(id) {
     auditLogs.value = await api.getJudgmentLogs(id)
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   }
 }
 
@@ -135,12 +138,12 @@ async function confirm(id) {
 }
 
 async function supplement(id) {
-  if (!inputText.value.trim()) return alert('请填写补充信息')
+  if (!inputText.value.trim()) return toast.error('请填写补充信息')
   await runAction(id, () => api.supplementJudgment(id, inputText.value.trim()), '已重新判定')
 }
 
 async function dispute(id) {
-  if (!inputText.value.trim()) return alert('请填写反驳理由')
+  if (!inputText.value.trim()) return toast.error('请填写反驳理由')
   const res = await runAction(id, () => api.disputeJudgment(id, inputText.value.trim()), '已提交反驳复核')
   if (res) {
     // v1.5 A2：复核结论就地展示（替代阻塞式 alert）
@@ -169,6 +172,7 @@ async function removeEvent(jid, eventId, confirmed) {
     flash('已删除' + (confirmed ? '，相关点数已回滚' : ''))
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   } finally {
     busy.value = false
   }
@@ -179,6 +183,8 @@ function flash(msg) {
   notice.value = msg
   clearTimeout(noticeTimer)
   noticeTimer = setTimeout(() => (notice.value = ''), 2000)
+  // v1.9 F2：同时接入全局 toast（统一规范）
+  toast.success(msg)
 }
 
 function clearSuccess(id) {
@@ -228,6 +234,7 @@ async function openEdit(jid, eventId) {
     editTarget.value = eventId
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   }
 }
 
@@ -249,6 +256,7 @@ async function saveEdit() {
     flash('已保存。事件内容变更后旧判定已作废，可重新判定。')
   } catch (e) {
     error.value = e.message
+    toast.error(e.message)
   } finally {
     busy.value = false
   }
@@ -313,6 +321,7 @@ onMounted(load)
           <!-- 摘要行（点击展开/收起详情） -->
           <div class="row" style="align-items: center; cursor: pointer" @click="toggleItem(j.id)">
             <b>{{ j.event_title || j.category }}</b>
+            <span v-if="j.origin === 'challenge'" class="tag" title="由挑战结算生成">挑战</span>
             <span class="tag">{{ j.event_type }}</span>
             <span class="tag">{{ STATUS_LABEL[j.status] || j.status }}</span>
             <span v-if="j.rejudge_count > 0" class="tag" title="从审计日志统计的重判次数">已重判 · 第 {{ j.rejudge_count }} 次</span>

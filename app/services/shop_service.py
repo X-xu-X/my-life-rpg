@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Attribute, Redemption, ShopItem, User, UserProfile
 from app.prompts.shop import build_pricing_messages
-from app.services import coin_service, llm_config
+from app.services import coin_service, economy_service, llm_config
 from app.services.llm_service import llm_service
 
 # 常驻物资（决策 14 / B4-1，首次访问商店时幂等预置；用户可改价或停用）
@@ -95,13 +95,19 @@ def _long_term_memory(db: Session, user_id: int) -> str:
 
 
 def price_item(db: Session, user: User, name: str, price_yuan: float | None) -> dict:
-    """一次 LLM 调用为物品定价，返回 {coin_price, pricing_reason, worth_note}。"""
+    """一次 LLM 调用为物品定价，返回 {coin_price, pricing_reason, worth_note}。
+
+    v1.10（N1-7 / N1-8）：注入 `economy_service.snapshot()` 的行情快照
+    ——**与挑战定价共用同一套**。原先 prompt 要求 AI「结合金币获取速度折算」，
+    但从未传入任何收入数据，AI 只能编造。
+    """
     messages = build_pricing_messages(
         name=name,
         price_yuan=price_yuan,
         redemption_history=_redemption_history(db, user),
         attributes_context=_attributes_context(db, user.id),
         recent_memory=_long_term_memory(db, user.id),
+        economy_context=economy_service.snapshot(db, user),
     )
     config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_AUX)
     result = llm_service.chat_json(messages, config=config)

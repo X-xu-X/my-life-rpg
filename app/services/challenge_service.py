@@ -1,4 +1,4 @@
-"""挑战服务（v1.8）：AI 生成 → 接受（押金）→ 完成判定 → 结算 → 过期。
+"""挑战服务（v1.8 建立 / v1.10 经济定价重构）：AI 生成 → 接受（押金）→ 完成判定 → 结算 → 过期。
 
 **一致性铁律**（v1.5 B-03 教训）：
 - 金币只有 `coin_service.grant()` 一个写入口，押金/返还/没收/奖励全部走它
@@ -9,6 +9,9 @@
 
 状态机：candidate → accepted → settled；candidate/accepted 过期 → expired；
         candidate/accepted 主动放弃 → abandoned（押金没收 + 按难度扣点）。
+
+v1.10 变更（N1）：**金额改由 AI 定价** —— `COIN_TABLE` 降级为"解析兜底表"，
+押金统一由 `derive_deposit()` 按奖励比例派生。**不要在代码里加"金额必须等于参数表"的校验。**
 """
 from datetime import datetime, timedelta
 
@@ -16,18 +19,27 @@ from sqlalchemy.orm import Session
 
 from app.models import AIJudgment, Challenge, Event, User
 from app.prompts.challenge import build_challenge_messages, build_completion_messages
-from app.services import coin_service, judge_service, llm_config
+from app.services import coin_service, economy_service, judge_service, llm_config
 from app.services.llm_service import llm_service
 
 # 候选数量（决策 5：日 3 个 / 周 2 个）
 CANDIDATE_COUNT = {"daily": 3, "weekly": 2}
 
-# 金币参数表（DEV_PLAN_v1.8 §四 B2，AI 必须按档取值）
+# 金币参数表
+#
+# ⚠️ v1.10（N1）起**降级为「解析兜底表」**——不再是唯一权威。
+# 金额现在由 AI 综合任务分量 + 行情快照自行定价（用户 2026-09-29 确认"完全放开给 AI"）；
+# 本表只在 AI 给不出合法正整数时兜底（非整数 / ≤0 / 缺失），避免出现 0 或负数金额。
+#
 # 结构：scope -> difficulty -> (coin_reward, deposit)
 COIN_TABLE = {
     "daily": {1: (5, 5), 2: (8, 7), 3: (10, 10), 4: (13, 12), 5: (15, 15)},
     "weekly": {1: (30, 15), 2: (35, 20), 3: (40, 25), 4: (45, 30), 5: (50, 35)},
 }
+
+# 押金比例（N1-2）：押金 = max(1, round(奖励 × 0.6))。
+# AI **只给奖励、不给押金**——比例稳定比放开更符合"押金要够痛但可承受"的设计意图。
+DEPOSIT_RATIO = 0.6
 
 # 退缩（retreated）扣点上限与难度梯度（单次未完成不至于重罚）
 RETREAT_DELTA_CAP = 1.5
@@ -59,14 +71,40 @@ def period_end(scope: str, now: datetime | None = None) -> datetime:
 
 
 def coin_params(scope: str, difficulty: int) -> tuple[int, int]:
-    """按参数表取 (coin_reward, deposit)。
+    """按参数表取 (coin_reward, deposit) —— **仅作解析兜底**。
 
-    **以参数表为准**：AI 只负责给出 difficulty，金币数由本表派生，
-    这样既满足"奖励随难度递增"，也杜绝模型自由发明数字。
+    ⚠️ v1.10（N1）起本表**不再是金币权威**：金额由 AI 自行定价（见 `_parse_reward`），
+    这里只在 AI 给不出合法正整数时被调用，避免出现 0 / 负数字段。
+
+    新代码**不要**用本函数推导正常金额；押金请用 `derive_deposit()`。
     """
     table = COIN_TABLE.get(scope) or COIN_TABLE["daily"]
     d = max(1, min(5, int(difficulty or 1)))
     return table[d]
+
+
+def derive_deposit(coin_reward: int) -> int:
+    """押金由奖励按固定比例派生（N1-2，**单一实现，各写入点共用**）。
+
+    比例 0.6，至少 1 币——押金要够痛但可承受；比例稳定比让 AI 自由发挥更符合设计意图。
+    """
+    return max(1, round(int(coin_reward) * DEPOSIT_RATIO))
+
+
+def _parse_reward(raw, scope: str, difficulty: int) -> tuple[int, bool]:
+    """解析 AI 给的 `coin_reward`，返回 (金额, 是否走了兜底)。
+
+    合法 = 能转成 int 且 > 0。非法（非整数 / 字符串 / 0 / 负数 / 缺失）→ 回落参数表，
+    保证字段永不为 0 或负数（N1-3：**不设经济上限**，所以不封顶，只兜非法）。
+    """
+    try:
+        val = int(raw)
+    except (TypeError, ValueError):
+        val = 0
+    if val > 0:
+        return val, False
+    reward, _ = coin_params(scope, difficulty)
+    return reward, True
 
 
 def retreat_magnitude(difficulty: int) -> float:
@@ -148,6 +186,8 @@ def generate(db: Session, user: User, scope: str = "daily", force: bool = False)
         recent_events=judge_service._recent_events_context(db, user.id, exclude_event_id=0),
         recent_memory=_long_term_memory(db, user.id),
         existing_titles=_existing_titles(db, user.id, scope, pkey),
+        # v1.10（N1-7）：与商店定价共用同一套行情快照，避免两套经济脱节
+        economy_context=economy_service.snapshot(db, user),
     )
 
     config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_AUX)
@@ -164,18 +204,21 @@ def generate(db: Session, user: User, scope: str = "daily", force: bool = False)
         raw_description = str(item.get("description", "")).strip()
 
         # v1.9 F3：解析多档位。档位非法就丢；丢完只剩 ≤1 档 → 退回单档（等价旧行为）
-        variants = _parse_variants(item.get("variants"))
+        variants = _parse_variants(item.get("variants"), scope)
         if len(variants) > 1:
             # 顶层字段对齐「与 AI 给的顶层 difficulty 最接近」的那一档（无则第一档）
             chosen = min(variants, key=lambda v: abs(v["difficulty"] - raw_difficulty))
             difficulty = chosen["difficulty"]
             description = chosen["description"]
+            # v1.10（N1-1）：顶层金额取**该档自己的**金额（AI 定价）
+            reward, _ = _parse_reward(chosen.get("coin_reward"), scope, difficulty)
         else:
             variants = []
             difficulty = raw_difficulty
             description = raw_description
+            reward, _ = _parse_reward(item.get("coin_reward"), scope, difficulty)
 
-        reward, deposit = coin_params(scope, difficulty)  # 数字一律由参数表派生
+        deposit = derive_deposit(reward)  # N1-2：押金由奖励按比例派生（AI 不给押金）
         related = [
             judge_service._normalize_attribute_name(str(n))
             for n in (item.get("related_attributes") or [])
@@ -206,17 +249,30 @@ def generate(db: Session, user: User, scope: str = "daily", force: bool = False)
 
 
 VARIANT_MAX_COUNT = 5
-VARIANT_LABEL_MAX = 6
+# v1.10（N4）：6 字对"中文 + 空格 + 符号"的短标签不够用——真实库里
+# 「3 件 + 复盘」被 [:6] 砍成了 '3 件 + '（尾部还留了空格）。放宽到 12，并在截断后 strip。
+VARIANT_LABEL_MAX = 12
+
+# 截断后可能残留的尾巴标点（截断发生在标点之后时，标签看起来像被切断的句子）。
+# 例：'起身 5 次 + 23:' ← AI 原写 '起身 5 次 + 23:00 前睡' 被截到 12 字。
+_LABEL_TAIL_CHARS = " \t:：,，。.、+&|/-—…·"
 
 
-def _parse_variants(raw) -> list[dict]:
-    """解析 AI 给的 variants（v1.9 F3）。
+def _clean_label(raw) -> str:
+    """清洗档位 label：截到 VARIANT_LABEL_MAX 字，去掉首尾空白与**残留的尾巴标点**。"""
+    return str(raw or "").strip()[:VARIANT_LABEL_MAX].strip().rstrip(_LABEL_TAIL_CHARS)
 
-    逐档校验：label 非空且 ≤ 6 字（超长截断）、description 非空（空则丢弃该档）、
-    difficulty 夹到 [1, 5]。丢弃非法档后剩 ≤ 1 档由调用方退回单档（此处原样返回）。
 
-    **不接受 AI 给的任何金币/押金数字**——只保留 label/description/difficulty 三个键，
-    金额一律由 `coin_params()` 派生，从源头杜绝模型自由发明数字。
+def _parse_variants(raw, scope: str = "daily") -> list[dict]:
+    """解析 AI 给的 variants（v1.9 F3 建立 / v1.10 P0-1 扩展到含金额）。
+
+    逐档校验：label 非空且 ≤ 12 字（超长截断并 strip）、description 非空（空则丢弃该档）、
+    difficulty 夹到 [1, 5]、`coin_reward` 由 `_parse_reward` 解析（非法回落参数表）。
+    丢弃非法档后剩 ≤ 1 档由调用方退回单档（此处原样返回）。
+
+    v1.10 变更：**不再丢弃金额**——金额改由 AI 定价（N1），此处保留四键
+    `label / description / difficulty / coin_reward`。押金**不在档位里**，由
+    `derive_deposit()` 按选中档的奖励派生。
     """
     if not isinstance(raw, list):
         return []
@@ -225,7 +281,7 @@ def _parse_variants(raw) -> list[dict]:
     for v in raw[:VARIANT_MAX_COUNT]:
         if not isinstance(v, dict):
             continue
-        label = str(v.get("label", "")).strip()[:VARIANT_LABEL_MAX]
+        label = _clean_label(v.get("label", ""))
         description = str(v.get("description", "")).strip()
         if not label or not description:
             continue
@@ -237,16 +293,25 @@ def _parse_variants(raw) -> list[dict]:
         if difficulty in seen_difficulty:  # 档位难度必须递增/互不相同
             continue
         seen_difficulty.add(difficulty)
-        out.append({"label": label, "description": description, "difficulty": difficulty})
+        reward, _ = _parse_reward(v.get("coin_reward"), scope, difficulty)
+        out.append(
+            {
+                "label": label,
+                "description": description,
+                "difficulty": difficulty,
+                "coin_reward": reward,
+            }
+        )
     out.sort(key=lambda x: x["difficulty"])
     return out
 
 
 def switch_variant(db: Session, user: User, challenge: Challenge, variant_index: int) -> Challenge:
-    """候选期切换难度档位（v1.9 F3）。
+    """候选期切换难度档位（v1.9 F3 建立 / v1.10 改用该档自己的金额）。
 
     - 只有 `candidate` 可切；`accepted` 及之后档位锁定（用户已按该档押了钱）
-    - 切换后把该档的 description/difficulty 写回顶层，并**重算**金币与押金
+    - 切换后把该档的 description/difficulty/**coin_reward** 写回顶层，
+    押金按 `derive_deposit()` 重算（**不再从参数表取**，N1-2）
     - 不写审计（候选期的选择不是关键操作，此时也还没有 judgment_id）
     """
     if challenge.status != "candidate":
@@ -260,7 +325,9 @@ def switch_variant(db: Session, user: User, challenge: Challenge, variant_index:
     chosen = variants[variant_index]
     challenge.description = chosen["description"]
     challenge.difficulty = chosen["difficulty"]
-    challenge.coin_reward, challenge.deposit = coin_params(challenge.scope, chosen["difficulty"])
+    reward, _ = _parse_reward(chosen.get("coin_reward"), challenge.scope, chosen["difficulty"])
+    challenge.coin_reward = reward
+    challenge.deposit = derive_deposit(reward)
     db.commit()
     db.refresh(challenge)
     return challenge

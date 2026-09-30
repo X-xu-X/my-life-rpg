@@ -176,4 +176,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ action }),
     }),
+
+  // ===== 豁免券（v1.10 M2） =====
+  listExemptions: () => request('/exemptions'),
+  // body: { target_date, period, start_time?, end_time?, reason? }
+  buyExemption: (payload) =>
+    request('/exemptions', { method: 'POST', body: JSON.stringify(payload) }),
 }

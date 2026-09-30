@@ -91,6 +91,25 @@ const pricingBusy = ref(false)
 const pendingRedemptions = computed(() => redemptions.value.filter((r) => r.status === 'pending'))
 const fulfilledRedemptions = computed(() => redemptions.value.filter((r) => r.status === 'fulfilled'))
 
+// ---- 豁免券（v1.10 M2，放在商店分段内） ----
+const exemptions = ref([])
+const exemptionPresets = ref([])
+const excForm = ref({ target_date: todayStr(), period: 'afternoon', start_time: '14:00', end_time: '16:00', reason: '' })
+const excResult = ref(null)
+const EXC_STATUS_LABEL = { active: '未使用', used: '已使用', expired: '已过期' }
+
+function todayStr() {
+  const d = new Date()
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+const excCustom = computed(() => excForm.value.period === 'custom')
+// 跨零点提示：结束早于或等于开始 → 区间延到次日
+const excCrossMidnight = computed(
+  () => excCustom.value && excForm.value.start_time && excForm.value.end_time
+    && excForm.value.end_time <= excForm.value.start_time
+)
+
 // ---- 停滞问询 ----
 const stagnation = ref([])
 const stagnationBusy = ref(false)
@@ -196,6 +215,18 @@ async function loadShop() {
   }
 }
 
+async function loadExemptions() {
+  try {
+    const data = await api.listExemptions()
+    exemptions.value = data.items || []
+    if ((data.presets || []).length) exemptionPresets.value = data.presets
+    coins.value = data.balance ?? coins.value
+  } catch (e) {
+    error.value = e.message
+    toast.error(e.message)
+  }
+}
+
 async function loadStagnation() {
   try {
     const data = await api.getStagnation()
@@ -211,7 +242,7 @@ async function loadAll() {
   error.value = ''
   try {
     await loadCoins()
-    await Promise.all([loadChallenges(), loadShop(), loadStagnation()])
+    await Promise.all([loadChallenges(), loadShop(), loadExemptions(), loadStagnation()])
   } finally {
     loading.value = false
   }
@@ -372,6 +403,37 @@ async function redeem(it) {
     return data
   })
   if (res) toast.success(`已兑换「${it.name}」，奖励券已放入「待兑现」`)
+}
+
+async function buyExemption() {
+  const f = excForm.value
+  if (!f.target_date) {
+    error.value = '请选择豁免券的日期'
+    return
+  }
+  if (f.period === 'custom' && (!f.start_time || !f.end_time)) {
+    error.value = '自定义时段需要填写开始与结束时间'
+    return
+  }
+  excResult.value = null
+  const res = await runAction('exc-buy', async () => {
+    const data = await api.buyExemption({
+      target_date: f.target_date,
+      period: f.period,
+      start_time: f.start_time,
+      end_time: f.end_time,
+      reason: f.reason,
+    })
+    await loadExemptions()
+    await loadCoins()
+    return data
+  })
+  if (res) {
+    excResult.value = res
+    excForm.value = { ...excForm.value, reason: '' }
+    const cost = res.exemption?.coin_cost ?? 0
+    toast.success(`已购买豁免券（${res.exemption?.label || ''}，-${cost} 币）`)
+  }
 }
 
 async function fulfill(r) {
@@ -733,6 +795,91 @@ onMounted(loadAll)
               <template v-else>AI 重新定价</template>
             </button>
             <button class="btn small" :disabled="anyBusy" @click="changePrice(it)">改价</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 豁免券（v1.10 M2）：时段券，绝不做万能券 -->
+      <div class="card">
+        <h3>豁免券 <span class="tag">时段券 · 过期作废</span></h3>
+        <p class="muted" style="font-size: 12px">
+          花金币买「一段时间内，计划内的事没完成也不扣分」的权利。<b>必须指定日期 + 时段</b>，
+          过期作废——不是万能券。AI 会看你的理由判动机：正当紧急 → 正常价；明显逃避 → 提价或额外扣点。
+        </p>
+
+        <div class="row">
+          <div class="field">
+            <label>日期</label>
+            <input v-model="excForm.target_date" type="date" :disabled="anyBusy" />
+          </div>
+          <div class="field">
+            <label>时段</label>
+            <div class="row" style="flex-wrap: wrap; gap: 6px">
+              <button
+                v-for="p in exemptionPresets"
+                :key="p.key"
+                class="btn small"
+                :class="{ primary: excForm.period === p.key }"
+                :disabled="anyBusy"
+                @click="excForm.period = p.key"
+              >
+                {{ p.label }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="excCustom" class="row">
+          <div class="field">
+            <label>开始</label>
+            <input v-model="excForm.start_time" type="time" :disabled="anyBusy" />
+          </div>
+          <div class="field">
+            <label>结束</label>
+            <input v-model="excForm.end_time" type="time" :disabled="anyBusy" />
+          </div>
+          <div v-if="excCrossMidnight" class="muted" style="align-self: flex-end; padding-bottom: 8px; font-size: 12px">
+            结束早于开始 → 视为<b>跨零点</b>，区间延到次日
+          </div>
+        </div>
+
+        <div class="field">
+          <label>理由（会直接影响 AI 的定价与动机判断）</label>
+          <input
+            v-model="excForm.reason"
+            placeholder="例如：明天下午要陪家人去医院复查"
+            :disabled="anyBusy"
+          />
+        </div>
+
+        <button class="btn primary" :disabled="anyBusy" @click="buyExemption">
+          <template v-if="isBusy('exc-buy')"><span class="spinner"></span>AI 正在评估动机与定价…</template>
+          <template v-else>购买豁免券</template>
+        </button>
+
+        <div v-if="excResult" style="margin-top: 10px">
+          <div class="worth-note" :class="{ warn: excResult.exemption?.motive === 'evasive' }">
+            <b>{{ excResult.exemption?.motive === 'evasive' ? 'AI 判为「明显逃避」：' : 'AI 判为「正当紧急」：' }}</b>
+            {{ excResult.exemption?.motive_note }}
+          </div>
+          <div v-if="excResult.penalty" class="muted" style="font-size: 12px; margin-top: 4px; color: #b7791f">
+            额外扣点已生效：{{ excResult.penalty.name }} {{ excResult.penalty.delta }}（购买时立刻扣）
+          </div>
+        </div>
+
+        <div v-if="exemptions.length" style="margin-top: 12px">
+          <div class="muted voucher-title">我的券（{{ exemptions.length }}）</div>
+          <div
+            v-for="e in exemptions"
+            :key="e.id"
+            class="voucher"
+            :class="{ done: e.status !== 'active' }"
+          >
+            <b>{{ e.label }}</b>
+            <span class="tag">{{ EXC_STATUS_LABEL[e.status] || e.status }}</span>
+            <span v-if="e.cross_midnight" class="tag">跨零点</span>
+            <span class="muted">消耗 {{ e.coin_cost }} 币<template v-if="e.extra_penalty > 0">，额外扣 {{ e.penalty_attribute }} {{ e.extra_penalty }}</template></span>
+            <div v-if="e.motive_note" class="muted" style="font-size: 12px; margin-top: 2px">{{ e.motive_note }}</div>
           </div>
         </div>
       </div>

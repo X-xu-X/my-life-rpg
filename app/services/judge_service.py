@@ -19,7 +19,13 @@ from sqlalchemy.orm import Session
 from app import prompts
 from app.constants import ATTRIBUTE_ALIASES
 from app.models import AIJudgment, Attribute, AttributeHistory, CheckinItem, Event, JudgmentLog, Setting
-from app.services import achievement_service, item_service, llm_config, memory_service
+from app.services import (
+    achievement_service,
+    exemption_service,
+    item_service,
+    llm_config,
+    memory_service,
+)
 from app.services.anchor_service import format_anchors_text
 from app.services.llm_service import LLMError, llm_service
 from app.services.user_service import get_or_create_default_user
@@ -327,6 +333,27 @@ def _parse_merged_with(raw) -> list[dict]:
     return out
 
 
+def _apply_exemption(db: Session, user, event: Event, changes: list[dict]) -> tuple[list[dict], dict | None]:
+    """v1.10（M2）豁免券：**判定链路里的唯一插入点**。
+
+    落在用户已购券时段内的**负向变化一律归零**（该时段内不扣分），正向原样保留
+    ——绝不整条事件跳过判定（其他维度照常加点）。
+    只在此处查一次券，不重构既有分支。
+
+    返回 `(changes, hit)`；`hit` 为 None 表示本次没有券生效。
+    """
+    at = event.occurred_at or event.created_at or datetime.now()
+    return exemption_service.apply_to_changes(changes, at, db, user)
+
+
+def _exemption_note(hit: dict) -> str:
+    """把豁免结果写进判定总结，让用户知道"为什么这次没扣分"。"""
+    return (
+        f"【豁免券】本次事件落在你购买的豁免时段（{hit['label']}）内，"
+        f"{hit['zeroed']} 项扣分已豁免；其他正面表现照常加点。"
+    )
+
+
 def _prior_snapshot(judgment: AIJudgment) -> dict:
     """基准判定快照（v1.6 增量修订契约：重判时注入，要求相干维度逐字保留）。"""
     return {
@@ -421,10 +448,15 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
     # 双保险：过滤掉用户关闭判定的维度（即使 AI 仍返回了）
     if disabled:
         changes = [c for c in changes if c["name"] not in disabled]
+    # v1.10（M2）：豁免券——落在已购券时段内的负向变化一律归零（正向照常加点）
+    changes, exemption_hit = _apply_exemption(db, user, event, changes)
     summary = str(result.get("summary", ""))
     if config.quality_note:
         # v1.4：判定经降级路径（辅助模型）时，summary 末尾附质量标注（前端显示小标签）
         summary = (summary + "\n" + config.quality_note).strip()
+    if exemption_hit:
+        # v1.10（M2）：说明"本次为什么没扣分"，否则用户会以为 AI 判错了
+        summary = (summary + "\n" + _exemption_note(exemption_hit)).strip()
     merged_with = _parse_merged_with(result.get("merged_with"))  # v1.7：跨来源合并明细
     # v1.10（M1）：AI 发现型成就建议（可选字段）。**不自动发放**——只落库供前端展示追授卡，
     # 用户点【追授】才走 achievement_service.grant_discovered()。
@@ -457,6 +489,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
                 "revision_notes": judgment.revision_notes,
                 "merged_with": merged_with,  # v1.7
                 "achievement_suggestion": suggestion,  # v1.10
+                "exemption": exemption_hit,  # v1.10 M2：本次生效的豁免券（无则 None）
                 "clarification": clarification.strip(),  # v1.5 A4：完整回答入审计，供「我的补充」展示
             },
         )
@@ -485,6 +518,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
                 "analysis": judgment.analysis,
                 "summary": judgment.summary,
                 "merged_with": merged_with,  # v1.7
+                "exemption": exemption_hit,  # v1.10 M2：本次生效的豁免券（无则 None）
             },
         )
     db.commit()
@@ -623,12 +657,16 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
     config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_JUDGE)
     result = llm_service.chat_json(messages, config=config)
     changes = _parse_changes(result.get("affected_attributes", []))
+    # v1.10（M2）：豁免券同样作用于补充重判（同一插入点，保证重判前后语义一致）
+    changes, exemption_hit = _apply_exemption(db, user, event, changes)
 
     judgment.suggested_changes = changes
     judgment.analysis = result.get("analysis", [])  # v1.1：补充重判同样记录分析过程
     summary = str(result.get("summary", ""))
     if config.quality_note:
         summary = (summary + "\n" + config.quality_note).strip()
+    if exemption_hit:
+        summary = (summary + "\n" + _exemption_note(exemption_hit)).strip()
     judgment.summary = summary
     judgment.confidence = float(result.get("confidence", 0.0))
     judgment.confidence_reason = str(result.get("confidence_reason", ""))  # v1.4：补充重判后同步更新
@@ -643,6 +681,7 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
             "analysis": judgment.analysis,
             "revision_notes": judgment.revision_notes,
             "merged_with": judgment.merged_with,  # v1.7
+            "exemption": exemption_hit,  # v1.10 M2
         },
     )
     db.commit()
@@ -684,9 +723,13 @@ def dispute(db: Session, judgment: AIJudgment, detail: str) -> dict:
 
     if conclusion == "adjust":
         changes = _parse_changes(result.get("affected_attributes", []))
+        # v1.10（M2）：豁免券同样作用于反驳复核（同一插入点）
+        changes, exemption_hit = _apply_exemption(db, user, event, changes)
         if changes:  # 仅在模型给出有效调整结果时覆盖
             judgment.suggested_changes = changes
             judgment.summary = explanation or judgment.summary
+            if exemption_hit:
+                judgment.summary = (judgment.summary + "\n" + _exemption_note(exemption_hit)).strip()
             judgment.revision_notes = notes  # v1.6
             judgment.merged_with = merged  # v1.7
             judgment.status = "adjusted"

@@ -12,6 +12,9 @@ ATTRIBUTE_DIMENSIONS = [
     "诚信",
 ]
 
+# 维度集合（v1.10）：给需要"这个名字是不是合法维度"判断的地方用，避免各写一份 set(...)
+ATTRIBUTE_DIMENSIONS_SET = frozenset(ATTRIBUTE_DIMENSIONS)
+
 # 属性名规范化：AI 可能返回英文/变体，映射到标准维度（DECISIONS.md D5 扩展）
 ATTRIBUTE_ALIASES = {
     # 原有 6 维

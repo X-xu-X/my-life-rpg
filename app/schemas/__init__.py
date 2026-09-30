@@ -172,8 +172,25 @@ class AchievementActionIn(BaseModel):
     action: str = Field(..., description="grant / dismiss")
 
 
-# ============ Onboarding ============
+# ============ 豁免券（v1.10 M2） ============
 
+class ExemptionIn(BaseModel):
+    """购买豁免券：**必须指定日期 + 时段**（缺一即拒，不做万能券）。
+
+    - `period` ∈ morning/afternoon/evening/allday/custom
+    - `period=custom` 时必须给出 `start_time` / `end_time`（HH:MM）；
+      `end_time <= start_time` 表示**跨零点**（如 22:00–02:00）
+    - `reason` 会直接影响 AI 的动机判断（正当紧急 → 正常价；明显逃避 → 提价或扣点）
+    """
+
+    target_date: str = Field(..., description="目标日期 YYYY-MM-DD")
+    period: str = Field(..., description="morning/afternoon/evening/allday/custom")
+    start_time: str = Field("", description="HH:MM（period=custom 时必填）")
+    end_time: str = Field("", description="HH:MM（period=custom 时必填）")
+    reason: str = Field("", description="用户写的理由（影响 AI 动机判断）")
+
+
+# ============ Onboarding ============
 class OnboardingAnswerIn(BaseModel):
     """提交一轮回答（首次引导）。"""
 

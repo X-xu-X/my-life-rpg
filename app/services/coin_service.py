@@ -35,6 +35,7 @@ SOURCES = (
     "challenge_forfeit",
     "shop_redeem",
     "achievement",
+    "exemption_purchase",
 )
 
 

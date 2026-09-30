@@ -446,14 +446,18 @@ class Exemption(Base):
     """豁免券（v1.10 M2）—— **时段券**，只对指定日期 + 时段生效，过期作废。
 
     **不是万能券**（用户明确要求："要是买来随便一个时间都可以，感觉临时不想干活用券，
-    感觉很奇怪，不利于自身成长"）：`target_date` + `period` 必填，缺一即拒绝购买。
+    感觉很奇怪，不利于自身成长"）：`target_date` + 时段必填，缺一即拒绝购买。
 
-    效果：该时段内**目标类**的未完成 / 退缩 → 不扣分或减少扣分；
+    效果：该时段内**目标类**的未完成 / 退缩 → 不扣分（v1.10 定稿口径：负向一律归零）；
     时段内做的**其他事情照常加别的维度点数**（不得整条事件跳过判定）。
 
     代价：`coin_cost` 由 AI **判动机后浮动**——正当紧急 → 正常价；
-    明显逃避 → 提价 或 `extra_penalty`（额外属性扣点），二者至少取其一，
+    明显逃避 → 提价 或 `extra_penalty`（额外属性扣点，**购买时立刻扣**），二者至少取其一，
     且必须在 `motive_note` 里说清（展示给用户）。
+
+    v1.10 实现口径（用户 2026-09-30 拍板，覆盖文档原「period 四档枚举」的写法）：
+    - 时段支持**自定义起止时间**，`period` 降级为**预设标签**（morning/.../allday/custom）；
+    - **允许跨零点**：`end_time <= start_time` 表示区间延到次日（如 22:00–02:00）。
     """
 
     __tablename__ = "exemptions"
@@ -461,12 +465,18 @@ class Exemption(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     target_date: Mapped[str] = mapped_column(String(10), nullable=False)  # YYYY-MM-DD（必填）
-    period: Mapped[str] = mapped_column(String(20), nullable=False)  # morning/afternoon/evening/allday（必填）
+    period: Mapped[str] = mapped_column(String(20), nullable=False)  # morning/afternoon/evening/allday/custom
+    # v1.10：实际生效的起止时刻（HH:MM）。end_time <= start_time → **跨零点**
+    start_time: Mapped[str] = mapped_column(String(5), default="00:00")
+    end_time: Mapped[str] = mapped_column(String(5), default="23:59")
     reason: Mapped[str] = mapped_column(Text, default="")  # 用户写的理由
     coin_cost: Mapped[int] = mapped_column(Integer, default=0)  # AI 判动机后的实际价格
     motive: Mapped[str] = mapped_column(String(20), default="legitimate")  # legitimate/evasive
     motive_note: Mapped[str] = mapped_column(Text, default="")  # AI 的动机判断说明（展示）
     extra_penalty: Mapped[float] = mapped_column(Float, default=0.0)  # 判为逃避时的额外扣点
+    # v1.10：额外扣点落在哪个维度（AI 指定，非法值回落「规划力」）
+    penalty_attribute: Mapped[str] = mapped_column(String(20), default="")
     status: Mapped[str] = mapped_column(String(20), default="active")  # active/used/expired
+    used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # 券真正发挥豁免作用的时刻
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)

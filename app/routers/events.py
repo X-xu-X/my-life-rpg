@@ -118,17 +118,25 @@ def list_events(
 
 @router.get("/events/heatmap")
 def get_heatmap(db: Session = Depends(get_db)):
-    """月度活动热力图数据：最近 365 天每天的事件数。"""
+    """月度活动热力图数据：最近 365 天每天的事件数。
+
+    v1.10 P2-2（V3）：口径由 `created_at` 改为 **`occurred_at`（发生日）**——
+    补记昨天的事必须落在昨天格子里；`occurred_at` 为 NULL 的老行回落 `created_at`。
+    返回结构保持 `[{date, count}]` 不变。
+    """
     user = get_or_create_default_user(db)
     start = datetime.now() - timedelta(days=365)
     rows = (
-        db.query(Event.created_at)
+        db.query(Event.occurred_at, Event.created_at)
         .filter(Event.user_id == user.id, Event.created_at >= start)
         .all()
     )
     counts: dict[str, int] = {}
-    for (created_at,) in rows:
-        day = created_at.strftime("%Y-%m-%d")
+    for occurred_at, created_at in rows:
+        ref = occurred_at or created_at
+        if ref is None:
+            continue
+        day = ref.strftime("%Y-%m-%d")
         counts[day] = counts.get(day, 0) + 1
     return [{"date": day, "count": cnt} for day, cnt in sorted(counts.items())]
 

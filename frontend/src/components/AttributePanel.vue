@@ -105,12 +105,17 @@ function renderRadar() {
   if (!radarChart) radarChart = echarts.init(radarEl.value)
   const names = visibleAttrs.value.map((a) => a.name)
   const values = visibleAttrs.value.map((a) => a.value)
+  // v1.10 P2-2（V1）：动态上界——取可见维度最大值，向上取整到 5 的倍数再 +5，下限 10。
+  // 轴名附加真实值，避免「形状放大」被误读为绝对水平（文档给出的两个推荐做法之一）。
+  const rawMax = values.reduce((m, v) => Math.max(m, Number(v) || 0), 0)
+  const dynMax = Math.max(10, Math.ceil(rawMax / 5) * 5 + 5)
   radarChart.setOption({
     color: ['#4f6ef7'],
+    tooltip: {},
     radar: {
-      indicator: names.map((n) => ({ name: n, max: 100 })),
-      radius: '65%',
-      axisName: { color: '#2b2f3a' },
+      indicator: names.map((n, i) => ({ name: `${n} ${Math.round(Number(values[i]) || 0)}`, max: dynMax })),
+      radius: '58%', // 13 轴：收窄半径，给长轴名留空间
+      axisName: { color: '#2b2f3a', fontSize: 11 },
       splitArea: { areaStyle: { color: ['#fafbfe', '#f0f2f8'] } },
     },
     series: [
@@ -123,57 +128,102 @@ function renderRadar() {
   })
 }
 
+// v1.10 P2-2（V2）：趋势图改为**单维度可切换**，默认选当前值最低的维度
+const growthDim = ref('')
+
 function renderGrowth() {
   if (!growthEl.value) return
   if (!growthChart) growthChart = echarts.init(growthEl.value)
   const names = [...new Set(history.value.map((h) => h.name))]
   if (names.length === 0) {
+    growthChart.clear()
     growthChart.setOption({})
     return
   }
-  const series = names.map((name) => {
-    const pts = history.value
-      .filter((h) => h.name === name)
-      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-      .map((h) => [h.created_at, h.value_after])
-    return { name, type: 'line', data: pts, smooth: true, showSymbol: true }
-  })
+  // 默认维度：当前值最低的主维度（有历史数据的那些里选）
+  if (!growthDim.value || !names.includes(growthDim.value)) {
+    const visible = visibleAttrs.value.filter((a) => names.includes(a.name))
+    const pool = visible.length ? visible : attrs.value.filter((a) => names.includes(a.name))
+    const lowest = pool.reduce((m, a) => (m === null || Number(a.value) < Number(m.value) ? a : m), null)
+    growthDim.value = lowest ? lowest.name : names[0]
+  }
+  const dim = growthDim.value
+  const pts = history.value
+    .filter((h) => h.name === dim)
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+    .map((h) => [h.created_at, h.value_after])
+  // Y 轴按该维度实际区间缩放（下取整 -2 / 上取整 +2，并夹在 0~100）
+  const vals = pts.map((p) => Number(p[1]) || 0)
+  const yMin = Math.max(0, Math.floor(Math.min(...vals)) - 2)
+  const yMax = Math.min(100, Math.ceil(Math.max(...vals)) + 2)
+  growthChart.clear()
   growthChart.setOption({
-    color: ['#4f6ef7', '#1f9e6a', '#e0533d', '#d97706', '#8b5cf6', '#0ea5e9'],
+    color: ['#4f6ef7'],
     tooltip: { trigger: 'axis' },
-    legend: { data: names, textStyle: { color: '#2b2f3a' } },
-    grid: { left: 40, right: 20, top: 40, bottom: 40 },
+    grid: { left: 48, right: 24, top: 30, bottom: 40 },
     xAxis: { type: 'time', axisLabel: { color: '#7a7f8c' } },
-    yAxis: { type: 'value', min: 0, max: 100, axisLabel: { color: '#7a7f8c' } },
-    series,
+    yAxis: { type: 'value', min: yMin, max: yMax, axisLabel: { color: '#7a7f8c' } },
+    series: [{ name: dim, type: 'line', data: pts, smooth: true, showSymbol: true, areaStyle: { opacity: 0.08 } }],
   })
 }
+
+function switchGrowth(name) {
+  growthDim.value = name
+  renderGrowth()
+}
+
+/** 趋势图维度按钮组的数据源（有历史记录的维度，按当前值升序） */
+const growthDims = computed(() => {
+  const names = new Set(history.value.map((h) => h.name))
+  return attrs.value
+    .filter((a) => names.has(a.name))
+    .slice()
+    .sort((a, b) => Number(a.value) - Number(b.value))
+})
 
 function renderHeatmap() {
   if (!heatmapEl.value) return
   if (!heatmapChart) heatmapChart = echarts.init(heatmapEl.value)
   if (heatmap.value.length === 0) {
+    heatmapChart.clear()
     heatmapChart.setOption({})
     return
   }
-  const data = heatmap.value.map((h) => [h.date, h.count])
-  // 最近 12 个月的日历范围
+  const todayStr = (() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  })()
+  // v1.10 P2-2（V3）：今日格子加边框高亮（用逐项 itemStyle 覆盖）
+  const data = heatmap.value.map((h) => ({
+    value: [h.date, h.count],
+    itemStyle: h.date === todayStr ? { borderColor: '#e0533d', borderWidth: 1.5 } : undefined,
+  }))
+  // 近 4 个月（文档建议 4 个月：兼顾习惯观察与格子可读性）
   const now = new Date()
-  const start = new Date(now.getFullYear(), now.getMonth() - 11, 1)
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-  const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-  const maxCount = Math.max(1, ...heatmap.value.map((h) => h.count))
+  const start = new Date(now.getFullYear(), now.getMonth() - 3, 1)
+  const fmtDay = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const rangeStart = fmtDay(start)
+  const rangeEnd = fmtDay(now)
+  heatmapChart.clear()
   heatmapChart.setOption({
     tooltip: {
       formatter: (p) => `${p.value[0]}：${p.value[1]} 条记录`,
     },
+    // v1.10 P2-2（V3）：连续色阶 → 分段色阶（0 不上色 / 1-2 浅蓝 / 3-5 中蓝 / 6+ 深蓝）
     visualMap: {
-      min: 0,
-      max: maxCount,
+      type: 'piecewise',
+      show: true,
+      selectedMode: false,
       orient: 'horizontal',
       left: 'center',
       bottom: 0,
-      inRange: { color: ['#eef1fe', '#a8b9f9', '#4f6ef7'] },
+      pieces: [
+        { min: 6, label: '6+ 条', color: '#2f4fd0' },
+        { min: 3, max: 5, label: '3-5 条', color: '#5b7bf5' },
+        { min: 1, max: 2, label: '1-2 条', color: '#b9c6fb' },
+        { value: 0, label: '0 条', color: '#f4f6fd' },
+      ],
       textStyle: { color: '#7a7f8c' },
     },
     calendar: {
@@ -181,11 +231,12 @@ function renderHeatmap() {
       left: 40,
       right: 20,
       bottom: 60,
-      range: [`${fmt(start)}`, `${fmt(end)}`],
-      cellSize: ['auto', 14],
+      range: [rangeStart, rangeEnd],
+      cellSize: ['auto', 16],
       yearLabel: { show: false },
       monthLabel: { nameMap: 'ZH', color: '#2b2f3a' },
       dayLabel: { nameMap: 'ZH', color: '#7a7f8c', firstDay: 1 },
+      itemStyle: { borderColor: '#e6e9f2', borderWidth: 1 },
     },
     series: [
       {
@@ -262,6 +313,16 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
+    <!-- v1.10 P2-2（V3）：热力图移近顶部，不必滚到底部才看得到 -->
+    <div class="card">
+      <h3>月度活动热力图</h3>
+      <p class="muted" style="font-size: 12px; margin: 0 0 6px">
+        按<b>实际发生日</b>落格（补记昨天的事件会落在昨天）；今天的格子带红色描边。
+      </p>
+      <div v-if="heatmap.length === 0" class="muted">暂无记录，去「今日盘点」记一笔后这里会显示活动分布。</div>
+      <div ref="heatmapEl" style="width: 100%; height: 200px"></div>
+    </div>
+
     <div class="row">
       <div class="card" style="flex: 1">
         <h3>能力数值</h3>
@@ -299,14 +360,20 @@ onBeforeUnmount(() => {
 
     <div class="card">
       <h3>成长趋势</h3>
-      <div v-if="history.length === 0" class="muted">暂无成长记录，去「记录事件」并确认入账后这里会显示趋势。</div>
+      <!-- v1.10 P2-2（V2）：单维度可切换（默认当前值最低），Y 轴按该维度实际区间缩放 -->
+      <div v-if="growthDims.length" class="row" style="flex-wrap: wrap; gap: 6px; margin-bottom: 8px">
+        <button
+          v-for="d in growthDims"
+          :key="d.name"
+          class="seg-btn"
+          :class="{ active: growthDim === d.name }"
+          @click="switchGrowth(d.name)"
+        >
+          {{ d.name }} {{ Math.round(Number(d.value) || 0) }}
+        </button>
+      </div>
+      <div v-if="history.length === 0" class="muted">暂无成长记录，去「今日盘点」记一笔并确认入账后这里会显示趋势。</div>
       <div ref="growthEl" style="width: 100%; height: 340px"></div>
-    </div>
-
-    <div class="card">
-      <h3>月度活动热力图</h3>
-      <div v-if="heatmap.length === 0" class="muted">暂无记录，去「记录事件」打卡后这里会显示活动分布。</div>
-      <div ref="heatmapEl" style="width: 100%; height: 200px"></div>
     </div>
   </div>
 </template>

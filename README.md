@@ -18,6 +18,7 @@ AI 驱动的个人成长游戏化系统 —— 记录生活事件，AI 依据科
 - [x] M3+：打卡项目体系（自定义打卡项目 / 内容化录入 / 跨来源合并 / 今日盘点 / 目标进度展示，v1.7）
 - [x] M3++：游戏化经济系统（AI 定制挑战 / 押金结算 / 金币体系 / 现实奖励商店 + AI 定价 / 停滞问询 / 段位，v1.8）
 - [x] M3+++：体验打磨（启动资金按问卷浮动 / 挑战一卡多档 / 全站交互反馈规范 / 手账本搜索重构 / 挑战来源徽章，v1.9）
+- [x] M3++++：经济定价重构（AI 主导定价 + 行情快照）/ 成就系统 / 豁免券 / 属性满级拆子维度 / 三页合并「今日盘点」/ 可视化重做（v1.10）
 - [ ] M4：上云部署 + 多用户
 - [ ] M5：APP（PWA）
 
@@ -48,21 +49,25 @@ app/
   main.py                 # FastAPI 入口（启动自动建表 + 写入内置锚点 + 默认用户）
   config.py               # 配置（模型名/base_url/密钥均从 .env 读取，可插拔）
   database.py             # SQLAlchemy 引擎与会话
-  models/                 # 15 张核心表 ORM 定义（v1.7 checkin_items；v1.8 coin_ledger/challenges/shop_items/redemptions）
-                          # v1.9 未加新表，仅给 events 加 origin、challenges 加 variants（自动迁移）
+  models/                 # 17 张核心表 ORM 定义（v1.7 checkin_items；v1.8 coin_ledger/challenges/shop_items/redemptions；
+                          # v1.10 achievements/exemptions；另给 attributes 加 parent_id/sub_proposal，自动迁移）
   schemas/                # Pydantic 请求/响应模型
   services/
     llm_service.py        # LLM 统一调用（唯一 LLM 出口，可插拔）
-    judge_service.py      # AI 判定闭环（确认/补充/反驳 + 审计）
+    judge_service.py      # AI 判定闭环（确认/补充/反驳 + 审计；v1.10 接入豁免券与子维度落点）
     item_service.py       # 打卡项目周期统计与目标进度（v1.7）
     coin_service.py       # 金币账户与流水（唯一写入口 grant，v1.8）
-    challenge_service.py  # 挑战生成/接受/押金/完成判定/结算/过期状态机（v1.8）
-    shop_service.py       # 商店常驻物资预置 + AI 定价 + 兑换券（v1.8）
+    economy_service.py    # 行情快照（余额/近 7 天收支/赚币规则/商店价位区间，v1.10 只读）
+    challenge_service.py  # 挑战生成/接受/押金/完成判定/结算/过期状态机（v1.8；v1.10 奖励改 AI 定价）
+    shop_service.py       # 商店常驻物资预置 + AI 定价 + 兑换券（v1.8；v1.10 与挑战同口径行情快照）
+    achievement_service.py # 成就系统（累计型自动发放 + AI 发现型追授，v1.10）
+    exemption_service.py  # 豁免券（时段券 + AI 判动机浮动定价 + 购买时扣点，v1.10）
+    subdimension_service.py # 子维度（满 95 提议 / 多选确认 / 加点落点解析，v1.10）
     stagnation_service.py # 停滞觉察与问询（替代时间衰减，用户确认才扣分，v1.8）
     anchor_service.py     # 量化锚点库（内置基准 + 校准）
     onboarding_service.py # Onboarding 问卷流
     user_service.py       # V1 单用户
-  prompts/                # 关键 Prompt 模板（judge/dispute/onboarding/challenge/shop）
+  prompts/                # 关键 Prompt 模板（judge/dispute/onboarding/challenge/shop/exemption/subdimension）
   routers/                # API 路由
 sql/
   schema.sql              # 建表 SQL（随 M1 交付，MySQL 迁移参考）

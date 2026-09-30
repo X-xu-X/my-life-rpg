@@ -3,24 +3,22 @@ import { ref, onMounted } from 'vue'
 import { api } from './api'
 import Onboarding from './components/Onboarding.vue'
 import AttributePanel from './components/AttributePanel.vue'
-import EventForm from './components/EventForm.vue'
 import TodayCheckin from './components/TodayCheckin.vue'
 import TimelineView from './components/TimelineView.vue'
 import JournalView from './components/JournalView.vue'
 import JudgmentList from './components/JudgmentList.vue'
-import GoalsView from './components/GoalsView.vue'
 import ChallengeView from './components/ChallengeView.vue'
 import AnchorsView from './components/AnchorsView.vue'
 import SettingsView from './components/SettingsView.vue'
 import ToastHost from './components/ToastHost.vue'
 
+// v1.10 P2-1：tabs 11 → 9。「记录事件」「目标」并入「今日盘点」（信息架构调整，
+// EventForm/GoalsView 组件原样挂载进 TodayCheckin，不改任何业务逻辑）。
 const tabs = [
-  { key: 'panel', label: '属性面板' },
   { key: 'today', label: '今日盘点' },
-  { key: 'event', label: '记录事件' },
+  { key: 'panel', label: '属性面板' },
   { key: 'timeline', label: '手账本' },
   { key: 'judgments', label: '判定中心' },
-  { key: 'goals', label: '目标' },
   { key: 'challenge', label: '挑战' },
   { key: 'anchors', label: '锚点库' },
   { key: 'onboarding', label: '角色档案' },
@@ -28,7 +26,9 @@ const tabs = [
   { key: 'settings', label: '设置' },
 ]
 
-const activeTab = ref('panel')
+// v1.10 P2-1：默认落到「今日盘点」（它是每日入口，排在首位）。
+// 注：onProfileCreated() 仍保持跳 'panel' 不变（文档明确要求不动这个行为）。
+const activeTab = ref('today')
 const hasProfile = ref(false)
 const attrCount = ref(0)
 const backendOk = ref(false) // v1.1：后端连接状态
@@ -105,16 +105,10 @@ onMounted(() => {
   </div>
 
   <Onboarding v-if="activeTab === 'onboarding'" @created="onProfileCreated" />
-  <AttributePanel v-else-if="activeTab === 'panel'" />
   <TodayCheckin v-else-if="activeTab === 'today'" @go-judgments="activeTab = 'judgments'" />
-  <EventForm
-    v-else-if="activeTab === 'event'"
-    @go-judgments="activeTab = 'judgments'"
-    @go-items="activeTab = 'settings'"
-  />
+  <AttributePanel v-else-if="activeTab === 'panel'" />
   <TimelineView v-else-if="activeTab === 'timeline'" />
   <JudgmentList v-else-if="activeTab === 'judgments'" />
-  <GoalsView v-else-if="activeTab === 'goals'" />
   <ChallengeView v-else-if="activeTab === 'challenge'" />
   <AnchorsView v-else-if="activeTab === 'anchors'" />
   <JournalView v-else-if="activeTab === 'journal'" />

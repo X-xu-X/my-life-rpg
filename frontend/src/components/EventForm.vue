@@ -5,6 +5,9 @@ import { toast } from '../composables/useToast'
 
 const emit = defineEmits(['judged', 'go-judgments', 'go-items'])
 
+// v1.10 P2-1：标题可配置（并入「今日盘点」页时传「自由记一笔」），默认行为不变
+const props = defineProps({ title: { type: String, default: '记录事件' } })
+
 // mode: form(打卡) / journal(自由日记)
 const mode = ref('form')
 
@@ -417,7 +420,7 @@ onMounted(loadList)
 
 <template>
   <div class="card">
-    <h2>记录事件</h2>
+    <h2>{{ props.title }}</h2>
 
     <!-- 模式切换 -->
     <div class="row" style="margin-bottom: 12px">

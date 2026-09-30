@@ -12,11 +12,16 @@
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../api'
 import { toast } from '../composables/useToast'
+import EventForm from './EventForm.vue'
+import GoalsView from './GoalsView.vue'
+import ItemManager from './ItemManager.vue'
 
 const emit = defineEmits(['go-judgments'])
 
 const items = ref([])
 const stats = ref([])
+const goals = ref([]) // v1.10 P2-1：【规划内】展示目标任务 + 关联打卡项目子进度
+const showPlanning = ref(false) // v1.10 P2-1：【规划设置】折叠面板（目标 CRUD + 打卡项目管理）
 const error = ref('')
 const hint = ref('')
 let hintTimer = null
@@ -80,11 +85,33 @@ async function load() {
   try {
     items.value = await api.listItems({ enabled: true })
     stats.value = await api.getItemsStats()
+    // v1.10 P2-1：目标进度（只展示，不自动达成——v1.7 决策 7 不变）
+    goals.value = await api.listGoals().catch(() => [])
     error.value = ''
   } catch (e) {
     error.value = e.message
     toast.error(e.message)
   }
+}
+
+// v1.10 P2-1：【规划内】目标子进度（文案与 GoalsView 一致）
+const activeGoals = computed(() => (Array.isArray(goals.value) ? goals.value : []).filter((g) => g.status === 'active'))
+
+function periodLabel(frequencyType) {
+  if (frequencyType === 'daily') return '今日'
+  if (frequencyType === 'weekly') return '本周'
+  return ''
+}
+
+function progressText(p) {
+  const prefix = periodLabel(p.frequency_type)
+  if (!p.target) return `${prefix}已完成 ${p.this_period_count} 次`.trim()
+  return `${prefix} ${p.this_period_count}/${p.target}`.trim()
+}
+
+function progressPercent(p) {
+  if (!p.target) return 0
+  return Math.min(100, Math.round((p.this_period_count / p.target) * 100))
 }
 
 function flash(msg) {
@@ -158,15 +185,41 @@ onMounted(load)
   <div class="card">
     <h2>今日盘点</h2>
     <p class="muted">
-      一次性过一遍今天该做的事：每个项目写一句话就行，提交后各自独立判定。
+      每天从这里开始：过一遍今天该做的事，写一句话就各自独立判定；没做完的也可以在下面自由记一笔。
       未达标只做如实提示，<b>不会自动扣分</b>。
     </p>
+
+    <!-- v1.10 P2-1：【规划内】目标任务 + 关联打卡项目子进度（只展示，不自动达成） -->
+    <template v-if="activeGoals.length">
+      <div class="muted" style="font-size: 12px; border-bottom: 1px solid #eee; padding-bottom: 4px; margin: 12px 0 8px">
+        <b>规划内</b> · 目标任务 {{ activeGoals.length }} 个
+      </div>
+      <div v-for="g in activeGoals" :key="g.id" class="judgment-item">
+        <div class="row" style="align-items: center">
+          <b>{{ g.description || g.metric }}</b>
+          <span class="tag">{{ g.metric }}</span>
+          <span v-if="g.deadline" class="muted" style="font-size: 12px; margin-left: auto">
+            截止 {{ String(g.deadline).slice(0, 10) }}
+          </span>
+        </div>
+        <div v-for="p in (g.progress || [])" :key="p.item_id" style="margin-top: 6px">
+          <div class="row" style="align-items: center; font-size: 12.5px">
+            <span>{{ p.name }}</span>
+            <span class="muted" style="margin-left: auto">{{ progressText(p) }}</span>
+          </div>
+          <div v-if="p.rate !== null && p.rate !== undefined" class="track">
+            <div class="fill" :style="{ width: progressPercent(p) + '%' }"></div>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <p v-if="error" class="muted" style="color: #d33">{{ error }}</p>
     <p v-if="hint" class="muted" style="color: #2a7f3e; font-size: 13px">✓ {{ hint }}</p>
 
     <p v-if="items.length === 0 && !error" class="muted">
-      还没有启用中的打卡项目。先去「设置 → 打卡项目」建几个，再回来盘点。
+      还没有启用中的打卡项目。展开下面的【规划设置 → 打卡项目】建几个，再回来盘点；
+      也可以直接在【自由记一笔】里写点什么。
     </p>
 
     <div class="row" v-if="allItems.length" style="margin: 10px 0">
@@ -271,5 +324,30 @@ onMounted(load)
       <button class="btn small" @click="emit('go-judgments')">去判定中心确认入账 →</button>
       <button class="btn small" @click="load">刷新</button>
     </div>
+  </div>
+
+  <!-- ============ v1.10 P2-1：自由记一笔（原「记录事件」页，组件原样复用） ============ -->
+  <EventForm
+    title="自由记一笔"
+    @judged="load"
+    @go-judgments="emit('go-judgments')"
+    @go-items="showPlanning = true"
+  />
+
+  <!-- ============ v1.10 P2-1：规划设置（折叠；目标 + 打卡项目管理） ============ -->
+  <div class="card">
+    <div
+      class="row"
+      style="align-items: center; cursor: pointer; user-select: none"
+      @click="showPlanning = !showPlanning"
+    >
+      <h2 style="margin: 0">规划设置</h2>
+      <span class="muted" style="font-size: 12px; margin-left: 8px">目标与打卡项目（增删改停用、给项目选所属目标）</span>
+      <span class="muted" style="margin-left: auto">{{ showPlanning ? '▾' : '▸' }}</span>
+    </div>
+    <template v-if="showPlanning">
+      <GoalsView />
+      <ItemManager />
+    </template>
   </div>
 </template>

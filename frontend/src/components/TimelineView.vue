@@ -34,10 +34,9 @@ function judgmentFor(eventId) {
 }
 
 // ============================================================
-// v1.9 F4：手账本搜索重构
-// 覆盖范围 = 事件自身字段 + 关联判定内容（分析/总结/加点理由与依据/重判说明/
-// 置信度说明/合并说明）。全部在本地做（复用已加载的 events + judgments），
-// 不新增后端接口。
+// v1.9 F4 建立搜索 / v1.10 N3 收敛范围
+// 覆盖范围 = **只搜用户自己写的内容**（标题 / 正文 / 类别 / 参数值）。
+// 全部在本地做（复用已加载的 events），不新增后端接口。
 // ============================================================
 
 /** 参数摘要（跳过 "_" 前缀的内部键，与后端 format_event_description 一致） */
@@ -73,26 +72,13 @@ function searchFields(e) {
     const t = asText(text).trim()
     if (t) out.push({ label, text: t })
   }
+  // v1.10（N3-1）：**只搜用户自己写的内容**——v1.9 F4 加进来的 8 类 AI 内容
+  // （AI 总结 / 分析 / 加点理由 / 加点依据 / 入账理由 / 重判说明 / 置信度说明 / 合并说明）
+  // 已全部移除。命中片段的来源标签从此只可能是这四类。
   push('标题', e.title)
   push('正文', e.content)
   push('类别', e.category)
   push('参数', paramsSummary(e))
-
-  const j = judgmentFor(e.id)
-  if (j) {
-    push('AI 总结', j.summary)
-    if (Array.isArray(j.analysis) && j.analysis.length) push('AI 分析', j.analysis.join(' '))
-    for (const c of j.suggested_changes || []) {
-      push('加点理由', c.reason ? `${c.name}：${c.reason}` : '')
-      push('加点依据', c.evidence ? `${c.name}：${c.evidence}` : '')
-    }
-    for (const c of j.final_changes || []) {
-      push('入账理由', c.reason ? `${c.name}：${c.reason}` : '')
-    }
-    push('重判说明', j.revision_notes)
-    push('置信度说明', j.confidence_reason)
-    push('合并说明', j.merged_with)
-  }
   return out
 }
 
@@ -195,7 +181,7 @@ onMounted(load)
 
     <template v-if="events.length > 0">
       <div class="field">
-        <input v-model="searchText" placeholder="🔍 搜索记录（含 AI 分析与加点理由）…" />
+        <input v-model="searchText" placeholder="🔍 搜索你写过的标题、正文、类别与参数…" />
       </div>
 
       <!-- v1.9 F4-3：三态类型筛选 -->
@@ -213,7 +199,7 @@ onMounted(load)
       </div>
 
       <p class="muted" style="font-size: 12px">
-        点击记录行展开详情；组头可折叠（搜索时自动展开命中项）。搜索范围含正文、参数与 AI 判定内容。
+        点击记录行展开详情；组头可折叠（搜索时自动展开命中项）。搜索范围为你自己写的内容（标题 / 正文 / 类别 / 参数），不含 AI 判定文字。
       </p>
 
       <p v-if="searchKw && filteredEvents.length === 0" class="muted" style="margin-top: 8px">

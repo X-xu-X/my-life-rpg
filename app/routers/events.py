@@ -9,7 +9,7 @@ from app.database import get_db
 from app.models import AIJudgment, CheckinItem, Event
 from app.schemas import EventCreate, EventOut, EventUpdate, JudgeIn
 from app import prompts
-from app.services import judge_service, llm_config
+from app.services import achievement_service, judge_service, llm_config
 from app.services.judge_service import ClarifyNeededError
 from app.services.llm_service import LLMError, llm_service
 from app.services.user_service import get_or_create_default_user
@@ -150,6 +150,16 @@ def judge(event_id: int, body: JudgeIn, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail=str(exc))
     except LLMError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
+    # v1.10 M1：累计型成就顺带检查（写日记/记事件后即可解锁"日记 N 篇/记录 N 条"类成就）
+    unlocked: list[dict] = []
+    try:
+        user = get_or_create_default_user(db)
+        for row in achievement_service.check_and_grant(db, user):
+            unlocked.append({"code": row.code, "name": row.name, "icon": row.icon,
+                             "coin_reward": row.coin_reward})
+    except Exception:
+        db.rollback()
+
     return {
         "judgment_id": judgment.id,
         "status": judgment.status,
@@ -160,6 +170,8 @@ def judge(event_id: int, body: JudgeIn, db: Session = Depends(get_db)):
         "confidence_reason": judgment.confidence_reason or "",  # v1.4：置信度说明
         "revision_notes": judgment.revision_notes or [],  # v1.6：本次修订说明
         "merged_with": judgment.merged_with or [],  # v1.7：跨来源合并明细
+        "unlocked_achievements": unlocked,  # v1.10：本次新解锁的成就
+        "achievement_suggestion": judgment.achievement_suggestion or {},  # v1.10：AI 里程碑建议
     }
 
 

@@ -1,10 +1,12 @@
-"""数据模型（SQLAlchemy ORM，共 15 张核心表）。
+"""数据模型（SQLAlchemy ORM，共 17 张核心表）。
 
 对应 PRD 6.3 节：users / user_profiles / attributes / attribute_history /
 events / ai_judgments / judgment_logs / goals / anchors / settings。
 v1.7 新增：checkin_items（打卡项目，用户自建）。
 v1.8 新增：coin_ledger（金币流水）/ challenges（挑战）/ shop_items（商店物品）/
           redemptions（兑换券）。
+v1.10 新增：achievements（成就）/ exemptions（豁免券）。
+         另给 attributes 加 parent_id（v1.10 M3 子维度层级）。
 
 设计原则：
 - 所有业务表外键关联 user_id，V1 单用户、M4 多用户平滑扩展。
@@ -194,6 +196,10 @@ class AIJudgment(Base):
     revision_notes: Mapped[list] = mapped_column(JSON, default=list)
     # 跨来源合并明细（v1.7）：[{ref, note}]，与当天/近期记录是同一件事时列出；无合并为 []
     merged_with: Mapped[list] = mapped_column(JSON, default=list)
+    # AI 发现型成就建议（v1.10 M1）：{name, reason, state}。
+    # state ∈ pending/granted/dismissed；无建议为 {}。
+    # **必须用户确认后才发放**（不自动发），所以需要落库以便刷新后仍可操作。
+    achievement_suggestion: Mapped[dict] = mapped_column(JSON, default=dict)
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending/confirmed/adjusted/rejected
     # 最终生效的增减（反驳/补充后可能调整），确认入账时写入
     final_changes: Mapped[list] = mapped_column(JSON, default=list)
@@ -404,3 +410,63 @@ class Redemption(Base):
     redeemed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     fulfilled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     note: Mapped[str] = mapped_column(Text, default="")  # 用户备注
+
+
+class Achievement(Base):
+    """成就（v1.10 M1）。
+
+    两类来源：
+    - `cumulative` 累计型：按规则自动统计发放（日记累计 / 连续写日记 / 记录累计 /
+      完成挑战 / 首次兑换），在既有"确认入账、提交日记、挑战结算"之后**顺带检查**
+      （不新增定时任务）。
+    - `discovered` AI 发现型：主判定 prompt 认为用户达成值得纪念的里程碑时**建议追授**，
+      **必须用户确认后才发放**（不自动发）。
+
+    **每个成就只能解锁一次** —— 以 `(user_id, code)` 唯一约束保证幂等。
+    奖励只发金币 + 徽章（走 `coin_service.grant(source='achievement')`），
+    **不发属性点**（保持"点数只能靠真实行为挣"）。
+    """
+
+    __tablename__ = "achievements"
+    __table_args__ = (UniqueConstraint("user_id", "code", name="uq_achievement_user_code"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    code: Mapped[str] = mapped_column(String(60), nullable=False)  # 如 journal_streak_7
+    name: Mapped[str] = mapped_column(String(100), nullable=False)  # 展示名
+    description: Mapped[str] = mapped_column(Text, default="")  # 解锁说明
+    icon: Mapped[str] = mapped_column(String(20), default="🏅")  # emoji
+    kind: Mapped[str] = mapped_column(String(20), default="cumulative")  # cumulative/discovered
+    coin_reward: Mapped[int] = mapped_column(Integer, default=0)
+    unlocked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # NULL = 未解锁
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+class Exemption(Base):
+    """豁免券（v1.10 M2）—— **时段券**，只对指定日期 + 时段生效，过期作废。
+
+    **不是万能券**（用户明确要求："要是买来随便一个时间都可以，感觉临时不想干活用券，
+    感觉很奇怪，不利于自身成长"）：`target_date` + `period` 必填，缺一即拒绝购买。
+
+    效果：该时段内**目标类**的未完成 / 退缩 → 不扣分或减少扣分；
+    时段内做的**其他事情照常加别的维度点数**（不得整条事件跳过判定）。
+
+    代价：`coin_cost` 由 AI **判动机后浮动**——正当紧急 → 正常价；
+    明显逃避 → 提价 或 `extra_penalty`（额外属性扣点），二者至少取其一，
+    且必须在 `motive_note` 里说清（展示给用户）。
+    """
+
+    __tablename__ = "exemptions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    target_date: Mapped[str] = mapped_column(String(10), nullable=False)  # YYYY-MM-DD（必填）
+    period: Mapped[str] = mapped_column(String(20), nullable=False)  # morning/afternoon/evening/allday（必填）
+    reason: Mapped[str] = mapped_column(Text, default="")  # 用户写的理由
+    coin_cost: Mapped[int] = mapped_column(Integer, default=0)  # AI 判动机后的实际价格
+    motive: Mapped[str] = mapped_column(String(20), default="legitimate")  # legitimate/evasive
+    motive_note: Mapped[str] = mapped_column(Text, default="")  # AI 的动机判断说明（展示）
+    extra_penalty: Mapped[float] = mapped_column(Float, default=0.0)  # 判为逃避时的额外扣点
+    status: Mapped[str] = mapped_column(String(20), default="active")  # active/used/expired
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)

@@ -19,7 +19,13 @@ from sqlalchemy.orm import Session
 
 from app.models import AIJudgment, Challenge, Event, User
 from app.prompts.challenge import build_challenge_messages, build_completion_messages
-from app.services import coin_service, economy_service, judge_service, llm_config
+from app.services import (
+    achievement_service,
+    coin_service,
+    economy_service,
+    judge_service,
+    llm_config,
+)
 from app.services.llm_service import llm_service
 
 # 候选数量（决策 5：日 3 个 / 周 2 个）
@@ -582,6 +588,15 @@ def settle(db: Session, user: User, challenge: Challenge, final_status: str = "s
     db.commit()
     db.refresh(challenge)
 
+    # v1.10 M1：累计型成就顺带检查（「首次完成挑战 / 完成挑战 N 次」在此解锁）
+    unlocked: list[dict] = []
+    try:
+        for row in achievement_service.check_and_grant(db, user):
+            unlocked.append({"code": row.code, "name": row.name, "icon": row.icon,
+                             "coin_reward": row.coin_reward})
+    except Exception:
+        db.rollback()
+
     return {
         "challenge_id": challenge.id,
         "outcome": outcome,
@@ -589,6 +604,7 @@ def settle(db: Session, user: User, challenge: Challenge, final_status: str = "s
         "coins_delta": coins_delta,
         "balance": coin_service.balance(db, user),
         "applied_changes": applied_changes,
+        "unlocked_achievements": unlocked,
     }
 
 

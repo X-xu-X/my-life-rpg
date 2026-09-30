@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine, migrate_schema
 from app import models  # noqa: F401  导入以注册所有 ORM 模型到 Base.metadata
 from app.routers import (
+    achievements,
     onboarding,
     events,
     judgments,
@@ -48,6 +49,7 @@ app.include_router(attributes.router, prefix="/api", tags=["attributes"])
 app.include_router(goals.router, prefix="/api", tags=["goals"])
 app.include_router(items.router, prefix="/api", tags=["items"])
 app.include_router(coins.router, prefix="/api", tags=["coins"])
+app.include_router(achievements.router, prefix="/api", tags=["achievements"])
 app.include_router(challenges.router, prefix="/api", tags=["challenges"])
 app.include_router(shop.router, prefix="/api", tags=["shop"])
 app.include_router(stagnation.router, prefix="/api", tags=["stagnation"])

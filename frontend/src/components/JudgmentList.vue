@@ -280,6 +280,19 @@ function cancelAction() {
   actionError.value = { id: null, msg: '' }
 }
 
+// v1.10 M1：处理 AI 里程碑建议（追授 / 忽略）。
+// **必须用户点按钮**——判定链路本身不会自动发放任何奖励。
+async function handleMilestone(j, action) {
+  const res = await runAction(
+    `milestone-${j.id}`,
+    async () => api.handleAchievement(j.id, action),
+    action === 'grant' ? '已追授该里程碑' : '已忽略'
+  )
+  if (res && action === 'grant' && res.achievement) {
+    toast.success(`🎖 已追授「${res.achievement.name}」，+${res.achievement.coin_reward} 币`)
+  }
+}
+
 function toggleMyInput(id) {
   myInputOpen.value = myInputOpen.value === id ? null : id
 }
@@ -343,6 +356,24 @@ onMounted(load)
                 · {{ m.ref }}<template v-if="m.note">：{{ m.note }}</template>
               </div>
               <div style="margin-top: 2px">如认为不该合并，可点「反驳」撤销。</div>
+            </div>
+
+            <!-- v1.10 M1：AI 发现型里程碑建议（必须用户点按钮才发放） -->
+            <div
+              v-if="j.achievement_suggestion && j.achievement_suggestion.name && j.achievement_suggestion.state === 'pending'"
+              class="milestone-card"
+            >
+              <div>🎖 <b>AI 认为这是一个里程碑：</b>{{ j.achievement_suggestion.name }}</div>
+              <div class="muted" style="margin-top: 4px">「{{ j.achievement_suggestion.reason }}」</div>
+              <div class="row">
+                <button class="btn small primary" :disabled="anyBusy" @click="handleMilestone(j, 'grant')">
+                  <template v-if="isBusy(`milestone-${j.id}`)">处理中…</template>
+                  <template v-else>追授（+50 币）</template>
+                </button>
+                <button class="btn small" :disabled="anyBusy" @click="handleMilestone(j, 'dismiss')">
+                  忽略
+                </button>
+              </div>
             </div>
 
             <!-- v1.6：本次修订说明（重判改变了什么，无修订不显示） -->

@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import AIJudgment, Event, JudgmentLog
-from app.schemas import DisputeIn, SupplementIn
-from app.services import coin_service, judge_service
+from app.schemas import AchievementActionIn, DisputeIn, SupplementIn
+from app.services import achievement_service, coin_service, judge_service
 from app.services.llm_service import LLMError
 from app.services.user_service import get_or_create_default_user
 
@@ -85,6 +85,8 @@ def list_judgments(db: Session = Depends(get_db)):
             "confidence_reason": j.confidence_reason or "",  # v1.4：置信度说明
             "revision_notes": j.revision_notes or [],  # v1.6：本次修订说明
             "merged_with": j.merged_with or [],  # v1.7：跨来源合并明细
+            # v1.10 M1：AI 发现型成就建议（{name, reason, state}；无建议为 {}）
+            "achievement_suggestion": j.achievement_suggestion or {},
             "last_user_input": last_input.get(j.id),  # v1.5 A2：最近一次补充/反驳
             "rejudge_count": rejudge_counts.get(j.id, 0),  # v1.5 A3：重判次数
             "created_at": j.created_at,
@@ -109,6 +111,7 @@ def get_judgment(judgment_id: int, db: Session = Depends(get_db)):
         "confidence_reason": j.confidence_reason or "",  # v1.4：置信度说明
         "revision_notes": j.revision_notes or [],  # v1.6：本次修订说明
         "merged_with": j.merged_with or [],  # v1.7：跨来源合并明细
+        "achievement_suggestion": j.achievement_suggestion or {},  # v1.10 M1
         "created_at": j.created_at,
         "updated_at": j.updated_at,
     }
@@ -163,10 +166,79 @@ def confirm(judgment_id: int, db: Session = Depends(get_db)):
     except Exception:  # 金币发放失败不应影响判定入账这一主流程
         db.rollback()
 
+    # v1.10 M1：累计型成就顺带检查（幂等；内部自行 commit，失败不影响入账主流程）
+    unlocked: list[dict] = []
+    try:
+        for row in achievement_service.check_and_grant(db, user):
+            unlocked.append({"code": row.code, "name": row.name, "icon": row.icon,
+                             "coin_reward": row.coin_reward})
+    except Exception:
+        db.rollback()
+
     return {
         "status": judgment.status,
         "final_changes": judgment.final_changes,
         "coins_gained": coin_service.EVENT_CONFIRM_REWARD if coins_gained is not None else 0,
+        "balance": coin_service.balance(db, user),
+        "unlocked_achievements": unlocked,  # v1.10：本次新解锁的成就
+        "achievement_suggestion": judgment.achievement_suggestion or {},  # v1.10：AI 里程碑建议
+    }
+
+
+@router.post("/judgments/{judgment_id}/achievement")
+def handle_achievement(
+    judgment_id: int, body: AchievementActionIn, db: Session = Depends(get_db)
+):
+    """v1.10 M1：处理 AI 里程碑建议（追授 / 忽略）。
+
+    **必须由用户点按钮触发**——判定链路本身不会自动发放任何 AI 发现型成就。
+    - `grant`：`grant_discovered()` 落库 + 发一次金币（同 code 幂等，不会重复发）
+    - `dismiss`：仅把建议标记为 dismissed，不发放
+    """
+    action = (body.action or "").strip().lower()
+    if action not in ("grant", "dismiss"):
+        raise HTTPException(status_code=400, detail="action 只能是 grant 或 dismiss")
+
+    judgment = _get_judgment(db, judgment_id)
+    suggestion = judgment.achievement_suggestion or {}
+    name = str(suggestion.get("name", "")).strip() if isinstance(suggestion, dict) else ""
+    if not name:
+        raise HTTPException(status_code=400, detail="该判定没有待处理的里程碑建议")
+
+    # 已处理过 → 幂等返回，不重复发币
+    if isinstance(suggestion, dict) and suggestion.get("state") in ("granted", "dismissed"):
+        return {
+            "action": suggestion.get("state"),
+            "achievement": None,
+            "balance": coin_service.balance(db, get_or_create_default_user(db)),
+        }
+
+    user = get_or_create_default_user(db)
+    achievement = None
+    if action == "grant":
+        reason = str(suggestion.get("reason", "")).strip()
+        row = achievement_service.grant_discovered(db, user, name, reason)
+        achievement = {
+            "code": row.code,
+            "name": row.name,
+            "icon": row.icon,
+            "coin_reward": row.coin_reward,
+        }
+        new_state = "granted"
+    else:
+        new_state = "dismissed"
+
+    # 标记状态——前端据此收起追授卡（不物理删除建议内容，保留审计）
+    marked = dict(suggestion)
+    marked["state"] = new_state
+    judgment.achievement_suggestion = marked
+    # SQLAlchemy JSON 列原地改不可靠，显式赋值 + 强制脏标记
+    db.add(judgment)
+    db.commit()
+
+    return {
+        "action": new_state,
+        "achievement": achievement,
         "balance": coin_service.balance(db, user),
     }
 
@@ -187,6 +259,7 @@ def supplement(judgment_id: int, body: SupplementIn, db: Session = Depends(get_d
         "confidence_reason": judgment.confidence_reason or "",  # v1.4：置信度说明
         "revision_notes": judgment.revision_notes or [],  # v1.6：本次修订说明
         "merged_with": judgment.merged_with or [],  # v1.7：跨来源合并明细
+        "achievement_suggestion": judgment.achievement_suggestion or {},  # v1.10 M1
     }
 
 
@@ -205,4 +278,5 @@ def dispute(judgment_id: int, body: DisputeIn, db: Session = Depends(get_db)):
         "suggested_changes": result["judgment"].suggested_changes,
         "revision_notes": result["judgment"].revision_notes or [],  # v1.6：本次修订说明
         "merged_with": result["judgment"].merged_with or [],  # v1.7：跨来源合并明细
+        "achievement_suggestion": result["judgment"].achievement_suggestion or {},  # v1.10 M1
     }

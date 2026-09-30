@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Attribute, Redemption, ShopItem, User, UserProfile
 from app.prompts.shop import build_pricing_messages
-from app.services import coin_service, economy_service, llm_config
+from app.services import achievement_service, coin_service, economy_service, llm_config
 from app.services.llm_service import llm_service
 
 # 常驻物资（决策 14 / B4-1，首次访问商店时幂等预置；用户可改价或停用）
@@ -187,6 +187,12 @@ def redeem(db: Session, user: User, item: ShopItem, note: str = "") -> Redemptio
     db.add(redemption)
     db.commit()
     db.refresh(redemption)
+
+    # v1.10 M1：累计型成就顺带检查（「首次兑换奖励」在此解锁）
+    try:
+        achievement_service.check_and_grant(db, user)
+    except Exception:
+        db.rollback()
     return redemption
 
 

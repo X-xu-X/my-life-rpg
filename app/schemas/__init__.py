@@ -162,6 +162,16 @@ class DisputeIn(BaseModel):
     detail: str = Field(..., description="反驳理由")
 
 
+class AchievementActionIn(BaseModel):
+    """v1.10 M1：AI 里程碑建议的处理动作。
+
+    - `grant`：追授（发一次金币 + 落库）
+    - `dismiss`：忽略（不发放，标记该建议已处理）
+    """
+
+    action: str = Field(..., description="grant / dismiss")
+
+
 # ============ Onboarding ============
 
 class OnboardingAnswerIn(BaseModel):

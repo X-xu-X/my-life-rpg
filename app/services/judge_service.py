@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from app import prompts
 from app.constants import ATTRIBUTE_ALIASES
 from app.models import AIJudgment, Attribute, AttributeHistory, CheckinItem, Event, JudgmentLog, Setting
-from app.services import item_service, llm_config, memory_service
+from app.services import achievement_service, item_service, llm_config, memory_service
 from app.services.anchor_service import format_anchors_text
 from app.services.llm_service import LLMError, llm_service
 from app.services.user_service import get_or_create_default_user
@@ -426,6 +426,9 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
         # v1.4：判定经降级路径（辅助模型）时，summary 末尾附质量标注（前端显示小标签）
         summary = (summary + "\n" + config.quality_note).strip()
     merged_with = _parse_merged_with(result.get("merged_with"))  # v1.7：跨来源合并明细
+    # v1.10（M1）：AI 发现型成就建议（可选字段）。**不自动发放**——只落库供前端展示追授卡，
+    # 用户点【追授】才走 achievement_service.grant_discovered()。
+    suggestion = achievement_service.parse_suggestion(result.get("achievement_suggestion"))
     if current is not None:
         # v1.5 A1：就地更新现行判定（id 不变，审计追加 rejudge）
         current.suggested_changes = changes
@@ -435,6 +438,9 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
         current.confidence_reason = str(result.get("confidence_reason", ""))
         current.revision_notes = _parse_revision_notes(result.get("revision_notes"))  # v1.6：本次修订说明
         current.merged_with = merged_with  # v1.7
+        # 重判时只在本次真的给出新建议时覆盖，避免把上一轮还没处理的建议冲掉
+        if suggestion:
+            current.achievement_suggestion = suggestion
         current.status = "adjusted"
         judgment = current
         db.flush()
@@ -450,6 +456,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
                 "summary": summary,
                 "revision_notes": judgment.revision_notes,
                 "merged_with": merged_with,  # v1.7
+                "achievement_suggestion": suggestion,  # v1.10
                 "clarification": clarification.strip(),  # v1.5 A4：完整回答入审计，供「我的补充」展示
             },
         )
@@ -464,6 +471,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
             confidence_reason=str(result.get("confidence_reason", "")),  # v1.4：置信度说明
             revision_notes=[],  # v1.6：首判无修订
             merged_with=merged_with,  # v1.7：跨来源合并明细
+            achievement_suggestion=suggestion,  # v1.10：AI 发现型成就建议（可为 {}）
             status="pending",
             final_changes=[],
         )

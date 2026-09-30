@@ -235,6 +235,7 @@ async function resetProfile() {
     pendingAdjustment.value = null
     supplementNote.value = ''
     toast.info('角色档案已重置，可以重新走问卷')
+    await loadAchievements()
     emit('created')
   } catch (e) {
     error.value = e.message
@@ -244,6 +245,31 @@ async function resetProfile() {
   }
 }
 
+// ============================================================
+// v1.10 M1：成就墙
+// ============================================================
+const achievements = ref([])
+const achSummary = ref({ unlocked: 0, total: 0 })
+
+async function loadAchievements() {
+  try {
+    const data = await api.getAchievements()
+    achievements.value = data.items || []
+    achSummary.value = { unlocked: data.unlocked_count || 0, total: data.total_count || 0 }
+  } catch (e) {
+    // 成就墙加载失败不影响角色档案主流程
+    console.warn('成就墙加载失败', e)
+  }
+}
+
+function fmtDate(t) {
+  if (!t) return ''
+  return new Date(t).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })
+}
+
+onMounted(() => {
+  loadAchievements()
+})
 onMounted(loadStatus)
 </script>
 
@@ -343,6 +369,40 @@ onMounted(loadStatus)
           </div>
           <div v-else class="row" style="margin-top: 8px">
             <button class="btn" @click="ignoreSupplement">知道了</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- v1.10 M1：成就墙（已解锁彩色 / 未解锁灰态 + 进度） -->
+    <div v-if="phase === 'done' || phase === 'completed'" class="card" style="margin-top: 12px">
+      <h3>
+        成就墙
+        <span class="muted" style="font-size: 13px; font-weight: 400">
+          已解锁 {{ achSummary.unlocked }} / {{ achSummary.total }}
+        </span>
+      </h3>
+      <p class="muted" style="font-size: 12px">
+        徽章只发金币、不发属性点——点数只能靠真实行为挣。AI 发现值得纪念的里程碑时会提议追授，由你决定是否接受。
+      </p>
+      <div class="ach-grid">
+        <div
+          v-for="a in achievements"
+          :key="a.code"
+          class="ach-badge"
+          :class="{ locked: !a.unlocked }"
+          :title="a.description"
+        >
+          <div class="ach-icon">{{ a.icon }}</div>
+          <div class="ach-body">
+            <div class="ach-name">
+              {{ a.name }}
+              <span v-if="a.kind === 'discovered'" class="tag" style="margin-left: 4px">AI 追授</span>
+            </div>
+            <div class="muted" style="font-size: 12px">
+              <template v-if="a.unlocked">解锁于 {{ fmtDate(a.unlocked_at) }} · +{{ a.coin_reward }} 币</template>
+              <template v-else>{{ a.description }}（{{ a.current }}/{{ a.target }}）</template>
+            </div>
           </div>
         </div>
       </div>

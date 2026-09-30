@@ -167,4 +167,13 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ stopped, note }),
     }),
+
+  // ===== 成就（v1.10 M1） =====
+  getAchievements: () => request('/achievements'),
+  // 处理 AI 发现型里程碑建议：action = 'grant'（追授）/ 'dismiss'（忽略）
+  handleAchievement: (judgmentId, action) =>
+    request(`/judgments/${judgmentId}/achievement`, {
+      method: 'POST',
+      body: JSON.stringify({ action }),
+    }),
 }

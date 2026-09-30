@@ -229,7 +229,13 @@ def apply_to_changes(changes: list[dict], at: datetime, db: Session, user: User)
 
 
 def _attributes_context(db: Session, user_id: int) -> str:
-    attrs = db.query(Attribute).filter(Attribute.user_id == user_id).order_by(Attribute.id).all()
+    # v1.10 M3：只列主维度（惩罚扣点/动机判断针对主维度语义）
+    attrs = (
+        db.query(Attribute)
+        .filter(Attribute.user_id == user_id, Attribute.parent_id.is_(None))
+        .order_by(Attribute.id)
+        .all()
+    )
     return "、".join(f"{a.name} {a.current_value:.0f}" for a in attrs)
 
 

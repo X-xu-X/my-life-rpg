@@ -127,7 +127,7 @@ def _attributes_context_with_weakness(db: Session, user_id: int) -> str:
 
     attrs = (
         db.query(Attribute)
-        .filter(Attribute.user_id == user_id)
+        .filter(Attribute.user_id == user_id, Attribute.parent_id.is_(None))  # v1.10 M3：主维度
         .order_by(Attribute.current_value.asc())
         .all()
     )

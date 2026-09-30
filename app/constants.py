@@ -48,6 +48,16 @@ ATTRIBUTE_TIERS = [
     (80, 101, "大师"),
 ]
 
+# ---- 子维度（v1.10 M3） ----
+# 属性硬上限：主维度与子维度一致（0~100）
+ATTRIBUTE_FULL = 100.0
+# 触发「拆子维度」的阈值。M3-1 原文是"接近/达到 100"，
+# 用户 2026-09-30 拍板取 95（当前最高维度 ~73，取 100 会让功能长期闲置）。
+SUBDIMENSION_THRESHOLD = 95.0
+# 一次性提议的细分方向数量区间（M3-1：2~4 个）
+SUBDIMENSION_MIN = 2
+SUBDIMENSION_MAX = 4
+
 
 def tier_of(value: float) -> str:
     """按当前值返回段位名（0~100 分 5 档）。

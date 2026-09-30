@@ -206,6 +206,7 @@ def build_judge_messages(
     clarify_history: list[str] | None = None,
     prior_judgment: dict | None = None,
     recent_24h_context: str = "",
+    subdimension_context: str = "",
 ) -> list[dict[str, str]]:
     """构建判定消息。
 
@@ -223,6 +224,7 @@ def build_judge_messages(
     :param clarify_history: 此前各轮追问中用户的补充回答（按时间序，v1.4 问过即止依据）
     :param prior_judgment: 重判时的基准判定（v1.6：增量修订契约——不相干维度逐字保留）
     :param recent_24h_context: 近 24 小时记录（v1.7：**仅**用于判断是否同一件事，非判定内容）
+    :param subdimension_context: 子维度层级（v1.10 M3：主维度满 100 后加点落到子维度）
     """
     system = JUDGE_SYSTEM_PROMPT.format(anchors=anchors_text)
     mode_text = {"journal": "自由日记", "form": "结构化打卡"}.get(event_source, "")
@@ -254,6 +256,13 @@ def build_judge_messages(
         )
     if attribute_context:
         user_lines.append(f"\n【当前属性值】{attribute_context}")
+    if subdimension_context:
+        # v1.10 M3：已拆分的子维度——主维度满 100 后加点要落到子维度
+        user_lines.append(
+            f"\n【子维度（拆分后的层级）】\n{subdimension_context}\n"
+            "规则：**主维度已满 100 的**，加点必须落在其子维度上（affected_attributes 里直接写子维度名，"
+            "不要写主维度名）；**主维度未满 100 的**，一律照旧写主维度名，不要写子维度名。"
+        )
     if clarification:
         user_lines.append(f"\n【用户对追问的补充回答】{clarification}")
     if prior_judgment:

@@ -78,7 +78,13 @@ def detect(db: Session, user: User, now: datetime | None = None) -> list[dict]:
     checks = _get_checks(db, user.id)
     disabled = _disabled_attributes(db, user.id)
 
-    attrs = db.query(Attribute).filter(Attribute.user_id == user.id).order_by(Attribute.id).all()
+    # v1.10 M3：停滞问询只针对主维度（子维度随主维度一并体现）
+    attrs = (
+        db.query(Attribute)
+        .filter(Attribute.user_id == user.id, Attribute.parent_id.is_(None))
+        .order_by(Attribute.id)
+        .all()
+    )
     result: list[dict] = []
     for attr in attrs:
         if attr.name in disabled:

@@ -20,6 +20,7 @@ from app.routers import (
     challenges,
     shop,
     exemptions,
+    subdimensions,
     stagnation,
     anchors,
     export,
@@ -54,6 +55,7 @@ app.include_router(achievements.router, prefix="/api", tags=["achievements"])
 app.include_router(challenges.router, prefix="/api", tags=["challenges"])
 app.include_router(shop.router, prefix="/api", tags=["shop"])
 app.include_router(exemptions.router, prefix="/api", tags=["exemptions"])
+app.include_router(subdimensions.router, prefix="/api", tags=["subdimensions"])
 app.include_router(stagnation.router, prefix="/api", tags=["stagnation"])
 app.include_router(anchors.router, prefix="/api", tags=["anchors"])
 app.include_router(settings_router.router, prefix="/api", tags=["settings"])

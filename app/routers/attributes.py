@@ -18,9 +18,11 @@ def get_attributes(db: Session = Depends(get_db)):
     v1.8：新增 tier 段位（0~100 分 5 档），回答"点数算多还是少"；**不新增 group 字段**（分组方案已作废）。
     """
     user = get_or_create_default_user(db)
+    # v1.10 M3：只返回**主维度**——子维度由 GET /api/subdimensions 单独提供
+    # （属性面板条形列表缩进展示，不上雷达图/趋势图）
     attrs = (
         db.query(Attribute)
-        .filter(Attribute.user_id == user.id)
+        .filter(Attribute.user_id == user.id, Attribute.parent_id.is_(None))
         .order_by(Attribute.id)
         .all()
     )

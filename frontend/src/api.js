@@ -182,4 +182,18 @@ export const api = {
   // body: { target_date, period, start_time?, end_time?, reason? }
   buyExemption: (payload) =>
     request('/exemptions', { method: 'POST', body: JSON.stringify(payload) }),
+
+  // ===== 子维度（v1.10 M3） =====
+  listSubdimensions: () => request('/subdimensions'),
+  // AI 提议细分方向（真实 LLM 调用，调用方需 loading + 防重复）
+  proposeSubdimension: (attrId) =>
+    request(`/subdimensions/${attrId}/propose`, { method: 'POST' }),
+  // 用户勾选确认后才真正创建（多选后确认）
+  acceptSubdimension: (attrId, names) =>
+    request(`/subdimensions/${attrId}/accept`, {
+      method: 'POST',
+      body: JSON.stringify({ names }),
+    }),
+  dismissSubdimension: (attrId) =>
+    request(`/subdimensions/${attrId}/dismiss`, { method: 'POST' }),
 }

@@ -82,7 +82,12 @@ class UserProfile(Base):
 
 
 class Attribute(Base):
-    """属性定义 + 当前值。内置 6 个标准维度（见 DECISIONS.md D5）。"""
+    """属性定义 + 当前值。内置 6 个标准维度（见 DECISIONS.md D5）。
+
+    v1.10（M3）：支持**层级**——`parent_id` 为 NULL 即主维度（既有 13 维全为 NULL，行为不变）；
+    非空即某主维度的**子维度**（独立 0~100 累积，不影响主维度数值）。
+    子维度**由用户确认后才创建**（AI 只提议），提议内容落在 `sub_proposal`。
+    """
 
     __tablename__ = "attributes"
     __table_args__ = (UniqueConstraint("user_id", "name", name="uq_attribute_user_name"),)
@@ -94,6 +99,11 @@ class Attribute(Base):
     attr_type: Mapped[str] = mapped_column(String(50), default="")  # physical/mental/social/...
     current_value: Mapped[float] = mapped_column(Float, default=0.0)
     max_value: Mapped[float] = mapped_column(Float, default=100.0)
+    # v1.10 M3：父维度。NULL = 主维度；非空 = 子维度（指向主维度行）
+    parent_id: Mapped[int | None] = mapped_column(ForeignKey("attributes.id"), nullable=True)
+    # v1.10 M3：子维度提议（{state: pending|accepted|dismissed, items:[{name, description}], at}）。
+    # **只提议不自动创建**——用户勾选确认后才落库为真正的子维度行。
+    sub_proposal: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
 

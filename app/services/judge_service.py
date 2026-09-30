@@ -17,7 +17,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app import prompts
-from app.constants import ATTRIBUTE_ALIASES
+from app.constants import ATTRIBUTE_ALIASES, ATTRIBUTE_FULL
 from app.models import AIJudgment, Attribute, AttributeHistory, CheckinItem, Event, JudgmentLog, Setting
 from app.services import (
     achievement_service,
@@ -25,6 +25,7 @@ from app.services import (
     item_service,
     llm_config,
     memory_service,
+    subdimension_service,
 )
 from app.services.anchor_service import format_anchors_text
 from app.services.llm_service import LLMError, llm_service
@@ -42,10 +43,25 @@ UNREALISTIC_HONESTY_THRESHOLD = 3
 UNREALISTIC_HONESTY_DELTA = -0.5
 
 
-def _normalize_attribute_name(name: str) -> str | None:
-    """将 AI 返回的属性名规范化到标准维度；无法识别返回 None（保守跳过）。"""
+def _normalize_attribute_name(name: str, extra_names: set[str] | None = None) -> str | None:
+    """将 AI 返回的属性名规范化到标准维度；无法识别返回 None（保守跳过）。
+
+    v1.10（M3）：`extra_names` 传入该用户的**子维度名**——子维度由用户确认后动态产生，
+    不在 `ATTRIBUTE_ALIASES` 里，必须单独放行。
+    """
     key = name.strip().lower()
-    return ATTRIBUTE_ALIASES.get(key) or ATTRIBUTE_ALIASES.get(name.strip())
+    hit = ATTRIBUTE_ALIASES.get(key) or ATTRIBUTE_ALIASES.get(name.strip())
+    if hit:
+        return hit
+    if extra_names:
+        raw = name.strip()
+        if raw in extra_names:
+            return raw
+        # 大小写/空白容错（英文子维度名场景）
+        for cand in extra_names:
+            if cand.lower() == key:
+                return cand
+    return None
 
 
 def _clamp_delta(delta: float) -> float:
@@ -83,8 +99,12 @@ def _recent_same_category_count(db: Session, user_id: int, event: Event) -> int:
 
 
 def _attribute_context(db: Session, user_id: int) -> str:
-    """当前属性值文本（边际递减参考）。"""
-    attrs = db.query(Attribute).filter(Attribute.user_id == user_id).all()
+    """当前属性值文本（边际递减参考）。v1.10 M3：只列主维度（子维度另有专门 context）。"""
+    attrs = (
+        db.query(Attribute)
+        .filter(Attribute.user_id == user_id, Attribute.parent_id.is_(None))
+        .all()
+    )
     if not attrs:
         return ""
     return "、".join(f"{a.name} {a.current_value:.0f}" for a in attrs)
@@ -281,15 +301,15 @@ def _ensure_attribute(db: Session, user_id: int, name: str) -> Attribute:
     return attr
 
 
-def _parse_changes(raw_changes: list[dict]) -> list[dict]:
+def _parse_changes(raw_changes: list[dict], extra_names: set[str] | None = None) -> list[dict]:
     """解析并规范化 AI 返回的 affected_attributes。
 
-    - 属性名规范化到标准维度，无法识别则跳过（保守，避免污染数据）。
+    - 属性名规范化到标准维度（v1.10 M3 起也接受该用户的子维度名），无法识别则跳过。
     - delta 钳制到合理区间。
     """
     cleaned: list[dict] = []
     for item in raw_changes or []:
-        name = _normalize_attribute_name(str(item.get("name", "")))
+        name = _normalize_attribute_name(str(item.get("name", "")), extra_names)
         if name is None:
             continue
         try:
@@ -354,6 +374,31 @@ def _exemption_note(hit: dict) -> str:
     )
 
 
+def _subdimension_context(db: Session, user) -> str:
+    """v1.10（M3）：已拆分的子维度清单，供 prompt 决定"加点落主维度还是子维度"。
+
+    只列**有子维度**的主维度（没拆过的维度加不加这行都一样，避免 prompt 冗长）。
+    """
+    kids = subdimension_service.all_children(db, user)
+    if not kids:
+        return ""
+    grouped: dict[int, list] = {}
+    for k in kids:
+        grouped.setdefault(k.parent_id, []).append(k)
+    lines: list[str] = []
+    for pid, rows in grouped.items():
+        parent = db.get(Attribute, pid)
+        if parent is None:
+            continue
+        full = float(parent.current_value or 0) >= ATTRIBUTE_FULL
+        tag = "已满 100 → 加点写下列子维度名" if full else "未满 100 → 加点仍写主维度名"
+        lines.append(
+            f"- {parent.name}（{float(parent.current_value or 0):.1f}/100，{tag}）："
+            + "、".join(r.name for r in rows)
+        )
+    return "\n".join(lines)
+
+
 def _prior_snapshot(judgment: AIJudgment) -> dict:
     """基准判定快照（v1.6 增量修订契约：重判时注入，要求相干维度逐字保留）。"""
     return {
@@ -416,6 +461,8 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
         clarify_history.append(clarification.strip())
         event.params = {**(event.params or {}), "_clarify_history": clarify_history}
         db.flush()  # 立即持久化，下一轮追问可见
+    # v1.10（M3）：子维度层级——已拆分的用户才有内容，未拆分的用户行为完全不变
+    child_names = subdimension_service.child_name_set(db, user)
     messages = prompts.build_judge_messages(
         anchors_text=anchors_text,
         event_description=format_event_description(event, item_context_text(db, event)),
@@ -431,6 +478,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
         today_events_context=_today_events_context(db, user.id, event.id),
         recent_24h_context=_recent_24h_context(db, user.id, event.id),  # v1.7：合并判断专用
         event_source=event.source,
+        subdimension_context=_subdimension_context(db, user),  # v1.10 M3
     )
     # v1.4：按用户解析判定模型配置（BYOK；降级用辅助模型时 quality_note 非空）
     config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_JUDGE)
@@ -444,7 +492,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
     if result.get("needs_clarify"):
         raise ClarifyNeededError(result.get("questions") or ["请补充一下事件的关键细节。"])
 
-    changes = _parse_changes(result.get("affected_attributes", []))
+    changes = _parse_changes(result.get("affected_attributes", []), child_names)
     # 双保险：过滤掉用户关闭判定的维度（即使 AI 仍返回了）
     if disabled:
         changes = [c for c in changes if c["name"] not in disabled]
@@ -594,6 +642,10 @@ def confirm(db: Session, judgment: AIJudgment) -> AIJudgment:
         if delta == 0:
             continue  # 加权后为 0，不入账
         attr = _ensure_attribute(db, user.id, name)
+        # v1.10（M3）：决定落点——主维度未满 100 时加点仍落主维度；
+        # 主维度满 100 且已有子维度时落到子维度（子维度不影响主维度数值）。
+        attr, redirect_note = subdimension_service.resolve_write_target(db, user, attr)
+        name = attr.name
         before = attr.current_value
         # 封顶 100 / 下限 0：夹取后以**实际变动量**记账，保证
         # 「初始值 + Σ流水 = 当前值」的账目自洽（若仍记名义 delta，账目会对不上）
@@ -602,6 +654,9 @@ def confirm(db: Session, judgment: AIJudgment) -> AIJudgment:
         if actual_delta == 0:
             continue  # 已封顶/已触底，本次实际无变化 → 不写流水
         attr.current_value = after
+        reason = f"{item.get('reason', '')}（置信度 {conf:.0%} 加权）"
+        if redirect_note:
+            reason = f"{reason}{redirect_note}"
         db.add(
             AttributeHistory(
                 user_id=user.id,
@@ -610,11 +665,11 @@ def confirm(db: Session, judgment: AIJudgment) -> AIJudgment:
                 judgment_id=judgment.id,
                 delta=actual_delta,
                 value_after=after,
-                reason=f"{item.get('reason', '')}（置信度 {conf:.0%} 加权）",
+                reason=reason,
                 evidence=item.get("evidence", ""),
             )
         )
-        applied_changes.append({**item, "delta": actual_delta})
+        applied_changes.append({**item, "name": name, "delta": actual_delta, "reason": reason})
     judgment.status = "confirmed"
     judgment.final_changes = applied_changes
     _log(
@@ -652,11 +707,12 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
         prior_judgment=_prior_snapshot(judgment),  # v1.6：增量修订基准（注入后只改受影响维度）
         event_source=event.source,
         today_events_context=_today_events_context(db, user.id, event.id),  # v1.7：合并判断依据
+        subdimension_context=_subdimension_context(db, user),  # v1.10 M3
     )
     # v1.4：按用户解析判定模型配置（BYOK）
     config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_JUDGE)
     result = llm_service.chat_json(messages, config=config)
-    changes = _parse_changes(result.get("affected_attributes", []))
+    changes = _parse_changes(result.get("affected_attributes", []), subdimension_service.child_name_set(db, user))
     # v1.10（M2）：豁免券同样作用于补充重判（同一插入点，保证重判前后语义一致）
     changes, exemption_hit = _apply_exemption(db, user, event, changes)
 
@@ -722,7 +778,10 @@ def dispute(db: Session, judgment: AIJudgment, detail: str) -> dict:
     explanation = str(result.get("explanation", ""))
 
     if conclusion == "adjust":
-        changes = _parse_changes(result.get("affected_attributes", []))
+        changes = _parse_changes(
+            result.get("affected_attributes", []),
+            subdimension_service.child_name_set(db, user),  # v1.10 M3：子维度名合法
+        )
         # v1.10（M2）：豁免券同样作用于反驳复核（同一插入点）
         changes, exemption_hit = _apply_exemption(db, user, event, changes)
         if changes:  # 仅在模型给出有效调整结果时覆盖

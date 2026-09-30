@@ -85,7 +85,13 @@ def _redemption_history(db: Session, user: User, days: int = 30) -> str:
 
 
 def _attributes_context(db: Session, user_id: int) -> str:
-    attrs = db.query(Attribute).filter(Attribute.user_id == user_id).order_by(Attribute.id).all()
+    # v1.10 M3：只列主维度（子维度数值不参与商店行情语义）
+    attrs = (
+        db.query(Attribute)
+        .filter(Attribute.user_id == user_id, Attribute.parent_id.is_(None))
+        .order_by(Attribute.id)
+        .all()
+    )
     return "、".join(f"{a.name} {a.current_value:.0f}" for a in attrs)
 
 

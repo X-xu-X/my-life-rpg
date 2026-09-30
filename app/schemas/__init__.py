@@ -190,6 +190,17 @@ class ExemptionIn(BaseModel):
     reason: str = Field("", description="用户写的理由（影响 AI 动机判断）")
 
 
+# ============ 子维度 / 豁免券 之外的属性层级（v1.10 M3） ============
+
+class SubdimensionAcceptIn(BaseModel):
+    """确认创建子维度：**用户勾选的名字**（未勾选的不创建）。
+
+    多选后确认（用户 2026-09-30 拍板）——AI 建议 2~4 个，用户可只要其中一部分。
+    """
+
+    names: list[str] = Field(..., description="勾选确认的细分方向名（必须是 AI 提议里的名字）")
+
+
 # ============ Onboarding ============
 class OnboardingAnswerIn(BaseModel):
     """提交一轮回答（首次引导）。"""

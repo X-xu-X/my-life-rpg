@@ -36,9 +36,9 @@ const backendChecked = ref(false)
 
 async function refreshProfile() {
   try {
-    const data = await api.getAttributes()
+    const [data, status] = await Promise.all([api.getAttributes(), api.getOnboardingStatus()])
     attrCount.value = data.attributes?.length || 0
-    hasProfile.value = attrCount.value > 0
+    hasProfile.value = !!status.completed
   } catch (e) {
     console.warn('获取属性失败', e)
   }

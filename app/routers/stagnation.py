@@ -30,4 +30,8 @@ def answer_stagnation(name: str, body: StagnationAnswerIn, db: Session = Depends
     - `stopped=false` 在学只是没记 → 不扣分，引导补记并重置计时
     """
     user = get_or_create_default_user(db)
-    return stagnation_service.answer(db, user, name, body.stopped, body.note)
+    try:
+        return stagnation_service.answer(db, user, name, body.stopped, body.note)
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(400, str(exc)) from exc

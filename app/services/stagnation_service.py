@@ -13,7 +13,9 @@
 """
 from datetime import datetime, timedelta
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
+from app.services.transactions import rollback_on_error, lock_profile
 
 from app.models import Attribute, AttributeHistory, Setting, User, UserProfile
 from app.services import judge_service
@@ -40,7 +42,7 @@ def _set_checks(db: Session, user_id: int, data: dict) -> None:
         db.add(Setting(user_id=user_id, key=SETTING_KEY, value=data))
     else:
         row.value = data
-    db.commit()
+    db.flush()
 
 
 def _disabled_attributes(db: Session, user_id: int) -> set[str]:
@@ -57,7 +59,8 @@ def _last_activity(db: Session, user_id: int, attribute_id: int) -> datetime | N
     """该维度最后一条属性流水的创建时间；无流水返回 None。"""
     row = (
         db.query(AttributeHistory.created_at)
-        .filter(AttributeHistory.user_id == user_id, AttributeHistory.attribute_id == attribute_id)
+        .filter(AttributeHistory.user_id == user_id, AttributeHistory.attribute_id.in_(db.query(Attribute.id).filter(
+            Attribute.user_id == user_id, or_(Attribute.id == attribute_id, Attribute.parent_id == attribute_id))))
         .order_by(AttributeHistory.created_at.desc())
         .first()
     )
@@ -114,6 +117,7 @@ def detect(db: Session, user: User, now: datetime | None = None) -> list[dict]:
     return result
 
 
+@rollback_on_error
 def answer(db: Session, user: User, name: str, stopped: bool, note: str = "") -> dict:
     """回答停滞问询。
 
@@ -124,6 +128,11 @@ def answer(db: Session, user: User, name: str, stopped: bool, note: str = "") ->
 
     幂等：同一维度在冷却期内重复 answer 不会重复扣分（以 settings 中的问询时间为准）。
     """
+    lock_profile(db, user.id)
+    attr = db.query(Attribute).filter(Attribute.user_id == user.id,
+        Attribute.name == name, Attribute.parent_id.is_(None)).populate_existing().first()
+    if attr is None or name in _disabled_attributes(db, user.id):
+        raise ValueError("该主维度不存在或已关闭判定。")
     now = datetime.now()
     checks = _get_checks(db, user.id)
 
@@ -148,15 +157,6 @@ def answer(db: Session, user: User, name: str, stopped: bool, note: str = "") ->
     challenge = None
     if stopped:
         # ① 小幅扣分（event_id=NULL —— 停滞扣分没有对应事件）
-        attr = (
-            db.query(Attribute)
-            .filter(Attribute.user_id == user.id, Attribute.name == name)
-            .first()
-        )
-        if attr is None:
-            attr = Attribute(user_id=user.id, name=name, current_value=50.0)
-            db.add(attr)
-            db.flush()
         before = attr.current_value
         after = round(
             judge_service._clamp_attribute_value(before + STAGNATION_PENALTY, attr.max_value), 2
@@ -177,19 +177,21 @@ def answer(db: Session, user: User, name: str, stopped: bool, note: str = "") ->
                 )
             )
             deducted = actual
-        db.commit()
+        db.flush()
 
         # ② 生成一条"补课挑战"
         from app.services import challenge_service
 
         try:
-            challenge = _build_restart_challenge(db, user, name)
+            with db.begin_nested():
+                challenge = _build_restart_challenge(db, user, name)
         except Exception:
             challenge = None
 
     # 记录问询时间（两条分支都重置计时：stopped=False 时也重置，避免反复打扰）
     checks[name] = now.isoformat()
     _set_checks(db, user.id, checks)
+    db.commit()
 
     return {
         "name": name,
@@ -241,6 +243,6 @@ def _build_restart_challenge(db: Session, user: User, attribute_name: str):
         expires_at=challenge_service.period_end("weekly"),
     )
     db.add(ch)
-    db.commit()
+    db.flush()
     db.refresh(ch)
     return ch

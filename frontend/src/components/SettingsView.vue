@@ -243,6 +243,7 @@ async function exportData(format) {
 onMounted(() => {
   load()
   loadBackups()
+  loadLLMConfig()
 })
 </script>
 

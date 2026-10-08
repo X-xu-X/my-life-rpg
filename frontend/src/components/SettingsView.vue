@@ -256,7 +256,7 @@ onMounted(() => {
 
     <div class="card">
       <h3>游戏化扩展模块</h3>
-      <p class="muted">以下为可开关的扩展模块（重度功能，后续迭代开放），开启后对应入口才会出现。</p>
+      <p class="muted">这组旧开关尚未接入已交付模块，暂不可操作。</p>
       <div v-for="(mod, key) in MODULES" :key="key" class="judgment-item">
         <div class="row" style="align-items: center; justify-content: space-between">
           <div>
@@ -266,6 +266,7 @@ onMounted(() => {
           <button
             class="btn small"
             :class="{ primary: (settings?.gamification_modules || {})[key] }"
+            disabled
             @click="toggleModule(key)"
           >
             {{ (settings?.gamification_modules || {})[key] ? '已开启' : '已关闭' }}
@@ -362,7 +363,7 @@ onMounted(() => {
 
     <div class="card">
       <h3>数据导出（个人数据主权）</h3>
-      <p class="muted">导出你的全部数据，随时可以带走。</p>
+      <p class="muted">JSON 包含 17 张表的基线、审计与经济流水，保留删除记录并排除模型 Key；旧字段仍可用。</p>
       <div class="row">
         <button class="btn primary" :disabled="exporting" @click="exportData('json')">
           <template v-if="exporting">导出中…</template>

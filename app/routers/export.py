@@ -5,7 +5,8 @@ GET /api/export?format=csv  → 事件列表 CSV
 """
 import csv
 import io
-from datetime import datetime
+from datetime import datetime, date
+from app import models
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import Response
@@ -37,7 +38,7 @@ def _event(e: Event) -> dict:
     }
 
 
-def _collect(db: Session, user_id: int) -> dict:
+def _collect_legacy(db: Session, user_id: int) -> dict:
     """收集用户全部数据。"""
     events = db.query(Event).filter(Event.user_id == user_id).order_by(Event.created_at).all()
     attrs = db.query(Attribute).filter(Attribute.user_id == user_id).all()
@@ -102,6 +103,38 @@ def _collect(db: Session, user_id: int) -> dict:
             for a in anchors
         ],
     }
+
+
+SAFE_EXPORT_SETTINGS = frozenset({"gamification_modules", "hidden_attributes", "disabled_attributes", "stagnation_checks", "unreal_count"})
+
+
+def _encode_export(value):
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {k: _encode_export(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_encode_export(v) for v in value]
+    return value
+
+
+def _export_row(row):
+    return {column.name: _encode_export(getattr(row, column.name)) for column in row.__table__.columns}
+
+
+def _collect(db: Session, user_id: int) -> dict:
+    data = _collect_legacy(db, user_id)
+    table_models = (models.UserProfile, models.Attribute, models.AttributeHistory,
+        models.CheckinItem, models.Event, models.AIJudgment, models.JudgmentLog, models.Goal,
+        models.CoinLedger, models.Challenge, models.ShopItem, models.Redemption,
+        models.Achievement, models.Exemption)
+    tables = {model.__tablename__: [_export_row(row) for row in db.query(model).filter(
+        model.user_id == user_id).order_by(model.id).all()] for model in table_models}
+    tables["users"] = [_export_row(row) for row in db.query(models.User).filter(models.User.id == user_id).all()]
+    tables["anchors"] = [_export_row(row) for row in db.query(models.Anchor).order_by(models.Anchor.id).all()]
+    tables["settings"] = [_export_row(row) for row in db.query(models.Setting).filter(
+        models.Setting.user_id == user_id, models.Setting.key.in_(SAFE_EXPORT_SETTINGS)).order_by(models.Setting.id).all()]
+    return {**data, "format_version": 2, "tables": tables}
 
 
 @router.get("/export")

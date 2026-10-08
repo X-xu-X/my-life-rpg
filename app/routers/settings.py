@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.constants import ATTRIBUTE_DIMENSIONS_SET
 from app.config import settings
 from app.database import get_db
 from app.models import Setting
@@ -13,13 +14,14 @@ router = APIRouter()
 
 # 游戏化扩展模块（PRD 4.6 节，V3 交付，开关在此预留）
 GAMIFICATION_MODULES = ["achievements", "streak", "tasks", "coin_shop"]
+PUBLIC_SETTING_KEYS = frozenset({"gamification_modules", "hidden_attributes", "disabled_attributes"})
 
 
 @router.get("/settings")
 def get_settings(db: Session = Depends(get_db)):
     """读取全部设置。"""
     user = get_or_create_default_user(db)
-    rows = db.query(Setting).filter(Setting.user_id == user.id).all()
+    rows = db.query(Setting).filter(Setting.user_id == user.id, Setting.key.in_(PUBLIC_SETTING_KEYS)).all()
     result = {r.key: r.value for r in rows}
     # 游戏化模块开关默认关闭
     if "gamification_modules" not in result:
@@ -35,6 +37,19 @@ def get_settings(db: Session = Depends(get_db)):
 @router.post("/settings")
 def upsert_setting(body: SettingIn, db: Session = Depends(get_db)):
     """写入/更新某项设置。"""
+    if body.key not in PUBLIC_SETTING_KEYS:
+        raise HTTPException(400, "该设置只能由专用接口修改。")
+    value = body.value
+    if body.key == "gamification_modules":
+        valid = (isinstance(value, dict) and set(value) <= set(GAMIFICATION_MODULES)
+                 and all(type(v) is bool for v in value.values()))
+    else:
+        valid = (isinstance(value, list) and all(isinstance(v, str) for v in value)
+                 and set(value) <= ATTRIBUTE_DIMENSIONS_SET)
+        if valid:
+            body.value = list(dict.fromkeys(value))
+    if not valid:
+        raise HTTPException(400, "设置值不合法。")
     user = get_or_create_default_user(db)
     row = db.query(Setting).filter(Setting.user_id == user.id, Setting.key == body.key).first()
     if row is None:

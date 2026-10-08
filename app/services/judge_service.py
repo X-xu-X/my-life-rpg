@@ -649,7 +649,11 @@ def confirm(db: Session, judgment: AIJudgment, *, commit: bool = True) -> AIJudg
     conf = _parse_confidence(judgment.confidence)
     if conf < CONFIDENCE_CONFIRM_MIN:
         raise ValueError("判定置信度不足或不合法，请补充信息后重新判定。")
-    changes = judgment.suggested_changes
+    event = db.get(Event, judgment.event_id)
+    if event is None:
+        raise ValueError("事件不存在。")
+    raw_changes = judgment.suggested_changes
+    changes, exemption_hit = _apply_exemption(db, user, event, raw_changes)
     applied_changes = []
     for item in changes:
         name = item["name"]
@@ -691,7 +695,7 @@ def confirm(db: Session, judgment: AIJudgment, *, commit: bool = True) -> AIJudg
     _log(
         db, judgment.id, user.id, "confirm",
         detail=f"用户确认入账（置信度 {conf:.0%} 加权）",
-        payload={"raw_changes": changes, "applied_changes": applied_changes},
+        payload={"raw_changes": raw_changes, "applied_changes": applied_changes, "exemption": exemption_hit},
     )
     if commit:
         db.commit()

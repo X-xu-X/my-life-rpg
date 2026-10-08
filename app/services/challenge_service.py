@@ -13,6 +13,7 @@
 v1.10 变更（N1）：**金额改由 AI 定价** —— `COIN_TABLE` 降级为"解析兜底表"，
 押金统一由 `derive_deposit()` 按奖励比例派生。**不要在代码里加"金额必须等于参数表"的校验。**
 """
+import json
 from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
@@ -472,22 +473,29 @@ def complete(db: Session, user: User, challenge: Challenge, note: str) -> dict:
         note=note,
         today_events_context=judge_service._today_events_context(db, user.id, exclude_event_id=event.id),
     )
+    disabled = judge_service._get_disabled_attributes(db, user.id)
+    messages[0]["content"] += "\n依据科学锚点客观判定，不许迎合。必须输出 realistic 布尔值和 realistic_reason；不科学则 realistic=false 且无正向结果。confidence 必须在 0~1；禁用主维及其子维不得给分；可使用用户的合法子维名称。"
+    messages[1]["content"] += ("\n【科学锚点】\n" + judge_service.format_anchors_text(db)
+        + "\n【主维现状】\n" + judge_service._attribute_context(db, user.id)
+        + "\n【子维度】\n" + judge_service._subdimension_context(db, user)
+        + "\n【禁用维度】\n" + json.dumps(sorted(disabled), ensure_ascii=False))
     config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_JUDGE)
     result = llm_service.chat_json(messages, config=config)
+    if result.get("realistic") is not True:
+        db.rollback()
+        raise ValueError("挑战自述未通过真实性校验：" + str(result.get("realistic_reason", "请补充可验证的真实细节。")))
 
     outcome = str(result.get("outcome", "")).strip()
     if outcome not in VALID_OUTCOMES:
         outcome = "retreated"  # 无法识别 → 保守按未完成处理（不给奖励）
     explanation = str(result.get("explanation", "")).strip()
-    confidence = result.get("confidence")
-    try:
-        confidence = float(confidence)
-    except (TypeError, ValueError):
-        confidence = 0.85
-
-    # 3. 复用主判定链路的解析（禁止另写一套）
-    changes = judge_service._parse_changes(result.get("affected_attributes") or [])
+    confidence = judge_service._parse_confidence(result.get("confidence"))
+    from app.services import subdimension_service
+    changes = judge_service._parse_changes(result.get("affected_attributes"), subdimension_service.child_name_set(db, user))
     changes = _apply_outcome_changes(changes, outcome, challenge)
+    attrs = {a.name: a for a in db.query(judge_service.Attribute).filter(judge_service.Attribute.user_id == user.id).all()}
+    changes = [c for c in changes if c["name"] in attrs and c["name"] not in disabled
+               and not (attrs[c["name"]].parent_id and db.get(judge_service.Attribute, attrs[c["name"]].parent_id).name in disabled)]
 
     # 4. 落一条待确认判定
     judgment = AIJudgment(

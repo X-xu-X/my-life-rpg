@@ -167,7 +167,7 @@ def find_active(db: Session, user: User, at: datetime) -> Exemption | None:
         db.query(Exemption)
         .filter(
             Exemption.user_id == user.id,
-            Exemption.status.in_(["active", "used"]),
+            Exemption.status.in_(["active", "used", "expired"]),
             Exemption.target_date.in_([d.isoformat(), (d - timedelta(days=1)).isoformat()]),
         )
         .all()
@@ -181,7 +181,7 @@ def find_active(db: Session, user: User, at: datetime) -> Exemption | None:
 
 def mark_used(db: Session, row: Exemption) -> None:
     """券真正发挥豁免作用时置 `used`（幂等，只记第一次）。"""
-    if row.status == "active":
+    if row.status in ("active", "expired"):
         row.status = "used"
         row.used_at = datetime.now()
         db.flush()

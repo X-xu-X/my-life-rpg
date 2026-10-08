@@ -46,6 +46,7 @@ def _out(ch: Challenge, jmap: dict[int, AIJudgment] | None = None) -> dict:
         "judgment_id": ch.judgment_id,
         # 判定明细：刷新后仍可展示（suggested=建议加点；final=实际入账）
         "judgment_status": j.status if j else "",
+        "judgment_confidence": j.confidence if j else None,
         "judgment_changes": (j.suggested_changes or []) if j else [],
         "judgment_final_changes": (j.final_changes or []) if j else [],
         "created_at": ch.created_at,

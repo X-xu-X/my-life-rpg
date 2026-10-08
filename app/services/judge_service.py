@@ -11,6 +11,7 @@
 - 全程写 judgment_logs 审计
 """
 import json
+import math
 from datetime import datetime, timedelta
 
 from sqlalchemy import func
@@ -27,6 +28,7 @@ from app.services import (
     memory_service,
     subdimension_service,
 )
+from app.services.transactions import rollback_on_error, lock_profile
 from app.services.anchor_service import format_anchors_text
 from app.services.llm_service import LLMError, llm_service
 from app.services.user_service import get_or_create_default_user
@@ -299,6 +301,16 @@ def _ensure_attribute(db: Session, user_id: int, name: str) -> Attribute:
         db.add(attr)
         db.flush()
     return attr
+
+
+def _parse_confidence(raw) -> float:
+    if isinstance(raw, bool):
+        return 0.0
+    try:
+        value = float(raw)
+    except (TypeError, ValueError, OverflowError):
+        return 0.0
+    return value if math.isfinite(value) and 0 <= value <= 1 else 0.0
 
 
 def _parse_changes(raw_changes: list[dict], extra_names: set[str] | None = None) -> list[dict]:
@@ -617,7 +629,8 @@ def _handle_unrealistic(db: Session, user_id: int, event: Event, reason: str) ->
 
 # ============ 确认入账 ============
 
-def confirm(db: Session, judgment: AIJudgment) -> AIJudgment:
+@rollback_on_error
+def confirm(db: Session, judgment: AIJudgment, *, commit: bool = True) -> AIJudgment:
     """确认判定入账：写属性流水 + 更新属性当前值。
 
     v1.2：置信度加权——实际入账 delta = 原始建议 delta × confidence
@@ -625,14 +638,17 @@ def confirm(db: Session, judgment: AIJudgment) -> AIJudgment:
     v1.2：低置信度拦截——confidence < 80% 不允许入账，引导补充信息重判。
     """
     user = get_or_create_default_user(db)
-    if judgment.confidence is not None and judgment.confidence < CONFIDENCE_CONFIRM_MIN:
-        reason = (judgment.confidence_reason or "").strip()
-        reason_part = f"AI 的不确定点：{reason}。" if reason else ""
-        raise ValueError(
-            f"判定置信度不足（{judgment.confidence:.0%} < {CONFIDENCE_CONFIRM_MIN:.0%}）。{reason_part}"
-            "可使用「补充信息」补充细节后重新判定，再确认入账。"
-        )
-    conf = judgment.confidence if judgment.confidence is not None else 1.0
+    lock_profile(db, user.id)
+    claimed = db.query(AIJudgment).filter(
+        AIJudgment.id == judgment.id, AIJudgment.user_id == user.id,
+        AIJudgment.status.in_(["pending", "adjusted"]),
+    ).update({AIJudgment.status: "claimed"}, synchronize_session=False)
+    if claimed != 1:
+        raise ValueError("该判定已入账或正在处理中，请刷新后重试。")
+    db.refresh(judgment)
+    conf = _parse_confidence(judgment.confidence)
+    if conf < CONFIDENCE_CONFIRM_MIN:
+        raise ValueError("判定置信度不足或不合法，请补充信息后重新判定。")
     changes = judgment.suggested_changes
     applied_changes = []
     for item in changes:
@@ -677,7 +693,10 @@ def confirm(db: Session, judgment: AIJudgment) -> AIJudgment:
         detail=f"用户确认入账（置信度 {conf:.0%} 加权）",
         payload={"raw_changes": changes, "applied_changes": applied_changes},
     )
-    db.commit()
+    if commit:
+        db.commit()
+    else:
+        db.flush()
     db.refresh(judgment)
     return judgment
 

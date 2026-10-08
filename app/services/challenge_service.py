@@ -16,6 +16,7 @@ v1.10 变更（N1）：**金额改由 AI 定价** —— `COIN_TABLE` 降级为"
 from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
+from app.services.transactions import rollback_on_error, lock_profile
 
 from app.models import AIJudgment, Challenge, Event, User
 from app.prompts.challenge import build_challenge_messages, build_completion_messages
@@ -351,6 +352,7 @@ def _long_term_memory(db: Session, user_id: int) -> str:
 
 # ============ B3-1 · 接受（扣押金） ============
 
+@rollback_on_error
 def accept(db: Session, user: User, challenge: Challenge) -> Challenge:
     """接受挑战：校验状态与余额 → 扣押金 → 置 accepted 并重设截止时间。"""
     if challenge.status != "candidate":
@@ -359,6 +361,13 @@ def accept(db: Session, user: User, challenge: Challenge) -> Challenge:
     if challenge.expires_at and challenge.expires_at < now:
         raise ValueError("该挑战已过期，请刷新后接受新挑战。")
 
+    lock_profile(db, user.id)
+    claimed = db.query(Challenge).filter(Challenge.id == challenge.id,
+        Challenge.user_id == user.id, Challenge.status == "candidate").update(
+        {Challenge.status: "accepting"}, synchronize_session=False)
+    if claimed != 1:
+        raise ValueError("该挑战已接受或正在处理中。")
+    db.refresh(challenge)
     balance = coin_service.balance(db, user)
     if balance < challenge.deposit:
         raise ValueError(
@@ -521,6 +530,7 @@ def complete(db: Session, user: User, challenge: Challenge, note: str) -> dict:
 
 # ============ B3-3 · 结算 ============
 
+@rollback_on_error
 def settle(db: Session, user: User, challenge: Challenge, final_status: str = "settled") -> dict:
     """确认结算：加点（复用 judge_service.confirm）+ 押金/奖励发放。
 
@@ -541,21 +551,19 @@ def settle(db: Session, user: User, challenge: Challenge, final_status: str = "s
     outcome = challenge.outcome or "retreated"
     coins_delta = 0
 
-    # 1. 加点：**必须复用** judge_service.confirm（置信度加权 + 低置信度拦截 + 封顶）
-    applied_changes: list[dict] = []
-    if judgment.suggested_changes:
-        try:
-            judge_service.confirm(db, judgment)
-            applied_changes = judgment.final_changes or []
-        except ValueError:
-            # 置信度不足等：不加点，但结算流程照常（不卡住押金与金币）
-            judgment.status = "adjusted"
-            db.commit()
-    else:
-        # 无加点（excused 等）：直接标记为已确认，避免留下悬空 pending 判定
-        judgment.status = "confirmed"
-        judgment.final_changes = []
-        db.commit()
+    lock_profile(db, user.id)
+    claimed = db.query(Challenge).filter(
+        Challenge.id == challenge.id, Challenge.user_id == user.id, Challenge.status == "accepted",
+    ).update({Challenge.status: "settling"}, synchronize_session=False)
+    if claimed != 1:
+        raise ValueError("该挑战已结算或正在处理中。")
+    db.refresh(challenge)
+    outcome = challenge.outcome or "retreated"
+    judgment = db.get(AIJudgment, challenge.judgment_id)
+    if judgment is None:
+        raise ValueError("挑战的判定记录不存在。")
+    judge_service.confirm(db, judgment, commit=False)
+    applied_changes = judgment.final_changes or []
 
     # 2. 押金 / 金币
     if outcome in RETAIN_OUTCOMES:
@@ -710,10 +718,8 @@ def expire_stale(db: Session, user: User) -> int:
         try:
             settle(db, user, ch, final_status="expired")
         except ValueError:
-            # 结算过程异常不应阻塞过期状态推进
-            ch.status = "expired"
-            ch.resolved_at = now
-            db.commit()
+            db.rollback()
+            raise
 
     return len(rows)
 

@@ -148,23 +148,22 @@ def confirm(judgment_id: int, db: Session = Depends(get_db)):
     judgment = _get_judgment(db, judgment_id)
     if judgment.status == "confirmed":
         raise HTTPException(status_code=409, detail="该判定已确认入账，请勿重复操作。")
-    try:
-        judgment = judge_service.confirm(db, judgment)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
-    # v1.8 A3-1：日常事件赚币（幂等——已 confirmed 的判定上面已 409 拦掉，不会重复发币）
     user = get_or_create_default_user(db)
     event = db.get(Event, judgment.event_id)
-    coins_gained = None
+    if event is None:
+        raise HTTPException(404, "事件不存在")
+    if event.origin == "challenge":
+        raise HTTPException(409, "挑战判定请在挑战页结算。")
     try:
-        coins_gained = coin_service.reward_event_confirm(
-            db, user, judgment, event_title=(event.title if event else "") or ""
-        )
-        if coins_gained is not None:
-            db.commit()
-    except Exception:  # 金币发放失败不应影响判定入账这一主流程
+        judgment = judge_service.confirm(db, judgment, commit=False)
+        coins_gained = coin_service.reward_event_confirm(db, user, judgment, event_title=event.title or "")
+        db.commit()
+    except ValueError as exc:
         db.rollback()
+        raise HTTPException(409, str(exc)) from exc
+    except Exception:
+        db.rollback()
+        raise
 
     # v1.10 M1：累计型成就顺带检查（幂等；内部自行 commit，失败不影响入账主流程）
     unlocked: list[dict] = []

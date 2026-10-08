@@ -70,6 +70,10 @@ function outcomeCls(o) {
 function isActive(c) {
   return c.status === 'candidate' || c.status === 'accepted'
 }
+function canSettle(c) {
+  const confidence = c.judgment_confidence
+  return typeof confidence === 'number' && Number.isFinite(confidence) && confidence >= 0.8 && confidence <= 1
+}
 function isFinished(c) {
   return !isActive(c)
 }
@@ -716,7 +720,7 @@ onMounted(loadAll)
                     <template v-if="isBusy(`settle-${c.id}`)">
                       <span class="spinner"></span>入账中…
                     </template>
-                    <template v-else>确认结算</template>
+                    <template v-else>{{ canSettle(c) ? '确认结算' : '需补充信息' }}</template>
                   </button>
                   <button v-if="isBusy(`settle-${c.id}`)" class="btn small" @click="cancelAction">取消</button>
                 </div>

@@ -114,7 +114,7 @@ def hierarchy(db: Session, user: User) -> dict[str, list[dict]]:
 # ============ 判定链路的落点解析 ============
 
 
-def resolve_write_target(db: Session, user: User, attr: Attribute) -> tuple[Attribute, str]:
+def resolve_write_target(db: Session, user: User, attr: Attribute, *, delta: float = 0.0) -> tuple[Attribute, str]:
     """决定一次加点/扣点**实际**写哪一行，并给出说明（M3-3）。
 
     - 目标是**主维度**且未满 100 → 写自己（既有行为不变）
@@ -132,7 +132,7 @@ def resolve_write_target(db: Session, user: User, attr: Attribute) -> tuple[Attr
         return attr, ""
 
     # 情况二：目标是主维度且已满 → 兜底落到最低子维度
-    if float(attr.current_value or 0) >= ATTRIBUTE_FULL:
+    if delta > 0 and float(attr.current_value or 0) >= float(attr.max_value or ATTRIBUTE_FULL):
         kids = children_of(db, user, attr.id)
         if kids:
             target = min(kids, key=lambda k: (float(k.current_value or 0), k.id))

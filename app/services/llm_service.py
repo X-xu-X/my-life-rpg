@@ -7,6 +7,7 @@
 - 未来切换模型或供应商时，仅改 .env 配置，不动业务逻辑。
 """
 import json
+import math
 import re
 import time
 from typing import TYPE_CHECKING, Any
@@ -17,6 +18,23 @@ from app.config import settings
 
 if TYPE_CHECKING:  # 仅供类型标注；运行时不导入（llm_config 会导入本模块的 LLMError）
     from app.services.llm_config import LLMConfig
+
+
+def _strict_json_loads(raw):
+    def reject_constant(value):
+        raise ValueError("模型返回非标准数值：" + value)
+    value = json.loads(raw, parse_constant=reject_constant)
+    def validate(v):
+        if isinstance(v, float) and not math.isfinite(v):
+            raise ValueError("模型数值超出有限范围。")
+        if isinstance(v, dict):
+            for item in v.values(): validate(item)
+        elif isinstance(v, list):
+            for item in v: validate(item)
+    validate(value)
+    if not isinstance(value, dict):
+        raise ValueError("模型返回必须是 JSON 对象。")
+    return value
 
 
 class LLMError(RuntimeError):
@@ -169,8 +187,8 @@ class LLMService:
         # 去掉可能的 markdown 代码块围栏
         text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.IGNORECASE)
         try:
-            return json.loads(text)
-        except json.JSONDecodeError:
+            return _strict_json_loads(text)
+        except (json.JSONDecodeError, ValueError):
             pass
         # 提取首个平衡的大括号块
         match = re.search(r"\{.*\}", text, flags=re.DOTALL)
@@ -182,8 +200,8 @@ class LLMService:
             candidates.append(cls._repair_curly_quotes(text))
         for candidate in candidates:
             try:
-                return json.loads(candidate)
-            except json.JSONDecodeError:
+                return _strict_json_loads(candidate)
+            except (json.JSONDecodeError, ValueError):
                 continue
         raise LLMError(f"LLM 返回内容无法解析为 JSON：{raw[:200]}")
 

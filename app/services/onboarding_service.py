@@ -13,7 +13,9 @@ from sqlalchemy.orm import Session
 from app import prompts
 from app.models import Attribute, AttributeHistory, User, UserProfile
 from app.prompts.onboarding import CONFIDENCE_THRESHOLD
-from app.services import coin_service, llm_config
+from app.constants import ATTRIBUTE_DIMENSIONS_SET
+from app.services import coin_service, llm_config, judge_service
+from app.services.transactions import rollback_on_error, lock_profile
 from app.services.judge_service import _clamp_attribute_value as clamp_attribute_value
 from app.services.llm_service import llm_service
 from app.services.user_service import get_or_create_default_user
@@ -143,6 +145,26 @@ def _assert_unbuilt_profile(db: Session, profile: UserProfile) -> None:
         raise ValueError("已有建档基线或属性流水，不能重新建档。如需撤销请删除事件。")
 
 
+def _parse_initial_panel(raw):
+    if not isinstance(raw, list):
+        raise ValueError("初始面板必须包含全部标准维度。")
+    panel = []
+    seen = set()
+    for item in raw:
+        if not isinstance(item, dict):
+            raise ValueError("初始面板条目不合法。")
+        name = judge_service._normalize_attribute_name(str(item.get("name", "")))
+        value = judge_service._finite_float(item.get("value"), None)
+        if name not in ATTRIBUTE_DIMENSIONS_SET or name in seen or value is None or not 0 <= value <= 100:
+            raise ValueError("初始面板维度重复、未知或分值不合法。")
+        seen.add(name)
+        panel.append({**item, "name": name, "value": 50.0 if name == "诚信" else value})
+    if seen != ATTRIBUTE_DIMENSIONS_SET:
+        raise ValueError("初始面板缺少标准维度，请重试生成。")
+    return panel
+
+
+@rollback_on_error
 def _generate_panel(db: Session, profile: UserProfile, conversation: list[dict]) -> tuple[list, str]:
     """AI 生成初始属性面板，持久化到画像快照与 attributes 表。
 
@@ -155,7 +177,7 @@ def _generate_panel(db: Session, profile: UserProfile, conversation: list[dict])
     # v1.4：走判定模型组（judge）
     config = llm_config.resolve_llm_config(db, profile.user_id, llm_config.PURPOSE_JUDGE)
     result = llm_service.chat_json(prompts.build_panel_messages(conversation), config=config)
-    panel = result.get("attributes", [])
+    panel = _parse_initial_panel(result.get("attributes"))
     summary = result.get("summary", "")
 
     # v1.9 F1：解析并夹取启动资金（80~200，整数；非法/缺失取保底 80）
@@ -221,7 +243,7 @@ def _clamp_initial_coins(raw) -> int:
     """把 AI 给出的启动资金夹到 [80, 200] 的整数；非法/缺失取保底 80。"""
     try:
         value = int(raw)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return INITIAL_COINS_MIN
     return max(INITIAL_COINS_MIN, min(INITIAL_COINS_MAX, value))
 
@@ -267,7 +289,7 @@ def supplement_profile(db: Session, detail: str) -> dict:
         ),
         config=config,
     )
-    adjustments = result.get("adjustments", [])
+    adjustments = judge_service._parse_changes(result.get("adjustments"))
     explanation = result.get("explanation", "")
 
     # 沉淀补充信息到画像（无论是否调整属性，信息都要记住，供后续判定参考）
@@ -284,13 +306,16 @@ def supplement_profile(db: Session, detail: str) -> dict:
     return {"adjustments": adjustments, "explanation": explanation}
 
 
+@rollback_on_error
 def confirm_adjustment(db: Session) -> dict:
     """确认应用补充信息的调整建议（写属性流水 + 更新属性值）。"""
     user = get_or_create_default_user(db)
     profile = _get_profile(db, user)
 
+    lock_profile(db, user.id)
+    db.refresh(profile)
     pending = profile.pending_adjustment or {}
-    adjustments = pending.get("adjustments", [])
+    adjustments = judge_service._parse_changes(pending.get("adjustments"))
     if not adjustments:
         return {"applied": [], "message": "没有待确认的调整。"}
 
@@ -299,7 +324,7 @@ def confirm_adjustment(db: Session) -> dict:
         name = item.get("name", "")
         try:
             delta = float(item.get("delta", 0.0))
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError):
             delta = 0.0
         if delta == 0 or not name:
             continue
@@ -309,9 +334,7 @@ def confirm_adjustment(db: Session) -> dict:
             .first()
         )
         if attr is None:
-            attr = Attribute(user_id=user.id, name=name, current_value=50.0)
-            db.add(attr)
-            db.flush()
+            continue
         # v1.8：封顶 100 / 下限 0，以实际变动量记账
         before = attr.current_value
         after = round(clamp_attribute_value(before + delta, attr.max_value), 2)

@@ -331,6 +331,16 @@ def _require_reviewable(db, judgment, *, allow_challenge=False):
         raise ValueError("挑战判定请在挑战页补充自述或结算。")
 
 
+def _finite_float(raw, fallback=0.0):
+    if isinstance(raw, bool):
+        return fallback
+    try:
+        value = float(raw)
+    except (TypeError, ValueError, OverflowError):
+        return fallback
+    return value if math.isfinite(value) else fallback
+
+
 def _parse_confidence(raw) -> float:
     if isinstance(raw, bool):
         return 0.0
@@ -341,30 +351,26 @@ def _parse_confidence(raw) -> float:
     return value if math.isfinite(value) and 0 <= value <= 1 else 0.0
 
 
-def _parse_changes(raw_changes: list[dict], extra_names: set[str] | None = None) -> list[dict]:
-    """解析并规范化 AI 返回的 affected_attributes。
-
-    - 属性名规范化到标准维度（v1.10 M3 起也接受该用户的子维度名），无法识别则跳过。
-    - delta 钳制到合理区间。
-    """
-    cleaned: list[dict] = []
-    for item in raw_changes or []:
+def _parse_changes(raw_changes, extra_names: set[str] | None = None) -> list[dict]:
+    """先合并规范名称，再整体夹取；畸形数值不进入账目。"""
+    if not isinstance(raw_changes, list):
+        return []
+    grouped = {}
+    for item in raw_changes:
+        if not isinstance(item, dict):
+            continue
         name = _normalize_attribute_name(str(item.get("name", "")), extra_names)
         if name is None:
             continue
-        try:
-            delta = float(item.get("delta", 0.0))
-        except (TypeError, ValueError):
-            delta = 0.0
-        cleaned.append(
-            {
-                "name": name,
-                "delta": round(_clamp_delta(delta), 2),
-                "reason": str(item.get("reason", "")),
-                "evidence": str(item.get("evidence", "")),
-            }
-        )
-    return cleaned
+        group = grouped.setdefault(name, {"delta": 0.0, "reason": [], "evidence": []})
+        group["delta"] += _finite_float(item.get("delta"), 0.0)
+        for key in ("reason", "evidence"):
+            text = str(item.get(key, "")).strip()
+            if text: group[key].append(text)
+    return [{"name": name, "delta": round(_clamp_delta(_finite_float(g["delta"])), 2),
+             "reason": "；".join(dict.fromkeys(g["reason"])),
+             "evidence": "；".join(dict.fromkeys(g["evidence"]))}
+            for name, g in grouped.items()]
 
 
 def _parse_revision_notes(raw) -> list[str]:
@@ -569,7 +575,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
         current.suggested_changes = changes
         current.analysis = result.get("analysis", [])
         current.summary = summary
-        current.confidence = float(result.get("confidence", 0.0))
+        current.confidence = _parse_confidence(result.get("confidence"))
         current.confidence_reason = str(result.get("confidence_reason", ""))
         current.revision_notes = _parse_revision_notes(result.get("revision_notes"))  # v1.6：本次修订说明
         current.merged_with = merged_with  # v1.7
@@ -603,7 +609,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
             suggested_changes=changes,
             analysis=result.get("analysis", []),  # v1.1：AI 分析过程（推理链路）
             summary=summary,
-            confidence=float(result.get("confidence", 0.0)),
+            confidence=_parse_confidence(result.get("confidence")),
             confidence_reason=str(result.get("confidence_reason", "")),  # v1.4：置信度说明
             revision_notes=[],  # v1.6：首判无修订
             merged_with=merged_with,  # v1.7：跨来源合并明细
@@ -708,43 +714,43 @@ def confirm(db: Session, judgment: AIJudgment, *, commit: bool = True) -> AIJudg
     if event is None or event.is_deleted:
         raise ValueError("事件不存在。")
     raw_changes = judgment.suggested_changes
-    changes, exemption_hit = _apply_exemption(db, user, event, raw_changes)
-    applied_changes = []
+    normalized = _parse_changes(raw_changes, subdimension_service.child_name_set(db, user))
+    changes, exemption_hit = _apply_exemption(db, user, event, normalized)
+    disabled = _get_disabled_attributes(db, user.id)
+    attrs = db.query(Attribute).filter(Attribute.user_id == user.id).populate_existing().all()
+    by_name = {a.name: a for a in attrs}
+    by_id = {a.id: a for a in attrs}
+    def is_disabled(attr):
+        parent = by_id.get(attr.parent_id)
+        return attr.name in disabled or (parent is not None and parent.name in disabled)
+    targets = {}
     for item in changes:
-        name = item["name"]
-        raw_delta = item["delta"]
-        delta = round(raw_delta * conf, 2)
-        if delta == 0:
-            continue  # 加权后为 0，不入账
-        attr = _ensure_attribute(db, user.id, name)
-        # v1.10（M3）：决定落点——主维度未满 100 时加点仍落主维度；
-        # 主维度满 100 且已有子维度时落到子维度（子维度不影响主维度数值）。
-        attr, redirect_note = subdimension_service.resolve_write_target(db, user, attr)
-        name = attr.name
+        attr = by_name.get(item["name"])
+        if attr is None or is_disabled(attr):
+            continue
+        target, note = subdimension_service.resolve_write_target(db, user, attr, delta=item["delta"])
+        if is_disabled(target):
+            continue
+        group = targets.setdefault(target.id, {"attr": target, "delta": 0.0, "reason": [], "evidence": []})
+        group["delta"] += item["delta"] * conf
+        group["reason"].append(item.get("reason", "") + note)
+        group["evidence"].append(item.get("evidence", ""))
+    applied_changes = []
+    for group in targets.values():
+        attr = group["attr"]
+        delta = round(_clamp_delta(group["delta"]), 2)
         before = attr.current_value
-        # 封顶 100 / 下限 0：夹取后以**实际变动量**记账，保证
-        # 「初始值 + Σ流水 = 当前值」的账目自洽（若仍记名义 delta，账目会对不上）
         after = round(_clamp_attribute_value(before + delta, attr.max_value), 2)
-        actual_delta = round(after - before, 2)
-        if actual_delta == 0:
-            continue  # 已封顶/已触底，本次实际无变化 → 不写流水
+        actual = round(after - before, 2)
+        if actual == 0:
+            continue
         attr.current_value = after
-        reason = f"{item.get('reason', '')}（置信度 {conf:.0%} 加权）"
-        if redirect_note:
-            reason = f"{reason}{redirect_note}"
-        db.add(
-            AttributeHistory(
-                user_id=user.id,
-                attribute_id=attr.id,
-                event_id=judgment.event_id,
-                judgment_id=judgment.id,
-                delta=actual_delta,
-                value_after=after,
-                reason=reason,
-                evidence=item.get("evidence", ""),
-            )
-        )
-        applied_changes.append({**item, "name": name, "delta": actual_delta, "reason": reason})
+        reason = "；".join(dict.fromkeys(group["reason"])) + f"（置信度 {conf:.0%} 加权）"
+        evidence = "；".join(dict.fromkeys(group["evidence"]))
+        db.add(AttributeHistory(user_id=user.id, attribute_id=attr.id,
+            event_id=judgment.event_id, judgment_id=judgment.id, delta=actual,
+            value_after=after, reason=reason, evidence=evidence))
+        applied_changes.append({"name": attr.name, "delta": actual, "reason": reason, "evidence": evidence})
     judgment.status = "confirmed"
     judgment.final_changes = applied_changes
     _log(
@@ -814,7 +820,7 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
     if exemption_hit:
         summary = (summary + "\n" + _exemption_note(exemption_hit)).strip()
     judgment.summary = summary
-    judgment.confidence = float(result.get("confidence", 0.0))
+    judgment.confidence = _parse_confidence(result.get("confidence"))
     judgment.confidence_reason = str(result.get("confidence_reason", ""))  # v1.4：补充重判后同步更新
     judgment.revision_notes = _parse_revision_notes(result.get("revision_notes"))  # v1.6：本次修订说明
     judgment.merged_with = _parse_merged_with(result.get("merged_with"))  # v1.7：跨来源合并明细
@@ -915,7 +921,7 @@ def dispute(db: Session, judgment: AIJudgment, detail: str) -> dict:
             payload={"result": result},
         )
 
-    judgment.confidence = float(result.get("confidence", judgment.confidence))
+    judgment.confidence = _parse_confidence(result.get("confidence"))
     db.commit()
     db.refresh(judgment)
     return {

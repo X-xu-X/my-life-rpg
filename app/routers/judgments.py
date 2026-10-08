@@ -29,7 +29,7 @@ def list_judgments(db: Session = Depends(get_db)):
     rows = (
         db.query(AIJudgment, Event)
         .join(Event, AIJudgment.event_id == Event.id)
-        .filter(AIJudgment.user_id == user.id, AIJudgment.status != "invalidated")
+        .filter(AIJudgment.user_id == user.id, AIJudgment.status.notin_(["invalidated", "deleted"]), Event.is_deleted.is_(False))
         .order_by(AIJudgment.created_at.desc())
         .all()
     )
@@ -150,7 +150,7 @@ def confirm(judgment_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=409, detail="该判定已确认入账，请勿重复操作。")
     user = get_or_create_default_user(db)
     event = db.get(Event, judgment.event_id)
-    if event is None:
+    if event is None or event.is_deleted:
         raise HTTPException(404, "事件不存在")
     if event.origin == "challenge":
         raise HTTPException(409, "挑战判定请在挑战页结算。")

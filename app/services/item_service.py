@@ -38,7 +38,7 @@ def count_in_period(db: Session, user_id: int, item: CheckinItem) -> int:
     return (
         db.query(func.count(Event.id))
         .filter(
-            Event.user_id == user_id,
+            Event.user_id == user_id, Event.is_deleted.is_(False),
             Event.item_id == item.id,
             Event.is_pure.is_(False),
             Event.created_at >= start,
@@ -67,7 +67,7 @@ def period_count_map(db: Session, user_id: int, items: list[CheckinItem]) -> dic
         rows = (
             db.query(Event.item_id, func.count(Event.id))
             .filter(
-                Event.user_id == user_id,
+                Event.user_id == user_id, Event.is_deleted.is_(False),
                 Event.item_id.in_(ids),
                 Event.is_pure.is_(False),
                 Event.created_at >= st,
@@ -103,7 +103,7 @@ def build_stats(db: Session, user_id: int, items: list[CheckinItem]) -> list[dic
             rows = (
                 db.query(Event.created_at)
                 .filter(
-                    Event.user_id == user_id,
+                    Event.user_id == user_id, Event.is_deleted.is_(False),
                     Event.item_id == it.id,
                     Event.is_pure.is_(False),
                     Event.created_at >= st,

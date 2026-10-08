@@ -249,7 +249,7 @@ def _recent_events(db: Session, user: User, days: int = 7, limit: int = 12) -> s
     cutoff = datetime.now() - timedelta(days=days)
     rows = (
         db.query(Event)
-        .filter(Event.user_id == user.id, Event.created_at >= cutoff)
+        .filter(Event.user_id == user.id, Event.is_deleted.is_(False), Event.created_at >= cutoff)
         .order_by(Event.created_at.desc())
         .limit(limit)
         .all()

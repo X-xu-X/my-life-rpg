@@ -178,6 +178,7 @@ class Event(Base):
     item_id: Mapped[int | None] = mapped_column(ForeignKey("checkin_items.id"), nullable=True)
     # 纯享版记录：True 表示只记录不加点、不走 AI 判定（生活手账）
     is_pure: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
     # v1.9（F5）：事件来源标记。None=普通记录（默认，老数据一律 NULL）；
     # "challenge"=挑战结算生成。**只由 challenge_service 的两处写入**，
     # 用户录入的事件永远不可能是挑战来源（EventCreate 不提供该字段）。

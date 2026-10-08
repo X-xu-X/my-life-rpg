@@ -105,7 +105,7 @@ def list_events(
 ):
     """事件列表（按创建时间倒序）。支持：pure 纯享过滤、q 关键词（标题/内容/类别）、date 日期（YYYY-MM-DD）。"""
     user = get_or_create_default_user(db)
-    query = db.query(Event).filter(Event.user_id == user.id)
+    query = db.query(Event).filter(Event.user_id == user.id, Event.is_deleted.is_(False))
     if pure is not None:
         query = query.filter(Event.is_pure == pure)
     if q:
@@ -128,7 +128,7 @@ def get_heatmap(db: Session = Depends(get_db)):
     start = datetime.now() - timedelta(days=365)
     rows = (
         db.query(Event.occurred_at, Event.created_at)
-        .filter(Event.user_id == user.id, Event.created_at >= start)
+        .filter(Event.user_id == user.id, Event.is_deleted.is_(False), Event.created_at >= start)
         .all()
     )
     counts: dict[str, int] = {}
@@ -148,7 +148,7 @@ def judge(event_id: int, body: JudgeIn, db: Session = Depends(get_db)):
     信息不足（needs_clarify）时返回追问问题；用户补充回答后带 clarification 重新判定。
     """
     event = db.get(Event, event_id)
-    if event is None:
+    if event is None or event.is_deleted:
         raise HTTPException(status_code=404, detail="事件不存在")
     try:
         judgment = judge_service.judge_event(db, event, clarification=body.clarification)
@@ -187,7 +187,7 @@ def judge(event_id: int, body: JudgeIn, db: Session = Depends(get_db)):
 def get_event(event_id: int, db: Session = Depends(get_db)):
     """获取单个事件详情（供编辑回填）。"""
     event = db.get(Event, event_id)
-    if event is None:
+    if event is None or event.is_deleted:
         raise HTTPException(status_code=404, detail="事件不存在")
     return event
 
@@ -197,7 +197,7 @@ def update_event(event_id: int, body: EventUpdate, db: Session = Depends(get_db)
     """编辑事件。未确认的判定（pending/adjusted）作废归档（内容变了旧判定不再可信）；
     已入账判定保留。v1.5 A1：作废不物理删除（status=invalidated + 审计记 invalidate），审计只增不删。"""
     event = db.get(Event, event_id)
-    if event is None:
+    if event is None or event.is_deleted:
         raise HTTPException(status_code=404, detail="事件不存在")
     data = body.model_dump(exclude_unset=True)
     for k, v in data.items():
@@ -225,7 +225,11 @@ def update_event(event_id: int, body: EventUpdate, db: Session = Depends(get_db)
 def delete_event(event_id: int, db: Session = Depends(get_db)):
     """删除事件（误提交兜底）：含已入账点数回滚与审计留痕（PRD 4.3）。"""
     event = db.get(Event, event_id)
-    if event is None:
+    if event is None or event.is_deleted:
         raise HTTPException(status_code=404, detail="事件不存在")
-    judge_service.delete_event(db, event)
+    try:
+        judge_service.delete_event(db, event)
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(409, str(exc)) from exc
     return {"status": "deleted", "event_id": event_id}

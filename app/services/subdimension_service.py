@@ -150,6 +150,7 @@ def _related_events(db: Session, user: User, parent_name: str, days: int = 120, 
     cutoff = datetime.now() - timedelta(days=days)
     rows = (
         db.query(Event.title, Event.category, Event.content, AttributeHistory.reason)
+        .filter(Event.is_deleted.is_(False))
         .join(AttributeHistory, AttributeHistory.event_id == Event.id)
         .join(Attribute, Attribute.id == AttributeHistory.attribute_id)
         .filter(

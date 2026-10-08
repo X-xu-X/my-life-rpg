@@ -39,7 +39,7 @@ def _events_summary(db: Session, user_id: int, days: int = 30, limit: int = 50) 
     cutoff = datetime.now() - timedelta(days=days)
     events = (
         db.query(Event)
-        .filter(Event.user_id == user_id, Event.created_at >= cutoff, Event.is_pure.is_(False))
+        .filter(Event.user_id == user_id, Event.is_deleted.is_(False), Event.created_at >= cutoff, Event.is_pure.is_(False))
         .order_by(Event.created_at.asc())
         .limit(limit)
         .all()

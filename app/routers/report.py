@@ -27,7 +27,7 @@ def generate_report(db: Session = Depends(get_db), period: str = "week"):
     # 事件统计
     events = (
         db.query(Event)
-        .filter(Event.user_id == user.id, Event.created_at >= start)
+        .filter(Event.user_id == user.id, Event.is_deleted.is_(False), Event.created_at >= start)
         .all()
     )
     by_cat: dict[str, int] = {}

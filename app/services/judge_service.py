@@ -91,7 +91,7 @@ def _recent_same_category_count(db: Session, user_id: int, event: Event) -> int:
     return (
         db.query(func.count(Event.id))
         .filter(
-            Event.user_id == user_id,
+            Event.user_id == user_id, Event.is_deleted.is_(False),
             Event.category == event.category,
             Event.created_at >= cutoff,
         )
@@ -118,7 +118,7 @@ def _recent_events_context(db: Session, user_id: int, exclude_event_id: int, day
     events = (
         db.query(Event)
         .filter(
-            Event.user_id == user_id,
+            Event.user_id == user_id, Event.is_deleted.is_(False),
             Event.created_at >= cutoff,
             Event.id != exclude_event_id,
             Event.is_pure.is_(False),
@@ -149,7 +149,7 @@ def _recent_24h_context(db: Session, user_id: int, exclude_event_id: int, limit:
     events = (
         db.query(Event)
         .filter(
-            Event.user_id == user_id,
+            Event.user_id == user_id, Event.is_deleted.is_(False),
             Event.created_at >= cutoff,
             Event.id != exclude_event_id,
             Event.is_pure.is_(False),
@@ -183,7 +183,7 @@ def _today_events_context(db: Session, user_id: int, exclude_event_id: int) -> s
     events = (
         db.query(Event)
         .filter(
-            Event.user_id == user_id,
+            Event.user_id == user_id, Event.is_deleted.is_(False),
             Event.created_at >= start_of_day,
             Event.id != exclude_event_id,
             Event.is_pure.is_(False),
@@ -438,6 +438,8 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
     v1.4：追问历史累积——每次用户的补充回答持久化到 event.params["_clarify_history"]，
     后续轮次全部注入 prompt，AI 才能做到「问过即止」（同一面已答过不再重复问）。
     """
+    if event.is_deleted:
+        raise ValueError("事件已删除。")
     user = get_or_create_default_user(db)
     existing_confirmed = (
         db.query(AIJudgment)
@@ -621,8 +623,18 @@ def _handle_unrealistic(db: Session, user_id: int, event: Event, reason: str) ->
             )
         )
         msg += f"（累计 {count} 次不实提交，诚信 {UNREALISTIC_HONESTY_DELTA}）"
-    # 不实事件不予保留，直接删除，避免垃圾数据
-    db.delete(event)
+    event.is_deleted = True
+    judgments = db.query(AIJudgment).filter(AIJudgment.event_id == event.id).all()
+    if not judgments:
+        rejected = AIJudgment(event_id=event.id, user_id=user_id, status="deleted", confidence=0.0,
+                              suggested_changes=[], final_changes=[], summary=reason)
+        db.add(rejected)
+        db.flush()
+        judgments = [rejected]
+    for judgment in judgments:
+        judgment.status = "deleted"
+        _log(db, judgment.id, user_id, "reject", detail=reason,
+             payload={"event_id": event.id, "unreal_count": count})
     db.commit()
     raise ValueError(msg)
 
@@ -650,7 +662,7 @@ def confirm(db: Session, judgment: AIJudgment, *, commit: bool = True) -> AIJudg
     if conf < CONFIDENCE_CONFIRM_MIN:
         raise ValueError("判定置信度不足或不合法，请补充信息后重新判定。")
     event = db.get(Event, judgment.event_id)
-    if event is None:
+    if event is None or event.is_deleted:
         raise ValueError("事件不存在。")
     raw_changes = judgment.suggested_changes
     changes, exemption_hit = _apply_exemption(db, user, event, raw_changes)
@@ -713,6 +725,8 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
     _log(db, judgment.id, user.id, "supplement", detail=detail, payload={"detail": detail})
 
     event = db.get(Event, judgment.event_id)
+    if event is None or event.is_deleted:
+        raise ValueError("事件不存在或已删除。")
     anchors_text = format_anchors_text(db)
     # 在原事件描述上附加补充信息（v1.7：同样带打卡项目上下文）
     item_ctx = item_context_text(db, event)
@@ -779,6 +793,8 @@ def dispute(db: Session, judgment: AIJudgment, detail: str) -> dict:
     _log(db, judgment.id, user.id, "dispute", detail=detail, payload={"detail": detail})
 
     event = db.get(Event, judgment.event_id)
+    if event is None or event.is_deleted:
+        raise ValueError("事件不存在或已删除。")
     anchors_text = format_anchors_text(db)
     messages = prompts.build_dispute_messages(
         anchors_text=anchors_text,
@@ -848,64 +864,38 @@ def dispute(db: Session, judgment: AIJudgment, detail: str) -> dict:
 
 # ============ 事件删除（误提交兜底，v1.1） ============
 
+@rollback_on_error
 def delete_event(db: Session, event: Event) -> None:
-    """删除事件及其关联判定；已确认入账的点数同步回滚，全程留痕。
-
-    规则（PRD 4.3 节「误提交兜底」）：
-    - confirmed 判定：按 final_changes 反向回滚属性值，并写 AttributeHistory 流水
-      （delta 取反，reason 注明「事件删除回滚」，保证点数账目可追溯）
-    - 物理删除关联 ai_judgments 与 judgment_logs，再删除事件本身
-    - 历史入账流水（attribute_history）保留，与回滚流水形成完整账目
-    """
+    """逻辑删除；按真实入账流水反向记账，审计和金币完整保留。"""
     user = get_or_create_default_user(db)
-    judgments = (
-        db.query(AIJudgment)
-        .filter(AIJudgment.event_id == event.id, AIJudgment.user_id == user.id)
-        .all()
-    )
-
+    lock_profile(db, user.id)
+    claimed = db.query(Event).filter(Event.id == event.id, Event.user_id == user.id,
+        Event.is_deleted.is_(False)).update({Event.is_deleted: True}, synchronize_session=False)
+    if claimed != 1:
+        raise ValueError("事件已删除或不存在。")
+    db.refresh(event)
+    judgments = db.query(AIJudgment).filter(AIJudgment.event_id == event.id,
+                                           AIJudgment.user_id == user.id).populate_existing().all()
+    histories = db.query(AttributeHistory).filter(AttributeHistory.event_id == event.id,
+        AttributeHistory.user_id == user.id, AttributeHistory.judgment_id.in_([j.id for j in judgments])).all()
+    totals = {}
+    for h in histories:
+        totals[h.attribute_id] = totals.get(h.attribute_id, 0.0) + h.delta
+    reversed_changes = []
+    for attr_id, delta in totals.items():
+        attr = db.query(Attribute).filter(Attribute.id == attr_id, Attribute.user_id == user.id).populate_existing().one()
+        before = attr.current_value
+        after = round(_clamp_attribute_value(before - delta, attr.max_value), 2)
+        actual = round(after - before, 2)
+        if actual:
+            attr.current_value = after
+            db.add(AttributeHistory(user_id=user.id, attribute_id=attr.id, event_id=event.id,
+                judgment_id=None, delta=actual, value_after=after,
+                reason=f"事件删除回滚（event_id={event.id}）", evidence="按原始真实流水反向并夹取。"))
+            reversed_changes.append({"attribute_id": attr.id, "name": attr.name, "delta": actual})
     for judgment in judgments:
-        if judgment.status == "confirmed":
-            for item in judgment.final_changes or judgment.suggested_changes:
-                name = item.get("name", "")
-                try:
-                    delta = float(item.get("delta", 0.0))
-                except (TypeError, ValueError):
-                    delta = 0.0
-                if delta == 0 or not name:
-                    continue
-                attr = _ensure_attribute(db, user.id, name)
-                before = attr.current_value
-                after = round(_clamp_attribute_value(before - delta, attr.max_value), 2)
-                actual_delta = round(after - before, 2)
-                if actual_delta == 0:
-                    # 已封顶/已触底导致回滚无实际变化 → 不写空流水
-                    continue
-                attr.current_value = after
-                db.add(
-                    AttributeHistory(
-                        user_id=user.id,
-                        attribute_id=attr.id,
-                        event_id=None,
-                        judgment_id=None,
-                        delta=actual_delta,
-                        value_after=after,
-                        reason=f"事件删除回滚（原判定：{item.get('reason', '')}）",
-                        evidence="误提交兜底，删除事件",
-                    )
-                )
-        # 审计留痕后清理判定及其日志
-        _log(
-            db, judgment.id, user.id, "delete",
-            detail=f"删除事件（event_id={event.id}）",
-            payload={
-                "event_title": event.title or event.content[:40],
-                "confirmed_rollback": judgment.status == "confirmed",
-            },
-        )
-        db.flush()
-        db.query(JudgmentLog).filter(JudgmentLog.judgment_id == judgment.id).delete()
-        db.delete(judgment)
-
-    db.delete(event)
+        judgment.status = "deleted"
+        _log(db, judgment.id, user.id, "delete", detail=f"删除事件（event_id={event.id}）",
+             payload={"source_history_ids": [h.id for h in histories], "reversed_changes": reversed_changes,
+                      "coins_rolled_back": False, "coins_note": "日常/成就/挑战金币不随事件删除回滚"})
     db.commit()

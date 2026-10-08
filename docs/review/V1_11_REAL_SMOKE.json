@@ -1,0 +1,189 @@
+{
+  "backup": "C:\\Users\\19687\\Desktop\\游戏人生\\work_place\\my-life-rpg\\backups\\game_of_life_20261008_234626_860868_6ce25404.db",
+  "backup_event_columns": [
+    "id",
+    "user_id",
+    "event_type",
+    "category",
+    "source",
+    "title",
+    "params",
+    "content",
+    "occurred_at",
+    "created_at",
+    "is_pure",
+    "item_id",
+    "origin",
+    "is_deleted"
+  ],
+  "endpoints": {
+    "health": 200,
+    "attributes": 200,
+    "onboarding/status": 200,
+    "events": 200,
+    "judgments": 200,
+    "settings": 200,
+    "llm-config": 200,
+    "items/stats": 200
+  },
+  "before_counts": {
+    "users": 1,
+    "anchors": 30,
+    "user_profiles": 1,
+    "attributes": 13,
+    "events": 32,
+    "goals": 0,
+    "settings": 7,
+    "ai_judgments": 32,
+    "attribute_history": 124,
+    "judgment_logs": 86,
+    "checkin_items": 4,
+    "coin_ledger": 3,
+    "challenges": 5,
+    "shop_items": 5,
+    "redemptions": 0,
+    "achievements": 0,
+    "exemptions": 0
+  },
+  "after_counts": {
+    "users": 1,
+    "anchors": 30,
+    "user_profiles": 1,
+    "attributes": 13,
+    "events": 32,
+    "goals": 0,
+    "settings": 7,
+    "ai_judgments": 32,
+    "attribute_history": 124,
+    "judgment_logs": 86,
+    "checkin_items": 4,
+    "coin_ledger": 3,
+    "challenges": 5,
+    "shop_items": 5,
+    "redemptions": 0,
+    "achievements": 0,
+    "exemptions": 0
+  },
+  "coins": 40,
+  "ledger_sum": 40,
+  "attribute_checks": [
+    {
+      "name": "体能",
+      "baseline": 52,
+      "delta_sum": 6.79,
+      "expected": 58.79,
+      "actual": 58.79,
+      "matches": true
+    },
+    {
+      "name": "健康",
+      "baseline": 55,
+      "delta_sum": -1.07,
+      "expected": 53.93,
+      "actual": 53.93,
+      "matches": true
+    },
+    {
+      "name": "智力",
+      "baseline": 65,
+      "delta_sum": 7.95,
+      "expected": 72.95,
+      "actual": 72.95,
+      "matches": true
+    },
+    {
+      "name": "情商",
+      "baseline": 60,
+      "delta_sum": 1.15,
+      "expected": 61.15,
+      "actual": 61.15,
+      "matches": true
+    },
+    {
+      "name": "创造力",
+      "baseline": 52,
+      "delta_sum": 1.41,
+      "expected": 53.41,
+      "actual": 53.41,
+      "matches": true
+    },
+    {
+      "name": "规划力",
+      "baseline": 55,
+      "delta_sum": -2.98,
+      "expected": 52.02,
+      "actual": 52.02,
+      "matches": true
+    },
+    {
+      "name": "幸福感",
+      "baseline": 56,
+      "delta_sum": 5.25,
+      "expected": 61.25,
+      "actual": 61.25,
+      "matches": true
+    },
+    {
+      "name": "感恩",
+      "baseline": 60,
+      "delta_sum": 1.77,
+      "expected": 61.77,
+      "actual": 61.77,
+      "matches": true
+    },
+    {
+      "name": "意义感",
+      "baseline": 52,
+      "delta_sum": 4.88,
+      "expected": 56.88,
+      "actual": 56.88,
+      "matches": true
+    },
+    {
+      "name": "心理韧性",
+      "baseline": 58,
+      "delta_sum": 0.32,
+      "expected": 58.32,
+      "actual": 58.32,
+      "matches": true
+    },
+    {
+      "name": "开放性",
+      "baseline": 62,
+      "delta_sum": 1.15,
+      "expected": 63.15,
+      "actual": 63.15,
+      "matches": true
+    },
+    {
+      "name": "审美",
+      "baseline": 50,
+      "delta_sum": 0,
+      "expected": 50,
+      "actual": 50.0,
+      "matches": true
+    },
+    {
+      "name": "诚信",
+      "baseline": 50,
+      "delta_sum": 5.83,
+      "expected": 55.83,
+      "actual": 55.83,
+      "matches": true
+    }
+  ],
+  "export_tables": 17,
+  "export_contains_key": false,
+  "foreign_key_check": {
+    "unchanged": true,
+    "preexisting_findings": [
+      [
+        "ai_judgments",
+        35,
+        "events",
+        1
+      ]
+    ]
+  },
+  "integrity_check": "ok"
+}

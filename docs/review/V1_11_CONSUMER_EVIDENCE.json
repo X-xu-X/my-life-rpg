@@ -1,0 +1,123 @@
+{
+  "before": {
+    "event list": [
+      2,
+      1
+    ],
+    "heatmap": [
+      {
+        "date": "2026-10-08",
+        "count": 2
+      }
+    ],
+    "judgment list": [
+      {
+        "id": 1,
+        "event_id": 1,
+        "event_title": "唯一删除标记",
+        "event_type": "positive",
+        "category": "运动",
+        "origin": null,
+        "status": "confirmed",
+        "suggested_changes": [
+          {
+            "name": "体能",
+            "delta": 2
+          }
+        ],
+        "analysis": [],
+        "final_changes": [
+          {
+            "name": "体能",
+            "delta": 2.0,
+            "reason": "（置信度 100% 加权）",
+            "evidence": ""
+          }
+        ],
+        "summary": "",
+        "confidence": 1.0,
+        "confidence_reason": "",
+        "revision_notes": [],
+        "merged_with": [],
+        "achievement_suggestion": {},
+        "last_user_input": null,
+        "rejudge_count": 0,
+        "created_at": "2026-10-08 23:49:20.005086"
+      }
+    ],
+    "achievement metrics": {
+      "journal_total": 1,
+      "journal_streak": 1,
+      "events_total": 2,
+      "challenge_done": 0,
+      "redemptions": 0
+    },
+    "journal streak": 1,
+    "exemption context": "- 10-08 对照事件（positive）\n- 10-08 唯一删除标记（positive）",
+    "item count": 1,
+    "period counts": {
+      "1": 1
+    },
+    "item stats": [
+      {
+        "item_id": 1,
+        "name": "运动",
+        "nature": "other",
+        "frequency_type": "daily",
+        "frequency_target": 0,
+        "this_period_count": 1,
+        "samples": [
+          "2026-10-08"
+        ]
+      }
+    ],
+    "same category": 2,
+    "recent context": "10-08 运动：真实运动",
+    "24h context": "10-08 23:49 运动：真实运动",
+    "today context": "23:49 运动：真实运动",
+    "memory context": "10-08 [运动] 真实运动",
+    "subdimension context": "- 唯一删除标记（运动）｜判定依据：（置信度 100% 加权）"
+  },
+  "after": {
+    "event list": [
+      2
+    ],
+    "heatmap": [
+      {
+        "date": "2026-10-08",
+        "count": 1
+      }
+    ],
+    "judgment list": [],
+    "achievement metrics": {
+      "journal_total": 0,
+      "journal_streak": 0,
+      "events_total": 1,
+      "challenge_done": 0,
+      "redemptions": 0
+    },
+    "journal streak": 0,
+    "exemption context": "- 10-08 对照事件（positive）",
+    "item count": 0,
+    "period counts": {
+      "1": 0
+    },
+    "item stats": [
+      {
+        "item_id": 1,
+        "name": "运动",
+        "nature": "other",
+        "frequency_type": "daily",
+        "frequency_target": 0,
+        "this_period_count": 0,
+        "samples": []
+      }
+    ],
+    "same category": 1,
+    "recent context": "",
+    "24h context": "",
+    "today context": "",
+    "memory context": "",
+    "subdimension context": ""
+  }
+}

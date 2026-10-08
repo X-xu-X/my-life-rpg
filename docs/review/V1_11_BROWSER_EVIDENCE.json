@@ -1,0 +1,75 @@
+[
+  {
+    "tab": "今日盘点",
+    "bodyLength": 516,
+    "errors": []
+  },
+  {
+    "tab": "属性面板",
+    "bodyLength": 413,
+    "errors": []
+  },
+  {
+    "tab": "手账本",
+    "bodyLength": 312,
+    "errors": []
+  },
+  {
+    "tab": "判定中心",
+    "bodyLength": 318,
+    "errors": []
+  },
+  {
+    "tab": "挑战",
+    "bodyLength": 315,
+    "errors": [],
+    "lowConfidenceButtonDisabled": true
+  },
+  {
+    "tab": "锚点库",
+    "bodyLength": 2560,
+    "errors": []
+  },
+  {
+    "tab": "角色档案",
+    "bodyLength": 863,
+    "errors": []
+  },
+  {
+    "tab": "纯享记录",
+    "bodyLength": 184,
+    "errors": []
+  },
+  {
+    "tab": "设置",
+    "bodyLength": 1609,
+    "errors": [],
+    "keyInputsEmpty": true
+  },
+  {
+    "resetAll": {
+      "status": 409,
+      "body": {
+        "detail": "真实数据清空入口已停用；批量清理必须先整库备份并走事件删除接口。"
+      }
+    }
+  },
+  {
+    "protectedSetting": {
+      "status": 400,
+      "body": {
+        "detail": "该设置只能由专用接口修改。"
+      }
+    },
+    "publicSettings": {
+      "gamification_modules": {
+        "achievements": false,
+        "streak": false,
+        "tasks": false,
+        "coin_shop": false
+      },
+      "hidden_attributes": [],
+      "disabled_attributes": []
+    }
+  }
+]

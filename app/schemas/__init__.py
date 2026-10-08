@@ -221,8 +221,8 @@ class GoalCreate(BaseModel):
     metric: str = Field(..., description="量化指标")
     deadline: datetime | None = None
     related_attribute: str = ""
-    reward: float = 2.0
-    penalty: float = -1.0
+    reward: float = Field(2.0, ge=0, le=5, allow_inf_nan=False)
+    penalty: float = Field(-1.0, ge=-5, le=0, allow_inf_nan=False)
 
 
 class GoalUpdate(BaseModel):
@@ -230,8 +230,8 @@ class GoalUpdate(BaseModel):
     metric: str | None = None
     deadline: datetime | None = None
     related_attribute: str | None = None
-    reward: float | None = None
-    penalty: float | None = None
+    reward: float | None = Field(None, ge=0, le=5, allow_inf_nan=False)
+    penalty: float | None = Field(None, ge=-5, le=0, allow_inf_nan=False)
 
 
 class GoalOut(BaseModel):

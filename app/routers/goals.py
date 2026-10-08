@@ -15,6 +15,14 @@ from app.services.user_service import get_or_create_default_user
 router = APIRouter()
 
 
+def _run_goal_action(db, action, *args):
+    try:
+        return action(db, *args)
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(409, str(exc)) from exc
+
+
 def _goal_out(goal: Goal, progress: list[dict] | None = None) -> dict:
     """序列化目标（含审计流水 + v1.7 关联打卡项目进度）。"""
     progress = progress or []
@@ -45,6 +53,7 @@ def list_goals(db: Session = Depends(get_db)):
 @router.post("/goals")
 def create_goal(body: GoalCreate, db: Session = Depends(get_db)):
     user = get_or_create_default_user(db)
+    _run_goal_action(db, lambda session, data: goal_service.validate_goal(data), body.model_dump())
     goal = Goal(
         user_id=user.id,
         description=body.description,
@@ -75,7 +84,7 @@ def update_goal(goal_id: int, body: GoalUpdate, db: Session = Depends(get_db)):
     if goal is None:
         raise HTTPException(status_code=404, detail="目标不存在")
     data = body.model_dump(exclude_unset=True)
-    goal = goal_service.update_goal(db, goal, data)
+    goal = _run_goal_action(db, goal_service.update_goal, goal, data)
     return _goal_out(goal)
 
 
@@ -85,7 +94,7 @@ def achieve_goal(goal_id: int, db: Session = Depends(get_db)):
     goal = db.get(Goal, goal_id)
     if goal is None:
         raise HTTPException(status_code=404, detail="目标不存在")
-    goal, applied = goal_service.achieve_goal(db, goal)
+    goal, applied = _run_goal_action(db, goal_service.achieve_goal, goal)
     return {"goal": _goal_out(goal), "applied": applied}
 
 
@@ -95,7 +104,7 @@ def fail_goal(goal_id: int, db: Session = Depends(get_db)):
     goal = db.get(Goal, goal_id)
     if goal is None:
         raise HTTPException(status_code=404, detail="目标不存在")
-    goal, applied = goal_service.fail_goal(db, goal)
+    goal, applied = _run_goal_action(db, goal_service.fail_goal, goal)
     return {"goal": _goal_out(goal), "applied": applied}
 
 
@@ -105,5 +114,5 @@ def cancel_goal(goal_id: int, db: Session = Depends(get_db)):
     goal = db.get(Goal, goal_id)
     if goal is None:
         raise HTTPException(status_code=404, detail="目标不存在")
-    goal = goal_service.cancel_goal(db, goal)
+    goal = _run_goal_action(db, goal_service.cancel_goal, goal)
     return _goal_out(goal)

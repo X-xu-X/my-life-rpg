@@ -1,4 +1,5 @@
 """事件路由：打卡录入（双通道）+ 触发判定。"""
+from uuid import uuid4
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -213,6 +214,7 @@ def update_event(event_id: int, body: EventUpdate, db: Session = Depends(get_db)
     data = body.model_dump(exclude_unset=True)
     for k, v in data.items():
         setattr(event, k, v)
+    event.params = {**(event.params or {}), "_edit_revision": uuid4().hex}
     # 作废未确认判定：事件内容变化后，旧判定结果不再可信（归档保留，可追溯）
     stale = (
         db.query(AIJudgment)

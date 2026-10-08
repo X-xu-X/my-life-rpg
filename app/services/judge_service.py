@@ -304,14 +304,15 @@ def _ensure_attribute(db: Session, user_id: int, name: str) -> Attribute:
 
 
 def _event_version(event):
-    return (event.updated_at, event.title, event.category, event.content, event.occurred_at,
+    return (event.event_type, event.source, event.item_id, event.is_pure, event.origin,
+            event.title, event.category, event.content, event.occurred_at,
             json.dumps(event.params or {}, sort_keys=True, ensure_ascii=False))
 
 
 def _lock_event(db, event_id, user_id, version=None):
     changed = db.query(Event).filter(Event.id == event_id, Event.user_id == user_id,
         Event.is_deleted.is_(False)).update(
-        {Event.id: Event.id, Event.updated_at: Event.updated_at}, synchronize_session=False)
+        {Event.id: Event.id}, synchronize_session=False)
     if changed != 1:
         raise ValueError("事件不存在或已删除。")
     event = db.query(Event).filter(Event.id == event_id).populate_existing().one()
@@ -475,6 +476,8 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
     """
     if event.is_deleted:
         raise ValueError("事件已删除。")
+    if event.origin == "challenge":
+        raise ValueError("挑战记录请在挑战页补充自述。")
     user = get_or_create_default_user(db)
     existing_confirmed = (
         db.query(AIJudgment)
@@ -486,7 +489,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
         .first()
     )
     if existing_confirmed:
-        raise ValueError("该事件已确认入账。如需重新判定，请删除该事件后重新记录，或用「补充信息」调整。")
+        raise ValueError("该事件已确认入账。如需重新判定，请删除该事件后重新记录。")
     # v1.5 A1：现行判定（不删除，重判时就地更新）；invalidated 归档判定不参与
     current = (
         db.query(AIJudgment)
@@ -495,6 +498,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
             AIJudgment.user_id == user.id,
             AIJudgment.status.in_(["pending", "adjusted", "invalidated"]),
         )
+        .order_by((AIJudgment.status == "invalidated").asc(), AIJudgment.id.desc())
         .first()
     )
 
@@ -537,7 +541,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
     result = llm_service.chat_json(messages, config=config)
     event = _lock_event(db, event.id, user.id, version)
     rows = db.query(AIJudgment).filter(AIJudgment.event_id == event.id,
-        AIJudgment.user_id == user.id).populate_existing().all()
+        AIJudgment.user_id == user.id).order_by((AIJudgment.status == "invalidated").asc(), AIJudgment.id.desc()).populate_existing().all()
     if any(j.status == "confirmed" for j in rows):
         raise ValueError("该事件已确认入账，不能重新判定。")
     current = next((j for j in rows if j.status in ("pending", "adjusted", "invalidated")), None)
@@ -944,7 +948,7 @@ def delete_event(db: Session, event: Event) -> None:
         raise ValueError("事件已删除或不存在。")
     db.refresh(event)
     judgments = db.query(AIJudgment).filter(AIJudgment.event_id == event.id,
-                                           AIJudgment.user_id == user.id).populate_existing().all()
+                                           AIJudgment.user_id == user.id).order_by((AIJudgment.status == "invalidated").asc(), AIJudgment.id.desc()).populate_existing().all()
     histories = db.query(AttributeHistory).filter(AttributeHistory.event_id == event.id,
         AttributeHistory.user_id == user.id, AttributeHistory.judgment_id.in_([j.id for j in judgments])).all()
     totals = {}

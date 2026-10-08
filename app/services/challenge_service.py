@@ -107,9 +107,11 @@ def _parse_reward(raw, scope: str, difficulty: int) -> tuple[int, bool]:
     """
     try:
         val = int(raw)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         val = 0
-    if val > 0:
+    if val >= 2**63:
+        raise ValueError("挑战奖励超出 SQLite 整数存储范围。")
+    if val > 0 and not isinstance(raw, bool):
         return val, False
     reward, _ = coin_params(scope, difficulty)
     return reward, True

@@ -25,6 +25,8 @@ def _strict_json_loads(raw):
         raise ValueError("模型返回非标准数值：" + value)
     value = json.loads(raw, parse_constant=reject_constant)
     def validate(v):
+        if type(v) is int and not -(2**63) <= v < 2**63:
+            raise ValueError("模型整数超出 SQLite 存储范围。")
         if isinstance(v, float) and not math.isfinite(v):
             raise ValueError("模型数值超出有限范围。")
         if isinstance(v, dict):

@@ -66,7 +66,14 @@ def _apply_delta(db: Session, user_id: int, name: str, delta: float, reason: str
     """
     if name not in ATTRIBUTE_DIMENSIONS_SET:
         raise ValueError("目标关联属性必须是标准主维度。")
-    delta = _validate_amount(delta, positive=True) if reason.startswith("目标达成") else _validate_amount(delta, positive=False)
+    if isinstance(delta, bool):
+        raise ValueError("目标点数不合法。")
+    try:
+        delta = float(delta)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError("目标点数不合法。") from exc
+    if not math.isfinite(delta) or abs(delta) > 5:
+        raise ValueError("目标单次属性变化必须在 -5 到 5 之间。")
     if delta == 0:
         return None
     attr = _ensure_attribute(db, user_id, name)
@@ -105,6 +112,7 @@ def achieve_goal(db: Session, goal: Goal) -> tuple[Goal, list[dict]]:
     """标记目标达成，触发奖励结算（规划力 +reward，关联属性 +reward）。"""
     if not _claim_goal(db, goal, "achieved"):
         return goal, []
+    validate_goal({"related_attribute": goal.related_attribute, "reward": goal.reward, "penalty": goal.penalty})
     user = get_or_create_default_user(db)
     applied = []
     r = _apply_delta(
@@ -113,7 +121,6 @@ def achieve_goal(db: Session, goal: Goal) -> tuple[Goal, list[dict]]:
     )
     if r:
         applied.append(r)
-    validate_goal({"related_attribute": goal.related_attribute, "reward": goal.reward})
     if goal.related_attribute and goal.related_attribute != "规划力":
         r2 = _apply_delta(
             db, user.id, goal.related_attribute, goal.reward,
@@ -133,6 +140,7 @@ def fail_goal(db: Session, goal: Goal) -> tuple[Goal, list[dict]]:
     """标记目标未达成，触发扣分结算（规划力 +penalty）。"""
     if not _claim_goal(db, goal, "failed"):
         return goal, []
+    validate_goal({"related_attribute": goal.related_attribute, "reward": goal.reward, "penalty": goal.penalty})
     user = get_or_create_default_user(db)
     applied = []
     r = _apply_delta(

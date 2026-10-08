@@ -8,7 +8,9 @@
 """
 from datetime import datetime, timedelta
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
+from app.services.transactions import lock_profile
 
 from app.models import CoinLedger, Event, User, UserProfile
 
@@ -75,43 +77,20 @@ def grant(
 
     返回变动后的新余额。**不 commit**，由调用方控制事务边界（便于与判定入账同事务）。
     """
-    if delta == 0:
-        # 0 值留痕（如 challenge_forfeit 在 accept 时已扣款，此处只记一笔说明）：
-        # 不校验余额、不改余额，仅写流水
-        profile = _profile(db, user)
-        current = int(profile.coins or 0)
-        db.add(
-            CoinLedger(
-                user_id=user.id,
-                delta=0,
-                balance_after=current,
-                source=source,
-                reason=reason,
-                ref_type=ref_type,
-                ref_id=ref_id,
-            )
-        )
-        db.flush()
-        return current
-
+    if isinstance(delta, bool) or not isinstance(delta, int) or not -(2**63) <= delta < 2**63:
+        raise ValueError("金币金额超出整数存储范围或不合法。")
     profile = _profile(db, user)
-    current = int(profile.coins or 0)
-    new_balance = current + int(delta)
-    if new_balance < 0:
-        raise InsufficientCoins(f"金币不足（需 {abs(int(delta))} 币，当前 {current} 币）")
-
-    profile.coins = new_balance
-    db.add(
-        CoinLedger(
-            user_id=user.id,
-            delta=int(delta),
-            balance_after=new_balance,
-            source=source,
-            reason=reason,
-            ref_type=ref_type,
-            ref_id=ref_id,
-        )
-    )
+    updated = db.query(UserProfile).filter(
+        UserProfile.user_id == user.id,
+        func.coalesce(UserProfile.coins, 0) + delta >= 0,
+        func.coalesce(UserProfile.coins, 0) <= (2**63 - 1) - max(delta, 0),
+    ).update({UserProfile.coins: func.coalesce(UserProfile.coins, 0) + delta}, synchronize_session=False)
+    if updated != 1:
+        raise InsufficientCoins("金币不足或余额超出整数存储范围。")
+    db.refresh(profile)
+    new_balance = int(profile.coins or 0)
+    db.add(CoinLedger(user_id=user.id, delta=delta, balance_after=new_balance,
+                      source=source, reason=reason, ref_type=ref_type, ref_id=ref_id))
     db.flush()
     return new_balance
 
@@ -127,11 +106,13 @@ def ledger(db: Session, user: User, limit: int = 50) -> list[CoinLedger]:
     )
 
 
-def grant_startup_bonus_if_needed(db: Session, user: User) -> bool:
+def grant_startup_bonus_if_needed(db: Session, user: User, amount: int = STARTUP_BONUS, reason: str = "") -> bool:
     """幂等发放启动资金：仅当从未发过（ledger 无 onboarding_bonus 记录）时发放。
 
     返回 True 表示本次真的发了。
     """
+    _profile(db, user)
+    lock_profile(db, user.id)
     exists = (
         db.query(CoinLedger)
         .filter(CoinLedger.user_id == user.id, CoinLedger.source == "onboarding_bonus")
@@ -142,9 +123,9 @@ def grant_startup_bonus_if_needed(db: Session, user: User) -> bool:
     grant(
         db,
         user,
-        STARTUP_BONUS,
+        amount,
         source="onboarding_bonus",
-        reason=f"角色档案建立，发放启动资金 {STARTUP_BONUS} 币",
+        reason=reason or f"角色档案建立，发放启动资金 {amount} 币",
     )
     return True
 

@@ -193,18 +193,17 @@ def _generate_panel(db: Session, profile: UserProfile, conversation: list[dict])
         attr.current_value = value
         attr.description = item.get("reason", "")
 
-    db.commit()
+    db.flush()
 
     # v1.9 F1：发放启动资金（唯一写入口 coin_service.grant）
     # 幂等由 grant_startup_bonus_if_needed 的"ledger 是否已有 onboarding_bonus"判断兜底，
     # 故此处发放后，GET /api/coins 不会再补发一次。
     user = db.get(User, profile.user_id)
     if user is not None:
-        coin_service.grant(
+        coin_service.grant_startup_bonus_if_needed(
             db,
             user,
-            initial_coins,
-            source="onboarding_bonus",
+            amount=initial_coins,
             reason=f"角色档案建立，获得启动资金 {initial_coins} 币 —— {initial_coins_reason}",
         )
         db.commit()

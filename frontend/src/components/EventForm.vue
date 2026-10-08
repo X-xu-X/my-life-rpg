@@ -24,6 +24,7 @@ const kvRows = ref([]) // [{key, value}]
 const journalContent = ref('')
 const isPure = ref(false) // 纯享记录：只记录不加点、不走 AI 判定
 
+const savedSubmission = ref(null)
 const busy = ref(false)
 const error = ref('')
 
@@ -166,7 +167,7 @@ async function restoreJudgeState() {
     if (saved.judgmentId) {
       try {
         const j = await api.getJudgment(saved.judgmentId)
-        if (j && j.status !== 'invalidated') {
+        if (j && !['invalidated', 'deleted'].includes(j.status)) {
           result.value = j
           return
         }
@@ -194,6 +195,14 @@ function toOccurredIso() {
   return isNaN(d.getTime()) ? null : d.toISOString()
 }
 
+async function createOrReuse(body) {
+  const signature = JSON.stringify(body)
+  if (savedSubmission.value?.signature === signature) return { id: savedSubmission.value.eventId }
+  const event = await api.createEvent(body)
+  savedSubmission.value = { eventId: event.id, signature }
+  return event
+}
+
 async function submitForm() {
   // v1.7：正文必填
   if (!form.value.content.trim()) {
@@ -202,7 +211,7 @@ async function submitForm() {
   }
   const params = buildParams()
   const item = selectedItem.value
-  const event = await api.createEvent({
+  const event = await createOrReuse({
     item_id: form.value.item_id || null,
     source: 'form',
     content: form.value.content.trim(),
@@ -210,13 +219,16 @@ async function submitForm() {
     is_pure: isPure.value,
     occurred_at: toOccurredIso(),
   })
-  clearDraft()
   if (isPure.value) {
+    clearDraft()
+    savedSubmission.value = null
     result.value = { status: 'pure', summary: '已作为纯享记录保存，不参与 AI 判定。' }
     return
   }
   // 打卡通道不追问（prompt 约定 form 恒 needs_clarify=false），但仍兼容追问返回
   const res = await api.judgeEvent(event.id)
+  clearDraft()
+  savedSubmission.value = null
   if (res.needs_clarify) {
     clarifyEvent.value = { id: event.id, questions: res.questions || [] }
     return
@@ -230,18 +242,21 @@ async function submitJournal() {
     error.value = '请先写一段生活记录。'
     return
   }
-  const event = await api.createEvent({
+  const event = await createOrReuse({
     source: 'journal',
     content: journalContent.value.trim(),
     event_type: 'positive', // 占位，后端 AI 会重新提取
     is_pure: isPure.value,
   })
-  clearDraft()
   if (isPure.value) {
+    clearDraft()
+    savedSubmission.value = null
     result.value = { status: 'pure', summary: '已作为纯享记录保存，不参与 AI 判定。' }
     return
   }
   const res = await api.judgeEvent(event.id)
+  clearDraft()
+  savedSubmission.value = null
   if (res.needs_clarify) {
     clarifyEvent.value = { id: event.id, questions: res.questions || [] }
     return
@@ -276,6 +291,7 @@ async function submitClarify() {
 }
 
 async function submit() {
+  if (busy.value) return
   busy.value = true
   error.value = ''
   result.value = null
@@ -295,6 +311,7 @@ async function submit() {
 }
 
 function reset() {
+  savedSubmission.value = null
   form.value = { item_id: null, content: '', occurred_at: defaultOccurredAt() }
   kvRows.value = []
   journalContent.value = ''

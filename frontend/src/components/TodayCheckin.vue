@@ -128,6 +128,8 @@ function setRow(id, patch) {
 
 /** 提交单个项目的一句话记录 */
 async function submitOne(it) {
+  const previous = rowState.value[it.id] || {}
+  if (previous.busy) return false
   const text = (drafts.value[it.id] || '').trim()
   if (!text) {
     setRow(it.id, { err: '请先写一句话' })
@@ -135,23 +137,29 @@ async function submitOne(it) {
   }
   setRow(it.id, { busy: true, err: '', ok: false })
   try {
-    const event = await api.createEvent({
+    let eventId = previous.savedText === text ? previous.eventId : null
+    if (!eventId) {
+      const event = await api.createEvent({
       item_id: it.id,
       source: 'form',
       content: text,
       params: {},
       is_pure: false,
     })
-    const res = await api.judgeEvent(event.id)
+      eventId = event.id
+      setRow(it.id, { eventId, savedText: text })
+    }
+    const res = await api.judgeEvent(eventId)
     const okMsg = res.needs_clarify
       ? '已记录，AI 有疑问（去判定中心补充）'
       : '已记录并判定'
-    setRow(it.id, { busy: false, ok: true, err: '' })
+    setRow(it.id, { busy: false, ok: true, err: '', eventId: null, savedText: null })
     drafts.value = { ...drafts.value, [it.id]: '' }
+    await load()
     flash(`「${it.name}」${okMsg}`)
     return true
   } catch (e) {
-    setRow(it.id, { busy: false, err: e.message, ok: false })
+    setRow(it.id, { busy: false, err: `${e.message}；记录可能已保存，可重试判定`, ok: false })
     toast.error(`「${it.name}」${e.message}`)
     return false
   }

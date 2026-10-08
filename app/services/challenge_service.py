@@ -647,32 +647,33 @@ def settle(db: Session, user: User, challenge: Challenge, final_status: str = "s
 # ============ B3-4 · 放弃 ============
 
 def _make_retreat_judgment(db: Session, user: User, challenge: Challenge, note_text: str) -> AIJudgment:
-    """构造一条「按 retreated 处理」的待结算判定（无 LLM）。"""
-    magnitude = retreat_magnitude(challenge.difficulty)
-    names = list(challenge.related_attributes or []) or ["规划力"]
-    changes = [
-        {
-            "name": n,
-            "delta": -magnitude,
-            "reason": f"挑战「{challenge.title}」未完成",
-            "evidence": "自我调节学习：接受承诺后未兑现，反映承诺一致性与执行力不足。",
-        }
-        for n in dict.fromkeys(names)
-    ]
-    event = Event(
-        user_id=user.id, event_type="negative", category="目标", source="form",
-        title=f"挑战：{challenge.title}", content=note_text,
-        params={"_challenge_id": challenge.id},
-        origin="challenge",  # v1.9 F5：标记为挑战来源（abandon / 过期两条路径共用此处）
-        occurred_at=datetime.now(),
-    )
+    """退缩沿用原事件与判定；与终态、押金同事务。"""
+    lock_profile(db, user.id)
+    db.refresh(challenge)
+    if challenge.status != "accepted":
+        raise ValueError("挑战已结束，不能重复退缩结算。")
+    judgment = db.get(AIJudgment, challenge.judgment_id) if challenge.judgment_id else None
+    if judgment is not None and judgment.status not in ("pending", "adjusted"):
+        raise ValueError("挑战判定已入账或失效。")
+    event = db.get(Event, challenge.event_id) if challenge.event_id else None
+    if event is not None and event.is_deleted:
+        raise ValueError("挑战事件已删除。")
+    event = event or Event(user_id=user.id, event_type="negative", category="目标", source="form",
+        title=f"挑战：{challenge.title}", content=note_text, params={"_challenge_id": challenge.id},
+        origin="challenge", occurred_at=datetime.now())
     db.add(event)
     db.flush()
-    judgment = AIJudgment(
-        event_id=event.id, user_id=user.id, suggested_changes=changes,
-        analysis=[note_text],
-        summary=f"挑战「{challenge.title}」未完成。", confidence=1.0, status="pending",
-    )
+    rejudging = judgment is not None
+    judgment = judgment or AIJudgment(event_id=event.id, user_id=user.id)
+    magnitude = retreat_magnitude(challenge.difficulty)
+    judgment.suggested_changes = judge_service._parse_changes([
+        {"name": n, "delta": -magnitude, "reason": f"挑战「{challenge.title}」未完成",
+         "evidence": "接受承诺后未兑现，反映承诺一致性与执行力不足。"}
+        for n in dict.fromkeys(challenge.related_attributes or ["规划力"])])
+    judgment.analysis = [note_text]
+    judgment.summary = f"挑战「{challenge.title}」未完成。"
+    judgment.confidence = 1.0
+    judgment.status = "pending"
     db.add(judgment)
     db.flush()
     challenge.event_id = event.id
@@ -680,11 +681,8 @@ def _make_retreat_judgment(db: Session, user: User, challenge: Challenge, note_t
     challenge.outcome = "retreated"
     challenge.outcome_note = note_text
     db.flush()
-    judge_service._log(
-        db, judgment.id, user.id, "create",
-        detail=f"挑战「{challenge.title}」未完成（retreated）",
-        payload={"challenge_id": challenge.id, "outcome": "retreated"},
-    )
+    judge_service._log(db, judgment.id, user.id, "rejudge" if rejudging else "create",
+        detail=note_text, payload={"challenge_id": challenge.id, "outcome": "retreated"})
     return judgment
 
 
@@ -715,6 +713,7 @@ def abandon(db: Session, user: User, challenge: Challenge, note: str = "") -> di
 
 # ============ B3-5 · 过期（惰性结算，无需 LLM，幂等） ============
 
+@rollback_on_error
 def expire_stale(db: Session, user: User) -> int:
     """把已过期的挑战置为 expired；accepted 过期的同时完成结算（幂等）。
 
@@ -734,6 +733,10 @@ def expire_stale(db: Session, user: User) -> int:
         .all()
     )
     for ch in rows:
+        lock_profile(db, user.id)
+        db.refresh(ch)
+        if ch.status not in ("candidate", "accepted"):
+            continue
         if ch.status == "candidate":
             ch.status = "expired"
             ch.resolved_at = now

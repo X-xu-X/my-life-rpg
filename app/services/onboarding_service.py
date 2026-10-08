@@ -134,6 +134,15 @@ def submit_answer(db: Session, answers: list[dict]) -> dict:
     return {"completed": False, "done": False, **result}
 
 
+def _assert_unbuilt_profile(db: Session, profile: UserProfile) -> None:
+    db.query(UserProfile).filter(UserProfile.id == profile.id).update(
+        {UserProfile.id: UserProfile.id}, synchronize_session=False)
+    db.refresh(profile)
+    if (profile.onboarding_completed or profile.initial_attributes_snapshot
+            or db.query(AttributeHistory.id).filter(AttributeHistory.user_id == profile.user_id).first()):
+        raise ValueError("已有建档基线或属性流水，不能重新建档。如需撤销请删除事件。")
+
+
 def _generate_panel(db: Session, profile: UserProfile, conversation: list[dict]) -> tuple[list, str]:
     """AI 生成初始属性面板，持久化到画像快照与 attributes 表。
 
@@ -142,6 +151,7 @@ def _generate_panel(db: Session, profile: UserProfile, conversation: list[dict])
     代码**只做区间夹取**，不实现任何"按短板数计算"之类的兜底公式
     （那是用户在访谈中明确否决的方案）。
     """
+    _assert_unbuilt_profile(db, profile)
     # v1.4：走判定模型组（judge）
     config = llm_config.resolve_llm_config(db, profile.user_id, llm_config.PURPOSE_JUDGE)
     result = llm_service.chat_json(prompts.build_panel_messages(conversation), config=config)
@@ -333,7 +343,7 @@ def reset_onboarding(db: Session) -> dict:
     """重置角色档案：解锁首次引导，可重新走问卷生成新面板。属性值保留（重新建档时覆盖）。"""
     user = get_or_create_default_user(db)
     profile = _get_profile(db, user)
-    profile.onboarding_completed = False
+    _assert_unbuilt_profile(db, profile)
     profile.onboarding_state = {}
     profile.pending_adjustment = {}
     db.commit()
@@ -341,25 +351,4 @@ def reset_onboarding(db: Session) -> dict:
 
 
 def reset_all_data(db: Session) -> dict:
-    """重置全部数据（测试用）：清空事件/判定/流水/目标，属性回中性值，解锁引导。"""
-    from app.models import AIJudgment, AttributeHistory, Event, Goal, JudgmentLog
-
-    user = get_or_create_default_user(db)
-    for model in (JudgmentLog, AIJudgment, AttributeHistory, Event, Goal):
-        if hasattr(model, "user_id"):
-            db.query(model).filter(model.user_id == user.id).delete()
-        else:
-            db.query(model).delete()
-    # 属性回中性值
-    for attr in db.query(Attribute).filter(Attribute.user_id == user.id).all():
-        attr.current_value = 50.0
-        attr.description = ""
-    # 解锁引导并清空画像
-    profile = _get_profile(db, user)
-    profile.onboarding_completed = False
-    profile.onboarding_state = {}
-    profile.pending_adjustment = {}
-    profile.initial_attributes_snapshot = {}
-    profile.basic_profile = {}
-    db.commit()
-    return {"status": "ok", "message": "全部数据已重置，可重新开始。"}
+    raise ValueError("真实数据清空入口已停用；批量清理必须先整库备份并走事件删除接口。")

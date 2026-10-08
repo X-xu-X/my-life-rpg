@@ -9,7 +9,6 @@ const error = ref('')
 const exporting = ref(false)
 const backups = ref([])
 const backingUp = ref(false)
-const resetting = ref(false)   // v1.9 F2：重置全部数据期间禁用+文案
 
 // 属性维度开关
 const attributes = ref([])
@@ -196,21 +195,6 @@ async function doBackup() {
   }
 }
 
-async function resetAll() {
-  if (!window.confirm('⚠️ 重置全部数据？将清空所有事件/判定/属性流水/目标，属性回中性值，并解锁角色档案。此操作不可恢复！')) return
-  if (!window.confirm('再次确认：真的要清空所有数据重新开始吗？（建议先备份）')) return
-  error.value = ''
-  resetting.value = true
-  try {
-    await api.resetAllData()
-    toast.success('已重置，可重新开始（请刷新页面）')
-  } catch (e) {
-    error.value = e.message
-    toast.error(e.message)
-  } finally {
-    resetting.value = false
-  }
-}
 
 const reportData = ref(null)
 const reportBusy = ref(false)
@@ -425,14 +409,6 @@ onMounted(() => {
       </div>
     </div>
 
-    <div class="card">
-      <h3>测试 / 重置</h3>
-      <p class="muted">⚠️ 清空所有数据（事件/判定/流水/目标），属性回中性值，解锁角色档案。用于测试，操作前建议先备份。</p>
-      <button class="btn danger" :disabled="resetting" @click="resetAll">
-        <template v-if="resetting">重置中…</template>
-        <template v-else>重置全部数据</template>
-      </button>
-    </div>
 
     <p v-if="error" class="muted" style="color: #d33">{{ error }}</p>
   </div>

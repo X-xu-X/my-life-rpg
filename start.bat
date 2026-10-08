@@ -3,8 +3,18 @@ setlocal
 title Game of Life - Launcher
 cd /d "%~dp0"
 
+REM ============================================================
+REM  用法：
+REM    双击 start.bat        -> 仅本机访问 http://127.0.0.1:5173
+REM    双击 start-phone.bat  -> 局域网模式，手机可访问（同一 WiFi）
+REM    （等价于 start.bat phone）
+REM ============================================================
+set "PHONE_MODE=0"
+if /i "%~1"=="phone" set "PHONE_MODE=1"
+
 echo ============================================
 echo   游戏人生 Game of Life - 一键启动
+if "%PHONE_MODE%"=="1" echo   模式：局域网（手机可访问）
 echo ============================================
 echo.
 
@@ -63,15 +73,29 @@ if not exist "frontend\node_modules" (
     popd
 )
 
+REM ========== 3.5 手机模式：提前取局域网 IP（放在括号块外，避免变量展开问题）==========
+set "LANIP="
+if "%PHONE_MODE%"=="1" (
+    echo       正在获取局域网 IP...
+    powershell -NoProfile -Command "Get-NetIPAddress -AddressFamily IPv4 -PrefixOrigin Dhcp | Select-Object -First 1 -ExpandProperty IPAddress" > "%TEMP%\_gofl_lan_ip.txt" 2>nul
+    if exist "%TEMP%\_gofl_lan_ip.txt" set /p LANIP=<"%TEMP%\_gofl_lan_ip.txt"
+    del "%TEMP%\_gofl_lan_ip.txt" >nul 2>nul
+)
+
 REM ========== 4. 启动后端 ==========
 echo [3/5] 启动后端 http://127.0.0.1:8000 ...
 start "game-life-backend" /d "%~dp0" cmd /k ".venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000"
 
 REM ========== 5. 启动前端 ==========
-echo [4/5] 启动前端 http://127.0.0.1:5173 ...
-start "game-life-frontend" /d "%~dp0frontend" cmd /k "npm run dev"
+if "%PHONE_MODE%"=="1" (
+    echo [4/5] 启动前端（局域网模式，--host 对本网络开放）...
+    start "game-life-frontend" /d "%~dp0frontend" cmd /k "npm run dev -- --host"
+) else (
+    echo [4/5] 启动前端 http://127.0.0.1:5173 ...
+    start "game-life-frontend" /d "%~dp0frontend" cmd /k "npm run dev"
+)
 
-REM ========== 6. 打开浏览器 ==========
+REM ========== 6. 打开浏览器并提示手机地址 ==========
 echo [5/5] 等待服务就绪，自动打开浏览器...
 timeout /t 6 /nobreak >nul
 start "" http://127.0.0.1:5173
@@ -79,7 +103,26 @@ start "" http://127.0.0.1:5173
 echo.
 echo ============================================
 echo   启动完成！
-echo   后端健康检查：http://127.0.0.1:8000/api/health
+if "%PHONE_MODE%"=="1" (
+    echo.
+    echo   【本机】http://127.0.0.1:5173
+    if defined LANIP (
+        echo   【手机】http://%LANIP%:5173
+        echo.
+        echo   手机需与电脑连同一个 WiFi。
+        echo   首次访问若弹出防火墙询问，请选择「允许」。
+    ) else (
+        echo   【手机】未检测到局域网 IP
+        echo   请确认电脑已连接 WiFi 或网线后，重新运行本脚本。
+    )
+    echo.
+    echo   提示：记录都存在本电脑的 game_of_life.db 里，手机不存数据。
+) else (
+    echo   后端健康检查：http://127.0.0.1:8000/api/health
+    echo.
+    echo   想用手机记录？关闭后双击 start-phone.bat 即可。
+)
+echo.
 echo   关闭两个 game-life-* 窗口即可停止服务
 echo ============================================
 echo.

@@ -221,7 +221,8 @@ def _build_restart_challenge(db: Session, user: User, attribute_name: str):
     from app.services import challenge_service
 
     difficulty = 2
-    reward, deposit = challenge_service.coin_params("weekly", difficulty)
+    reward, _ = challenge_service.coin_params("weekly", difficulty)
+    deposit = challenge_service.derive_deposit(reward)
     ch = Challenge(
         user_id=user.id,
         scope="weekly",

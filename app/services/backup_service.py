@@ -5,6 +5,9 @@
 - 保留最近 N 份，更旧的自动清理
 """
 import sqlite3
+from contextlib import closing
+from uuid import uuid4
+from app.database import engine
 from datetime import datetime
 from pathlib import Path
 
@@ -15,26 +18,32 @@ BACKUP_KEEP = 30  # 保留最近 30 份备份
 
 
 def backup_now() -> Path | None:
-    """备份当前数据库到 backups/。返回备份文件路径（失败返回 None）。"""
-    db_path = Path(BASE_DIR / settings.db_file)
-    if not db_path.exists():
-        return None
-    BACKUP_DIR.mkdir(exist_ok=True)
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    dest = BACKUP_DIR / f"game_of_life_{ts}.db"
+    """按实际引擎路径在线备份；失败不阻断启动。"""
+    dest = None
     try:
-        src = sqlite3.connect(str(db_path))
-        dst = sqlite3.connect(str(dest))
-        try:
-            src.backup(dst)
-        finally:
-            dst.close()
-            src.close()
+        database = engine.url.database
+        if engine.dialect.name != "sqlite" or not database or database == ":memory:":
+            return None
+        db_path = Path(database).resolve()
+        if not db_path.is_file():
+            return None
+        BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        dest = BACKUP_DIR / f"game_of_life_{stamp}_{uuid4().hex[:8]}.db"
+        with closing(sqlite3.connect(db_path.as_uri() + "?mode=ro", uri=True)) as src:
+            with closing(sqlite3.connect(str(dest))) as dst:
+                src.backup(dst)
     except Exception:
-        # 备份失败不影响主流程，静默返回 None
-        dest.unlink(missing_ok=True)
+        if dest is not None:
+            try:
+                dest.unlink(missing_ok=True)
+            except OSError:
+                pass
         return None
-    _cleanup()
+    try:
+        _cleanup()
+    except OSError:
+        pass
     return dest
 
 

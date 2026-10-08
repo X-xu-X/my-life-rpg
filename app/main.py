@@ -66,6 +66,8 @@ app.include_router(report.router, prefix="/api", tags=["report"])
 @app.on_event("startup")
 def init_db():
     """启动时初始化：建表 + 轻量迁移 + 写入内置锚点 + 创建默认用户（均幂等）。"""
+    from app.services.backup_service import backup_now
+    backup_now()  # 已有数据库必须在迁移之前留原始副本
     Base.metadata.create_all(bind=engine)
     migrate_schema(engine)  # 为已有表补充模型新增的缺失列（如 ai_judgments.analysis）
     from app.database import SessionLocal
@@ -80,10 +82,6 @@ def init_db():
     finally:
         db.close()
 
-    # 启动时自动备份数据库（SQLite backup API，失败不影响启动）
-    from app.services.backup_service import backup_now
-
-    backup_now()
 
 
 @app.get("/api/health")

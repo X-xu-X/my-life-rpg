@@ -14,7 +14,12 @@ import { ref, computed, watch } from 'vue'
  * @param {{storageKey: string, getTime?: (item: any) => string}} options
  */
 export function useDateGroups(items, { storageKey, getTime = (item) => item.created_at }) {
-  const expanded = ref(JSON.parse(localStorage.getItem(storageKey) || 'null') || { today: true })
+  let cached = { today: true }
+  try {
+    const value = JSON.parse(localStorage.getItem(storageKey) || 'null')
+    if (value && typeof value === 'object' && !Array.isArray(value)) cached = value
+  } catch { /* 损坏或不可读的缓存使用默认展开状态 */ }
+  const expanded = ref(cached)
 
   watch(
     expanded,

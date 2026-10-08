@@ -440,6 +440,7 @@ def _apply_outcome_changes(
     return out
 
 
+@rollback_on_error
 def complete(db: Session, user: User, challenge: Challenge, note: str) -> dict:
     """用户自报完成情况 → 一次 LLM 调用判定 outcome 与加点 → 生成待确认判定。
 
@@ -447,11 +448,21 @@ def complete(db: Session, user: User, challenge: Challenge, note: str) -> dict:
     """
     if challenge.status != "accepted":
         raise ValueError(f"该挑战当前状态为 {challenge.status}，无法提交完成。")
-    if challenge.judgment_id:
-        raise ValueError("该挑战已完成判定，请在下方确认结算。")
+    lock_profile(db, user.id)
+    db.query(Challenge).filter(Challenge.id == challenge.id, Challenge.user_id == user.id,
+        Challenge.status == "accepted").update({Challenge.id: Challenge.id}, synchronize_session=False)
+    db.refresh(challenge)
+    if challenge.status != "accepted":
+        raise ValueError("挑战已结算，不能再次修改。")
+    judgment = db.get(AIJudgment, challenge.judgment_id) if challenge.judgment_id else None
+    if judgment is not None and judgment.status not in ("pending", "adjusted"):
+        raise ValueError("该判定已入账或失效。")
 
     # 1. 创建记录（复用判定链路；params 的 "_" 前缀键会被 format_event_description 跳过）
-    event = Event(
+    event = db.get(Event, challenge.event_id) if challenge.event_id else None
+    if event is not None and event.is_deleted:
+        raise ValueError("挑战事件已删除。")
+    event = event or Event(
         user_id=user.id,
         event_type="positive",
         category="目标",
@@ -462,6 +473,7 @@ def complete(db: Session, user: User, challenge: Challenge, note: str) -> dict:
         origin="challenge",  # v1.9 F5：标记为挑战来源（前端显示「挑战」徽章）
         occurred_at=datetime.now(),
     )
+    event.content = note or ""
     db.add(event)
     db.flush()
 
@@ -498,7 +510,8 @@ def complete(db: Session, user: User, challenge: Challenge, note: str) -> dict:
                and not (attrs[c["name"]].parent_id and db.get(judge_service.Attribute, attrs[c["name"]].parent_id).name in disabled)]
 
     # 4. 落一条待确认判定
-    judgment = AIJudgment(
+    rejudging = judgment is not None
+    judgment = judgment or AIJudgment(
         event_id=event.id,
         user_id=user.id,
         suggested_changes=changes,
@@ -508,6 +521,12 @@ def complete(db: Session, user: User, challenge: Challenge, note: str) -> dict:
         confidence_reason=str(result.get("confidence_reason", "") or ""),
         status="pending",
     )
+    judgment.suggested_changes = changes
+    judgment.analysis = [explanation] if explanation else []
+    judgment.summary = str(result.get("summary", "")).strip()
+    judgment.confidence = confidence
+    judgment.confidence_reason = str(result.get("confidence_reason", "") or "")
+    judgment.status = "pending"
     db.add(judgment)
     db.flush()
 
@@ -515,13 +534,14 @@ def complete(db: Session, user: User, challenge: Challenge, note: str) -> dict:
     challenge.judgment_id = judgment.id
     challenge.outcome = outcome
     challenge.outcome_note = explanation
-    db.commit()
+    db.flush()
 
     judge_service._log(
-        db, judgment.id, user.id, "create",
+        db, judgment.id, user.id, "rejudge" if rejudging else "create",
         detail=f"挑战「{challenge.title}」完成判定（{outcome}）",
         payload={"challenge_id": challenge.id, "outcome": outcome, "note": note},
     )
+    db.commit()
     db.refresh(judgment)
     db.refresh(challenge)
 
@@ -659,7 +679,7 @@ def _make_retreat_judgment(db: Session, user: User, challenge: Challenge, note_t
     challenge.judgment_id = judgment.id
     challenge.outcome = "retreated"
     challenge.outcome_note = note_text
-    db.commit()
+    db.flush()
     judge_service._log(
         db, judgment.id, user.id, "create",
         detail=f"挑战「{challenge.title}」未完成（retreated）",
@@ -668,6 +688,7 @@ def _make_retreat_judgment(db: Session, user: User, challenge: Challenge, note_t
     return judgment
 
 
+@rollback_on_error
 def abandon(db: Session, user: User, challenge: Challenge, note: str = "") -> dict:
     """主动放弃。
 

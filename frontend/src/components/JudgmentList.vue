@@ -303,7 +303,7 @@ onMounted(load)
 <template>
   <div class="card">
     <h2>判定中心</h2>
-    <p class="muted">AI 对每条事件给出建议增减，你可以确认入账、补充信息重判、或反驳复核。</p>
+    <p class="muted">未入账判定可确认、补充或反驳。已入账后冻结正文与判定，可删除事件撤销属性；金币保留。挑战判定请在挑战页处理。</p>
 
     <p v-if="error" class="muted" style="color: #d33">{{ error }}</p>
     <!-- v1.5 A2：轻提示（删除/保存等成功反馈，2 秒消失） -->
@@ -420,7 +420,7 @@ onMounted(load)
           </span>
         </template>
         <template v-else>
-          <div v-if="j.status !== 'confirmed'" class="row" style="gap: 8px; flex: 1">
+          <div v-if="j.status !== 'confirmed' && j.origin !== 'challenge'" class="row" style="gap: 8px; flex: 1">
             <button
               class="btn small primary"
               :disabled="busy || (j.confidence || 0) < 0.8"
@@ -431,7 +431,7 @@ onMounted(load)
           </div>
           <span v-else class="muted" style="flex: 1">✓ 已入账</span>
         </template>
-        <button class="btn small" :disabled="anyBusy" @click="openEdit(j.id, j.event_id)">编辑</button>
+        <button v-if="j.status !== 'confirmed' && j.origin !== 'challenge'" class="btn small" :disabled="anyBusy" @click="openEdit(j.id, j.event_id)">编辑</button>
         <button class="btn small" :disabled="anyBusy" @click="toggleAudit(j.id)">审计</button>
         <!-- v1.1：误提交兜底，任何状态都可删除事件 -->
         <button class="btn small danger" :disabled="anyBusy" @click="removeEvent(j.id, j.event_id, j.status === 'confirmed')">

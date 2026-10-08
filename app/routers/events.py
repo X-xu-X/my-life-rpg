@@ -6,7 +6,7 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import AIJudgment, CheckinItem, Event
+from app.models import AttributeHistory, AIJudgment, CheckinItem, Event
 from app.schemas import EventCreate, EventOut, EventUpdate, JudgeIn
 from app import prompts
 from app.services import achievement_service, judge_service, llm_config
@@ -199,6 +199,17 @@ def update_event(event_id: int, body: EventUpdate, db: Session = Depends(get_db)
     event = db.get(Event, event_id)
     if event is None or event.is_deleted:
         raise HTTPException(status_code=404, detail="事件不存在")
+    try:
+        event = judge_service._lock_event(db, event.id, event.user_id)
+        if event.origin == "challenge":
+            raise ValueError("挑战记录请在挑战页补充自述。")
+        if (db.query(AttributeHistory.id).filter(AttributeHistory.event_id == event.id).first()
+                or db.query(AIJudgment.id).filter(AIJudgment.event_id == event.id,
+                    AIJudgment.status == "confirmed").first()):
+            raise ValueError("事件已入账，不能编辑。如需撤销请删除事件。")
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(409, str(exc)) from exc
     data = body.model_dump(exclude_unset=True)
     for k, v in data.items():
         setattr(event, k, v)

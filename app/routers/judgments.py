@@ -248,6 +248,9 @@ def supplement(judgment_id: int, body: SupplementIn, db: Session = Depends(get_d
     judgment = _get_judgment(db, judgment_id)
     try:
         judgment = judge_service.supplement(db, judgment, body.detail)
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(409, str(exc)) from exc
     except LLMError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     return {
@@ -268,6 +271,9 @@ def dispute(judgment_id: int, body: DisputeIn, db: Session = Depends(get_db)):
     judgment = _get_judgment(db, judgment_id)
     try:
         result = judge_service.dispute(db, judgment, body.detail)
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(409, str(exc)) from exc
     except LLMError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     return {

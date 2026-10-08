@@ -303,6 +303,34 @@ def _ensure_attribute(db: Session, user_id: int, name: str) -> Attribute:
     return attr
 
 
+def _event_version(event):
+    return (event.updated_at, event.title, event.category, event.content, event.occurred_at,
+            json.dumps(event.params or {}, sort_keys=True, ensure_ascii=False))
+
+
+def _lock_event(db, event_id, user_id, version=None):
+    changed = db.query(Event).filter(Event.id == event_id, Event.user_id == user_id,
+        Event.is_deleted.is_(False)).update(
+        {Event.id: Event.id, Event.updated_at: Event.updated_at}, synchronize_session=False)
+    if changed != 1:
+        raise ValueError("事件不存在或已删除。")
+    event = db.query(Event).filter(Event.id == event_id).populate_existing().one()
+    if version is not None and _event_version(event) != version:
+        raise ValueError("判定期间事件已被编辑，请重新判定。")
+    return event
+
+
+def _require_reviewable(db, judgment, *, allow_challenge=False):
+    db.refresh(judgment)
+    event = db.get(Event, judgment.event_id)
+    if event is None or event.is_deleted or judgment.status in ("deleted", "invalidated", "claimed"):
+        raise ValueError("判定已失效，请刷新后重试。")
+    if judgment.status == "confirmed":
+        raise ValueError("该判定已入账，不能重复修订。如需撤销请删除事件。")
+    if event.origin == "challenge" and not allow_challenge:
+        raise ValueError("挑战判定请在挑战页补充自述或结算。")
+
+
 def _parse_confidence(raw) -> float:
     if isinstance(raw, bool):
         return 0.0
@@ -424,6 +452,7 @@ def _prior_snapshot(judgment: AIJudgment) -> dict:
 
 # ============ 判定 ============
 
+@rollback_on_error
 def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgment:
     """对事件触发 AI 判定，生成判定记录。
 
@@ -458,7 +487,7 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
         .filter(
             AIJudgment.event_id == event.id,
             AIJudgment.user_id == user.id,
-            AIJudgment.status.in_(["pending", "adjusted"]),
+            AIJudgment.status.in_(["pending", "adjusted", "invalidated"]),
         )
         .first()
     )
@@ -496,7 +525,19 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
     )
     # v1.4：按用户解析判定模型配置（BYOK；降级用辅助模型时 quality_note 非空）
     config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_JUDGE)
+    version = _event_version(event)
+    prior_version = (current.id, current.updated_at) if current is not None else None
+    db.commit()  # 保存追问回答并释放读事务；模型响应须通过版本检查才可写入
     result = llm_service.chat_json(messages, config=config)
+    event = _lock_event(db, event.id, user.id, version)
+    rows = db.query(AIJudgment).filter(AIJudgment.event_id == event.id,
+        AIJudgment.user_id == user.id).populate_existing().all()
+    if any(j.status == "confirmed" for j in rows):
+        raise ValueError("该事件已确认入账，不能重新判定。")
+    current = next((j for j in rows if j.status in ("pending", "adjusted", "invalidated")), None)
+    if ((current.id, current.updated_at) if current else None) != prior_version:
+        raise ValueError("判定期间已有新的判定结果，请刷新。")
+
 
     # 真实性甄别（v1.2）：事件明显不符合科学常理 → 拒绝判定，累计不实提交第 3 次起减诚信
     if not result.get("realistic", True):
@@ -651,6 +692,8 @@ def confirm(db: Session, judgment: AIJudgment, *, commit: bool = True) -> AIJudg
     """
     user = get_or_create_default_user(db)
     lock_profile(db, user.id)
+    _lock_event(db, judgment.event_id, user.id)
+    _require_reviewable(db, judgment, allow_challenge=True)
     claimed = db.query(AIJudgment).filter(
         AIJudgment.id == judgment.id, AIJudgment.user_id == user.id,
         AIJudgment.status.in_(["pending", "adjusted"]),
@@ -719,8 +762,10 @@ def confirm(db: Session, judgment: AIJudgment, *, commit: bool = True) -> AIJudg
 
 # ============ 补充信息重判 ============
 
+@rollback_on_error
 def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
     """用户补充信息，AI 重新判定。"""
+    _require_reviewable(db, judgment)
     user = get_or_create_default_user(db)
     _log(db, judgment.id, user.id, "supplement", detail=detail, payload={"detail": detail})
 
@@ -748,7 +793,15 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
     )
     # v1.4：按用户解析判定模型配置（BYOK）
     config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_JUDGE)
+    version = _event_version(event)
+    prior_updated_at = judgment.updated_at
+    db.commit()
     result = llm_service.chat_json(messages, config=config)
+    event = _lock_event(db, event.id, user.id, version)
+    _require_reviewable(db, judgment)
+    if judgment.updated_at != prior_updated_at:
+        raise ValueError("判定已被修订，请刷新后重试。")
+
     changes = _parse_changes(result.get("affected_attributes", []), subdimension_service.child_name_set(db, user))
     # v1.10（M2）：豁免券同样作用于补充重判（同一插入点，保证重判前后语义一致）
     changes, exemption_hit = _apply_exemption(db, user, event, changes)
@@ -784,11 +837,13 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
 
 # ============ 反驳复核 ============
 
+@rollback_on_error
 def dispute(db: Session, judgment: AIJudgment, detail: str) -> dict:
     """用户反驳，AI 依据事实复核（客观，不迎合）。
 
     返回 {judgment, result}：result 含 conclusion/explanation/confidence。
     """
+    _require_reviewable(db, judgment)
     user = get_or_create_default_user(db)
     _log(db, judgment.id, user.id, "dispute", detail=detail, payload={"detail": detail})
 
@@ -810,7 +865,15 @@ def dispute(db: Session, judgment: AIJudgment, detail: str) -> dict:
     )
     # v1.4：按用户解析判定模型配置（BYOK）
     config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_JUDGE)
+    version = _event_version(event)
+    prior_updated_at = judgment.updated_at
+    db.commit()
     result = llm_service.chat_json(messages, config=config)
+    event = _lock_event(db, event.id, user.id, version)
+    _require_reviewable(db, judgment)
+    if judgment.updated_at != prior_updated_at:
+        raise ValueError("判定已被修订，请刷新后重试。")
+
     conclusion = str(result.get("conclusion", "maintain"))
     notes = _parse_revision_notes(result.get("revision_notes"))  # v1.6：本次修订说明
     merged = _parse_merged_with(result.get("merged_with"))  # v1.7：跨来源合并明细

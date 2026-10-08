@@ -704,8 +704,10 @@ onMounted(loadAll)
                 </p>
               </template>
 
-              <!-- 已判定待结算 -->
+              <!-- 已判定待结算，可补充自述并原 id 重判 -->
               <template v-else>
+                <textarea v-model="notes[c.id]" rows="2" placeholder="补充真实细节后重新判定" :disabled="anyBusy"></textarea>
+                <button class="btn small" :disabled="anyBusy || !notes[c.id]?.trim()" @click="complete(c)">补充自述并重判</button>
                 <div class="ai-reason">
                   <b>AI 判定（{{ outcomeLabel(c.outcome) }}）：</b>{{ c.outcome_note }}
                 </div>
@@ -716,7 +718,7 @@ onMounted(loadAll)
                   </span>
                 </div>
                 <div class="row" style="margin-top: 8px">
-                  <button class="btn small primary" :disabled="anyBusy" @click="settle(c)">
+                  <button class="btn small primary" :disabled="anyBusy || !canSettle(c)" @click="settle(c)">
                     <template v-if="isBusy(`settle-${c.id}`)">
                       <span class="spinner"></span>入账中…
                     </template>

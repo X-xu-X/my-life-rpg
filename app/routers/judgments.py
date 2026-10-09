@@ -199,6 +199,19 @@ def handle_achievement(
         raise HTTPException(status_code=400, detail="action 只能是 grant 或 dismiss")
 
     judgment = _get_judgment(db, judgment_id)
+    user = get_or_create_default_user(db)
+    from app.services.transactions import lock_profile
+    lock_profile(db, user.id)
+    try:
+        event = judge_service._lock_event(db, judgment.event_id, user.id)
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(409, "该事实已删除或不存在，不能追授里程碑。") from exc
+    db.refresh(judgment)
+    if (judgment.user_id != user.id or event.is_deleted
+            or judgment.status not in ("pending", "adjusted", "confirmed")):
+        db.rollback()
+        raise HTTPException(409, "该事实已删除或判定已失效，不能追授里程碑。")
     suggestion = judgment.achievement_suggestion or {}
     name = str(suggestion.get("name", "")).strip() if isinstance(suggestion, dict) else ""
     if not name:
@@ -212,11 +225,10 @@ def handle_achievement(
             "balance": coin_service.balance(db, get_or_create_default_user(db)),
         }
 
-    user = get_or_create_default_user(db)
     achievement = None
     if action == "grant":
         reason = str(suggestion.get("reason", "")).strip()
-        row = achievement_service.grant_discovered(db, user, name, reason)
+        row = achievement_service.grant_discovered(db, user, name, reason, commit=False)
         achievement = {
             "code": row.code,
             "name": row.name,

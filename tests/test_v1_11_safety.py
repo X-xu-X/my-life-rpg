@@ -396,6 +396,44 @@ class SafetyTests(unittest.TestCase):
         self.assertEqual(before,self.db.query(m.AttributeHistory).count())
         self.assertEqual(self.client.post('/api/goals',json={'metric':'x','related_attribute':'unknown'}).status_code,409)
 
+    def test_pending_challenge_delete_rejected_then_can_abandon(self):
+        e = self.event(origin='challenge')
+        j = self.judgment(e)
+        ch = m.Challenge(user_id=self.user.id, title='待结算', status='accepted',
+                         event_id=e.id, judgment_id=j.id, related_attributes=['体能'])
+        self.db.add(ch); self.db.commit()
+        before = self.counts()
+        self.assertEqual(self.client.delete(f'/api/events/{e.id}').status_code, 409)
+        self.assertEqual(before, self.counts())
+        self.assertFalse(e.is_deleted)
+        with patch.object(achievement_service, 'check_and_grant', return_value=[]):
+            challenge_service.abandon(self.db, self.user, ch)
+        self.assertEqual(ch.status, 'abandoned')
+        self.assertEqual(self.client.delete(f'/api/events/{e.id}').status_code, 200)
+
+    def test_deleted_event_cannot_grant_discovered_achievement(self):
+        e = self.event()
+        j = self.judgment(e)
+        j.achievement_suggestion = {'name': '测试里程碑', 'state': 'pending'}
+        self.db.commit()
+        judge_service.delete_event(self.db, e)
+        before = self.counts()
+        result = self.client.post(f'/api/judgments/{j.id}/achievement', json={'action': 'grant'})
+        self.assertEqual(result.status_code, 409)
+        self.assertEqual(before, self.counts())
+        self.assertEqual(coin_service.balance(self.db, self.user), 0)
+
+    def test_coin_get_read_only_before_build_with_correct_startup(self):
+        for _ in range(3):
+            self.assertEqual(self.client.get('/api/coins').json()['balance'], 0)
+        self.assertEqual(self.db.query(m.CoinLedger).count(), 0)
+        profile = coin_service._profile(self.db, self.user)
+        result = {'attributes': [{'name': n, 'value': 60} for n in ATTRIBUTE_DIMENSIONS_SET],
+                  'initial_coins': 123, 'summary': '测试'}
+        self.run_llm(lambda: onboarding_service._generate_panel(self.db, profile, []), result)
+        self.assertEqual(self.client.get('/api/coins').json()['balance'], 123)
+        self.assertEqual(self.db.query(m.CoinLedger).count(), 1)
+
     def test_initial_panel_complete_finite_and_snapshot_matches_actual_values(self):
         panel=[{'name':n,'value':60} for n in ATTRIBUTE_DIMENSIONS_SET]
         for bad in (panel[:-1],panel+[panel[0]],[{'name':'unknown','value':50}], [{'name':n,'value':True} for n in ATTRIBUTE_DIMENSIONS_SET]):

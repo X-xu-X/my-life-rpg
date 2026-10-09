@@ -429,7 +429,9 @@ onMounted(load)
             <button class="btn small" :disabled="busy" @click="openAction(j.id, 'supplement')">补充信息</button>
             <button class="btn small danger" :disabled="busy" @click="openAction(j.id, 'dispute')">反驳</button>
           </div>
-          <span v-else class="muted" style="flex: 1">✓ 已入账</span>
+          <span v-else-if="j.status === 'confirmed'" class="muted" style="flex: 1">✓ 已入账</span>
+          <span v-else-if="j.origin === 'challenge'" class="muted" style="flex: 1">待结算，前往挑战页处理</span>
+          <span v-else class="muted" style="flex: 1">{{ STATUS_LABEL[j.status] || j.status }}</span>
         </template>
         <button v-if="j.status !== 'confirmed' && j.origin !== 'challenge'" class="btn small" :disabled="anyBusy" @click="openEdit(j.id, j.event_id)">编辑</button>
         <button class="btn small" :disabled="anyBusy" @click="toggleAudit(j.id)">审计</button>

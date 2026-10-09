@@ -11,15 +11,8 @@ router = APIRouter()
 
 @router.get("/coins")
 def get_coins(limit: int = 50, db: Session = Depends(get_db)):
-    """金币余额 + 流水（倒序）。
-
-    惰性发放启动资金（幂等）与检查连续写日记里程碑——即使用户从未打开过挑战页，
-    只要查询过余额，账目也会补齐。
-    """
+    """只读金币余额 + 流水（倒序）；启动资金仅在建档事务发放。"""
     user = get_or_create_default_user(db)
-    coin_service.grant_startup_bonus_if_needed(db, user)
-    coin_service.check_journal_streak(db, user)
-    db.commit()
 
     profile_balance = coin_service.balance(db, user)
     rows = coin_service.ledger(db, user, limit=limit)

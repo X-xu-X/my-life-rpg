@@ -224,7 +224,7 @@ def _slug(text: str) -> str:
     return s[:40] or "milestone"
 
 
-def grant_discovered(db: Session, user: User, name: str, reason: str = "") -> Achievement:
+def grant_discovered(db: Session, user: User, name: str, reason: str = "", *, commit: bool = True) -> Achievement:
     """追授 AI 发现型成就（**必须已获用户确认**，由路由层保证）。
 
     `code = discovered_<slug>`；若同名已存在则直接返回既有行（幂等，不重复发币）。
@@ -261,8 +261,9 @@ def grant_discovered(db: Session, user: User, name: str, reason: str = "") -> Ac
         ref_type="achievement",
         ref_id=row.id,
     )
-    db.commit()
-    db.refresh(row)
+    if commit:
+        db.commit()
+        db.refresh(row)
     return row
 
 

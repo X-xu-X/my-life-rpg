@@ -57,7 +57,8 @@ def _profile(db: Session, user: User) -> UserProfile:
 
 def balance(db: Session, user: User) -> int:
     """当前金币余额。"""
-    return int(_profile(db, user).coins or 0)
+    profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
+    return int(profile.coins or 0) if profile else 0
 
 
 def grant(

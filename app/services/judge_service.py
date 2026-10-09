@@ -942,6 +942,11 @@ def delete_event(db: Session, event: Event) -> None:
     """逻辑删除；按真实入账流水反向记账，审计和金币完整保留。"""
     user = get_or_create_default_user(db)
     lock_profile(db, user.id)
+    from app.models import Challenge
+    active = db.query(Challenge).filter(Challenge.user_id == user.id,
+        Challenge.event_id == event.id, Challenge.status == "accepted").with_for_update().first()
+    if active is not None:
+        raise ValueError("该记录关联待结算挑战，请前往挑战页结算或放弃后再删除。")
     claimed = db.query(Event).filter(Event.id == event.id, Event.user_id == user.id,
         Event.is_deleted.is_(False)).update({Event.is_deleted: True}, synchronize_session=False)
     if claimed != 1:

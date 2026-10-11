@@ -1,0 +1,521 @@
+{
+  "origin": "本机隔离 HTTPS PostgreSQL 合成库",
+  "tested_at": "2026-10-10T03:01:52.567Z",
+  "longTextLength": 20000,
+  "oneSavedEvent": true,
+  "baselineCoins": 80,
+  "accountIsolation": true,
+  "limitations": [
+    "浏览器模拟尺寸，未验证手机真机键盘或蜂窝网络",
+    "本机测试证书，未验证公网证书"
+  ],
+  "results": [
+    {
+      "width": 360,
+      "path": "/",
+      "scroll": 360,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 360,
+      "path": "/journal",
+      "scroll": 360,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 360,
+      "path": "/events/7",
+      "scroll": 360,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 360,
+      "path": "/review",
+      "scroll": 360,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 360,
+      "path": "/pending",
+      "scroll": 360,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 360,
+      "path": "/growth",
+      "scroll": 360,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 360,
+      "path": "/reports",
+      "scroll": 360,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 360,
+      "path": "/me",
+      "scroll": 360,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 360,
+      "path": "/settings",
+      "scroll": 360,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 360,
+      "path": "/checkin",
+      "scroll": 360,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 360,
+      "path": "/anchors",
+      "scroll": 360,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 360,
+      "path": "/onboarding",
+      "scroll": 360,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 360,
+      "path": "/challenges",
+      "scroll": 360,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 390,
+      "path": "/",
+      "scroll": 390,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 390,
+      "path": "/journal",
+      "scroll": 390,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 390,
+      "path": "/events/7",
+      "scroll": 390,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 390,
+      "path": "/review",
+      "scroll": 390,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 390,
+      "path": "/pending",
+      "scroll": 390,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 390,
+      "path": "/growth",
+      "scroll": 390,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 390,
+      "path": "/reports",
+      "scroll": 390,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 390,
+      "path": "/me",
+      "scroll": 390,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 390,
+      "path": "/settings",
+      "scroll": 390,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 390,
+      "path": "/checkin",
+      "scroll": 390,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 390,
+      "path": "/anchors",
+      "scroll": 390,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 390,
+      "path": "/onboarding",
+      "scroll": 390,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 390,
+      "path": "/challenges",
+      "scroll": 390,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 1360,
+      "path": "/",
+      "scroll": 1345,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 1360,
+      "path": "/journal",
+      "scroll": 1360,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 1360,
+      "path": "/events/7",
+      "scroll": 1345,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 1360,
+      "path": "/review",
+      "scroll": 1360,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 1360,
+      "path": "/pending",
+      "scroll": 1360,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 1360,
+      "path": "/growth",
+      "scroll": 1345,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 1360,
+      "path": "/reports",
+      "scroll": 1360,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 1360,
+      "path": "/me",
+      "scroll": 1360,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 1360,
+      "path": "/settings",
+      "scroll": 1345,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 1360,
+      "path": "/checkin",
+      "scroll": 1345,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 1360,
+      "path": "/anchors",
+      "scroll": 1345,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 1360,
+      "path": "/onboarding",
+      "scroll": 1345,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    },
+    {
+      "width": 1360,
+      "path": "/challenges",
+      "scroll": 1360,
+      "nav": [
+        "◷今天",
+        "▤手账",
+        "✧成长",
+        "○我的"
+      ],
+      "errors": [],
+      "alerts": []
+    }
+  ]
+}

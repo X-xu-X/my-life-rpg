@@ -1,4 +1,5 @@
 """事件路由：打卡录入（双通道）+ 触发判定。"""
+from app.services.time_service import clock_now
 from uuid import uuid4
 from datetime import datetime, timedelta
 
@@ -7,6 +8,15 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.config import settings
+from app.models.access import RequestReceipt
+from app.services.transactions import lock_profile
+from app.services.time_service import stored_time, date_range
+from fastapi.encoders import jsonable_encoder
+import hashlib
+import json
+from datetime import date as Date
+from uuid import UUID
 from app.models import AttributeHistory, AIJudgment, CheckinItem, Event
 from app.schemas import EventCreate, EventOut, EventUpdate, JudgeIn
 from app import prompts
@@ -14,6 +24,7 @@ from app.services import achievement_service, judge_service, llm_config
 from app.services.judge_service import ClarifyNeededError
 from app.services.llm_service import LLMError, llm_service
 from app.services.user_service import get_or_create_default_user
+from app.services import receipts
 
 router = APIRouter()
 
@@ -31,6 +42,20 @@ def create_event(body: EventCreate, db: Session = Depends(get_db)):
     """
     user = get_or_create_default_user(db)
 
+    if settings.cloud and body.client_request_id is None:
+        raise HTTPException(422, "保存需要 client_request_id。")
+    if not body.content.strip() and not body.title.strip():
+        raise HTTPException(422, "请填写记录。")
+    request_key = str(body.client_request_id) if body.client_request_id else None
+    payload_hash = hashlib.sha256(json.dumps(body.model_dump(mode="json"), sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+    if request_key:
+        lock_profile(db, user.id)
+        prior = db.query(RequestReceipt).filter_by(user_id=user.id, operation="create_event", request_key=request_key).first()
+        if prior:
+            if prior.payload_hash != payload_hash:
+                db.rollback()
+                raise HTTPException(409, "同一次提交标识不能用于不同内容。")
+            return prior.response_snapshot
     event_type = body.event_type
     category = body.category
     title = body.title
@@ -50,19 +75,6 @@ def create_event(body: EventCreate, db: Session = Depends(get_db)):
         first_line = (body.content or "").strip().splitlines()
         derived = first_line[0].strip() if first_line else ""
         title = (derived[:40] if derived else item.name) or item.name
-
-    # 自由日记：AI 从原文提取结构化要素（纯享记录跳过提取）
-    if not body.is_pure and body.source == "journal" and body.content:
-        try:
-            # v1.4：走判定模型组（judge）
-            config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_JUDGE)
-            result = llm_service.chat_json(prompts.build_extract_messages(body.content), config=config)
-        except LLMError as exc:
-            raise HTTPException(status_code=503, detail=f"日记要素提取失败：{exc}")
-        event_type = result.get("event_type") or "positive"
-        category = result.get("category") or body.category or "其他"
-        title = result.get("title") or body.title or "自由日记"
-        params = result.get("params") or {}
 
     # 兜底：v1.7 起打卡通道不再强制事件类型（决策 3），缺省按正面事件处理
     if not event_type:
@@ -89,9 +101,16 @@ def create_event(body: EventCreate, db: Session = Depends(get_db)):
         content=body.content,
         item_id=item_id,  # v1.7：所属打卡项目（可空）
         is_pure=body.is_pure,
-        occurred_at=body.occurred_at or datetime.now(),
+        occurred_at=stored_time(body.occurred_at, body.timezone),
+        client_request_id=request_key, content_version=1,
+        analysis_intent="never" if body.is_pure else body.intent, timezone_at_capture=body.timezone,
     )
     db.add(event)
+    db.flush()
+    if request_key:
+        db.add(RequestReceipt(user_id=user.id, operation="create_event", request_key=request_key,
+            payload_hash=payload_hash, resource_id=event.id,
+            response_snapshot=jsonable_encoder(EventOut.model_validate(event))))
     db.commit()
     db.refresh(event)
     return event
@@ -103,6 +122,8 @@ def list_events(
     pure: bool | None = None,
     q: str = "",
     date: str = "",
+    cursor: int | None = None,
+    limit: int = 250,
 ):
     """事件列表（按创建时间倒序）。支持：pure 纯享过滤、q 关键词（标题/内容/类别）、date 日期（YYYY-MM-DD）。"""
     user = get_or_create_default_user(db)
@@ -113,8 +134,14 @@ def list_events(
         like = f"%{q}%"
         query = query.filter(or_(Event.title.like(like), Event.content.like(like), Event.category.like(like)))
     if date:
-        query = query.filter(Event.created_at.like(f"{date}%"))
-    return query.order_by(Event.created_at.desc()).all()
+        try:
+            start, end = date_range(Date.fromisoformat(date), user.timezone)
+        except ValueError as exc:
+            raise HTTPException(422, "日期格式无效。") from exc
+        query = query.filter(Event.occurred_at >= start, Event.occurred_at < end)
+    if cursor is not None:
+        query = query.filter(Event.id < cursor)
+    return query.order_by(Event.id.desc()).limit(max(1, min(limit, 500))).all()
 
 
 @router.get("/events/heatmap")
@@ -126,7 +153,7 @@ def get_heatmap(db: Session = Depends(get_db)):
     返回结构保持 `[{date, count}]` 不变。
     """
     user = get_or_create_default_user(db)
-    start = datetime.now() - timedelta(days=365)
+    start = clock_now() - timedelta(days=365)
     rows = (
         db.query(Event.occurred_at, Event.created_at)
         .filter(Event.user_id == user.id, Event.is_deleted.is_(False), Event.created_at >= start)
@@ -137,7 +164,8 @@ def get_heatmap(db: Session = Depends(get_db)):
         ref = occurred_at or created_at
         if ref is None:
             continue
-        day = ref.strftime("%Y-%m-%d")
+        from app.services.time_service import local_day
+        day = local_day(ref, user.timezone).isoformat()
         counts[day] = counts.get(day, 0) + 1
     return [{"date": day, "count": cnt} for day, cnt in sorted(counts.items())]
 
@@ -152,6 +180,8 @@ def judge(event_id: int, body: JudgeIn, db: Session = Depends(get_db)):
     if event is None or event.is_deleted:
         raise HTTPException(status_code=404, detail="事件不存在")
     try:
+        if settings.cloud:
+            raise HTTPException(409, "请通过分析任务提交，旧同步入口已关闭。")
         judgment = judge_service.judge_event(db, event, clarification=body.clarification)
     except ClarifyNeededError as exc:
         return {"status": "clarify", "needs_clarify": True, "questions": exc.questions}
@@ -163,7 +193,7 @@ def judge(event_id: int, body: JudgeIn, db: Session = Depends(get_db)):
     unlocked: list[dict] = []
     try:
         user = get_or_create_default_user(db)
-        for row in achievement_service.check_and_grant(db, user):
+        for row in ([] if settings.cloud else achievement_service.check_and_grant(db, user)):
             unlocked.append({"code": row.code, "name": row.name, "icon": row.icon,
                              "coin_reward": row.coin_reward})
     except Exception:
@@ -201,6 +231,7 @@ def update_event(event_id: int, body: EventUpdate, db: Session = Depends(get_db)
     if event is None or event.is_deleted:
         raise HTTPException(status_code=404, detail="事件不存在")
     try:
+        lock_profile(db, event.user_id)
         event = judge_service._lock_event(db, event.id, event.user_id)
         if event.origin == "challenge":
             raise ValueError("挑战记录请在挑战页补充自述。")
@@ -211,7 +242,25 @@ def update_event(event_id: int, body: EventUpdate, db: Session = Depends(get_db)
     except ValueError as exc:
         db.rollback()
         raise HTTPException(409, str(exc)) from exc
-    data = body.model_dump(exclude_unset=True)
+    if settings.cloud and body.expected_version is None:
+        db.rollback()
+        raise HTTPException(422, "编辑需要 expected_version。")
+    if body.expected_version is not None and body.expected_version != event.content_version:
+        db.rollback()
+        raise HTTPException(409, "记录已更新，请重新读取。")
+    from app.models.access import EventDerivation
+    db.add(EventDerivation(user_id=event.user_id,event_id=event.id,event_version=event.content_version,
+        kind='original_version',payload=jsonable_encoder(EventOut.model_validate(event)),
+        provenance={'source':'user_edit'}))
+    data = body.model_dump(exclude_unset=True, exclude={"expected_version"})
+    if "occurred_at" in data and data["occurred_at"] is not None:
+        data["occurred_at"] = stored_time(data["occurred_at"], event.timezone_at_capture)
+    if data.get("item_id") is not None:
+        item = db.get(CheckinItem, data["item_id"])
+        if item is None or item.user_id != event.user_id:
+            db.rollback()
+            raise HTTPException(404, "打卡项目不存在。")
+    event.content_version += 1
     for k, v in data.items():
         setattr(event, k, v)
     event.params = {**(event.params or {}), "_edit_revision": uuid4().hex}
@@ -235,14 +284,37 @@ def update_event(event_id: int, body: EventUpdate, db: Session = Depends(get_db)
 
 
 @router.delete("/events/{event_id}")
-def delete_event(event_id: int, db: Session = Depends(get_db)):
+def delete_event(event_id: int, db: Session = Depends(get_db), body: receipts.MutationIn = receipts.MutationIn()):
     """删除事件（误提交兜底）：含已入账点数回滚与审计留痕（PRD 4.3）。"""
+    user = get_or_create_default_user(db)
+    lock_profile(db, user.id)
+    operation = f"delete_event:{event_id}"
     event = db.get(Event, event_id)
+    if event is None:
+        raise HTTPException(404, "事件不存在")
+    fingerprint, prior = receipts.replay(db, user.id, operation, body)
+    if prior is not None:
+        return prior
     if event is None or event.is_deleted:
         raise HTTPException(status_code=404, detail="事件不存在")
     try:
-        judge_service.delete_event(db, event)
+        event = judge_service._lock_event(db, event.id, user.id)
+        if body.expected_version is not None and body.expected_version != event.content_version:
+            raise ValueError("记录已更新，请重新读取后撤销。")
+        judge_service.delete_event(db, event, commit=False)
+        result = {"status": "deleted", "event_id": event_id}
+        receipts.record(db, user.id, operation, body, fingerprint, event_id, result)
+        db.commit()
     except ValueError as exc:
         db.rollback()
         raise HTTPException(409, str(exc)) from exc
-    return {"status": "deleted", "event_id": event_id}
+    return result
+
+
+@router.get("/event-submissions/{client_request_id}")
+def submission(client_request_id: UUID, db: Session = Depends(get_db)):
+    user = get_or_create_default_user(db)
+    prior = db.query(RequestReceipt).filter_by(user_id=user.id, operation="create_event", request_key=str(client_request_id)).first()
+    if prior is None:
+        raise HTTPException(404, "尚未查询到本次提交，请继续使用同一标识重试。")
+    return prior.response_snapshot

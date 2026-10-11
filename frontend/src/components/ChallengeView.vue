@@ -2,6 +2,10 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { api } from '../api'
 import { toast } from '../composables/useToast'
+import { useRedemption } from '../composables/useRedemption'
+import { useExemptionPurchase } from '../composables/useExemptionPurchase'
+const redemption = useRedemption()
+const exemptionPurchase = useExemptionPurchase()
 
 // ============================================================
 // v1.8 挑战 tab：挑战区 + 商店区
@@ -16,6 +20,14 @@ const loading = ref(false)
 const coins = ref(0)
 const ledger = ref([])
 const showLedger = ref(false)
+const streakBusy = ref(false)
+async function claimStreak() {
+  if(streakBusy.value)return
+  streakBusy.value=true
+  try {const result=await api.checkStreak();await loadCoins();toast.success(result.granted.length?'连续记录奖励已入账':'目前没有新的连续记录奖励')}
+  catch(e){error.value=e.message;toast.error(e.message)}
+  finally{streakBusy.value=false}
+}
 
 // 金币非股票，刻意避开红/绿涨跌歧义：正值用绿色正向色、消耗用灰色
 const SOURCE_META = {
@@ -307,7 +319,7 @@ async function pickVariant(c, index) {
 
 async function accept(c) {
   const res = await runAction(`accept-${c.id}`, async () => {
-    const data = await api.acceptChallenge(c.id)
+    const data = await api.acceptChallenge(c.id,c.updated_at)
     await loadChallenges()
     await loadCoins()
     return data
@@ -332,7 +344,7 @@ async function complete(c) {
 }
 
 async function settle(c) {
-  const res = await runAction(`settle-${c.id}`, async () => api.settleChallenge(c.id))
+  const res = await runAction(`settle-${c.id}`, async () => api.settleChallenge(c.id,c.updated_at))
   if (res) {
     settled.value = { ...settled.value, [c.id]: { ...(settled.value[c.id] || {}), ...res } }
     await loadChallenges()
@@ -393,25 +405,27 @@ async function reprice(it) {
 }
 
 async function redeem(it) {
-  if (coins.value < it.coin_price) {
+  if (redemption.busy.value || anyBusy.value) return
+  const recovering = redemption.pending.value?.state === 'unknown'
+  if (!recovering && coins.value < it.coin_price) {
     error.value = `金币不足（需 ${it.coin_price} 币，当前 ${coins.value} 币）`
     return
   }
   const rest = coins.value - it.coin_price
-  if (!confirm(`兑换「${it.name}」？\n将消耗 ${it.coin_price} 币，余额将剩 ${rest} 币。`)) return
-  const res = await runAction(`redeem-${it.id}`, async () => {
-    const data = await api.redeemShopItem(it.id, '')
-    await loadShop()
-    await loadCoins()
+  if (!recovering && !confirm(`兑换「${it.name}」？\n将消耗 ${it.coin_price} 币，余额将剩 ${rest} 币。`)) return
+  const res = await runAction(`redeem-${it.id}`, () => redemption.send(it))
+  if (res) {
+    toast.success('兑换已成功，奖励券已保存。')
     segment.value = 'shop'
-    return data
-  })
-  if (res) toast.success(`已兑换「${it.name}」，奖励券已放入「待兑现」`)
+    // A failed read cannot turn a committed purchase back into an unknown operation.
+    await Promise.allSettled([loadShop(), loadCoins()])
+  }
 }
 
 async function buyExemption() {
+  if(exemptionPurchase.busy.value || anyBusy.value)return
   const f = excForm.value
-  if (!f.target_date) {
+  if (!f.target_date && exemptionPurchase.pending.value?.state !== 'unknown') {
     error.value = '请选择豁免券的日期'
     return
   }
@@ -421,7 +435,7 @@ async function buyExemption() {
   }
   excResult.value = null
   const res = await runAction('exc-buy', async () => {
-    const data = await api.buyExemption({
+      const data = await exemptionPurchase.send({
       target_date: f.target_date,
       period: f.period,
       start_time: f.start_time,
@@ -473,7 +487,7 @@ async function answerStagnation(item, stopped) {
   stagnationBusy.value = true
   error.value = ''
   try {
-    const res = await api.answerStagnation(item.name, stopped)
+    const res = await api.answerStagnation(item.name, stopped, '', item.version)
     stagnationResult.value = res
     await loadStagnation()
     await loadChallenges()
@@ -495,7 +509,14 @@ onMounted(loadAll)
 </script>
 
 <template>
+  <header class="page-intro"><h1>挑战与奖励</h1></header>
   <div>
+    <p v-if="exemptionPurchase.warning.value" class="error">{{ exemptionPurchase.warning.value }}</p>
+    <p v-if="exemptionPurchase.pending.value?.state === 'unknown'" class="card">上次豁免购买结果待确认：{{ exemptionPurchase.pending.value.body.target_date }} · {{ exemptionPurchase.pending.value.body.period }}。<button class="btn" :disabled="anyBusy || exemptionPurchase.busy.value" @click="buyExemption">恢复购买结果</button></p>
+    <p v-if="redemption.warning.value" class="error" role="alert">{{ redemption.warning.value }}</p>
+    <p v-if="redemption.pending.value?.state === 'unknown'" class="card">上次兑换结果待确认：{{ redemption.pending.value.name }}。恢复会沿用同一操作标识。
+      <button class="btn" :disabled="anyBusy || redemption.busy.value" @click="redeem({id:redemption.pending.value.item_id})">恢复兑换结果</button>
+    </p>
     <!-- ============ 顶部金币条（两区常驻） ============ -->
     <div class="card coin-bar">
       <div class="coin-bar-top">
@@ -504,11 +525,12 @@ onMounted(loadAll)
           <b>{{ coins }}</b>
           <span class="muted">金币</span>
         </div>
-        <div class="row">
+        <div class="action-group">
           <button class="btn small" @click="showLedger = !showLedger">
             {{ showLedger ? '收起流水' : '查看流水' }}
           </button>
           <button class="btn small" :disabled="loading" @click="loadAll">刷新</button>
+          <button class="btn small" :disabled="streakBusy" @click="claimStreak">领取连续记录奖励</button>
         </div>
       </div>
       <p class="muted coin-hint">
@@ -535,7 +557,7 @@ onMounted(loadAll)
           <b>{{ s.name }}已经 {{ s.days }} 天没有相关记录了</b>
           <span class="muted"> — 是真的停了，还是忘了记？</span>
         </div>
-        <div class="row" style="margin-top: 8px">
+        <div class="action-group" style="margin-top: 8px">
           <button class="btn small" :disabled="stagnationBusy" @click="answerStagnation(s, false)">
             在学，只是没记
           </button>
@@ -588,7 +610,7 @@ onMounted(loadAll)
     <template v-if="segment === 'challenge'">
       <div v-for="group in [{ scope: 'daily', label: '日挑战', list: daily }, { scope: 'weekly', label: '周挑战', list: weekly }]" :key="group.scope">
         <div class="card">
-          <div class="row" style="align-items: center; justify-content: space-between">
+          <div class="action-group" style="align-items: center; justify-content: space-between">
             <h3 style="margin: 0">{{ group.label }}</h3>
             <button class="btn small" :disabled="anyBusy" @click="generate(group.scope, true)">
               <template v-if="isBusy(`gen-${group.scope}`)">
@@ -607,7 +629,7 @@ onMounted(loadAll)
             class="judgment-item challenge-card"
             :class="{ finished: isFinished(c), highlight: highlightId === c.id }"
           >
-            <div class="row" style="align-items: center; margin-bottom: 6px">
+            <div class="action-group" style="align-items: center; margin-bottom: 6px">
               <b>{{ c.title }}</b>
               <span class="tag">{{ STATUS_LABEL[c.status] || c.status }}</span>
               <span class="difficulty" :title="`难度 ${c.difficulty}/5`">{{ difficultyStars(c.difficulty) }}</span>
@@ -645,19 +667,19 @@ onMounted(loadAll)
                   <template v-else>{{ v.label }}</template>
                 </button>
               </div>
-              <div class="row challenge-meta">
+              <div class="action-group challenge-meta">
                 <span class="reward">完成可得 +{{ c.coin_reward }} 币</span>
                 <span class="muted">押金 {{ c.deposit }} 币</span>
               </div>
               <div v-if="c.ai_reason" class="ai-reason">
                 <b>为什么给你这个：</b>{{ c.ai_reason }}
               </div>
-              <div class="row" style="margin-top: 8px">
+              <div class="action-group" style="margin-top: 8px">
                 <button class="btn small primary" :disabled="anyBusy" @click="accept(c)">
                   <template v-if="isBusy(`accept-${c.id}`)">接受中…</template>
                   <template v-else>接受挑战</template>
                 </button>
-                <span class="muted" style="align-self: center; font-size: 12px">
+                <span class="muted" style="align-self: center; font-size: 13px">
                   接受即承诺，会先扣 {{ c.deposit }} 币押金；完成后退回。
                 </span>
               </div>
@@ -679,7 +701,7 @@ onMounted(loadAll)
                   placeholder="用一句话说明你完成得怎么样（AI 会据此判定是否达成）"
                   :disabled="isBusy(`complete-${c.id}`) || isBusy(`abandon-${c.id}`)"
                 ></textarea>
-                <div class="row">
+                <div class="action-group">
                   <button
                     class="btn small primary"
                     :disabled="anyBusy"
@@ -717,7 +739,7 @@ onMounted(loadAll)
                     {{ ch.name }} {{ ch.delta > 0 ? '+' : '' }}{{ ch.delta }}
                   </span>
                 </div>
-                <div class="row" style="margin-top: 8px">
+                <div class="action-group" style="margin-top: 8px">
                   <button class="btn small primary" :disabled="anyBusy || !canSettle(c)" @click="settle(c)">
                     <template v-if="isBusy(`settle-${c.id}`)">
                       <span class="spinner"></span>入账中…
@@ -753,14 +775,14 @@ onMounted(loadAll)
     <template v-else>
       <div class="card">
         <h3>想要的东西</h3>
-        <div class="row">
-          <div class="field">
-            <label>名称</label>
-            <input v-model="newItem.name" placeholder="例如：一杯手冲咖啡" :disabled="pricingBusy" />
+        <div class="form-grid">
+        <div class="field">
+            <label for="challengeview-field-1">名称</label>
+            <input id="challengeview-field-1" v-model="newItem.name" placeholder="例如：一杯手冲咖啡" :disabled="pricingBusy" />
           </div>
           <div class="field">
-            <label>现实价格（元）</label>
-            <input v-model="newItem.price_yuan" placeholder="例如：25（时间型奖励可填 0）" :disabled="pricingBusy" />
+            <label for="challengeview-field-2">现实价格（元）</label>
+            <input id="challengeview-field-2" v-model="newItem.price_yuan" placeholder="例如：25（时间型奖励可填 0）" :disabled="pricingBusy" />
           </div>
         </div>
         <button class="btn primary" :disabled="pricingBusy" @click="addItem">
@@ -773,7 +795,7 @@ onMounted(loadAll)
         <h3>奖励商店</h3>
         <p v-if="shopItems.length === 0" class="muted">暂无物品。</p>
         <div v-for="it in shopItems" :key="it.id" class="judgment-item" :class="{ finished: !it.enabled }">
-          <div class="row" style="align-items: center; margin-bottom: 6px">
+          <div class="action-group" style="align-items: center; margin-bottom: 6px">
             <b>{{ it.name }}</b>
             <span class="tag">
               {{ it.price_yuan ? it.price_yuan + ' 元' : '时间型' }}
@@ -787,10 +809,10 @@ onMounted(loadAll)
           <div v-if="it.worth_note" class="worth-note" :class="{ warn: /建议|不换|缓|别|控制|节制|先不/.test(it.worth_note) }">
             <b>值不值得买：</b>{{ it.worth_note }}
           </div>
-          <div class="row" style="margin-top: 8px">
+          <div class="action-group" style="margin-top: 8px">
             <button
               class="btn small primary"
-              :disabled="anyBusy || !it.enabled || coins < it.coin_price"
+              :disabled="anyBusy || redemption.busy.value || redemption.pending.value?.state === 'unknown' || !!redemption.warning.value || !it.enabled || coins < it.coin_price"
               @click="redeem(it)"
             >
               <template v-if="isBusy(`redeem-${it.id}`)">兑换中…</template>
@@ -808,19 +830,19 @@ onMounted(loadAll)
       <!-- 豁免券（v1.10 M2）：时段券，绝不做万能券 -->
       <div class="card">
         <h3>豁免券 <span class="tag">时段券 · 过期作废</span></h3>
-        <p class="muted" style="font-size: 12px">
+        <p class="muted" style="font-size: 13px">
           花金币买「一段时间内，计划内的事没完成也不扣分」的权利。<b>必须指定日期 + 时段</b>，
           过期作废——不是万能券。AI 会看你的理由判动机：正当紧急 → 正常价；明显逃避 → 提价或额外扣点。
         </p>
 
-        <div class="row">
-          <div class="field">
-            <label>日期</label>
-            <input v-model="excForm.target_date" type="date" :disabled="anyBusy" />
+        <div class="form-grid">
+        <div class="field">
+            <label for="challengeview-field-3">日期</label>
+            <input id="challengeview-field-3" v-model="excForm.target_date" type="date" :disabled="anyBusy" />
           </div>
           <div class="field">
             <label>时段</label>
-            <div class="row" style="flex-wrap: wrap; gap: 6px">
+            <div class="action-group" style="flex-wrap: wrap; gap: 6px">
               <button
                 v-for="p in exemptionPresets"
                 :key="p.key"
@@ -835,23 +857,23 @@ onMounted(loadAll)
           </div>
         </div>
 
-        <div v-if="excCustom" class="row">
+        <div v-if="excCustom" class="action-group">
           <div class="field">
-            <label>开始</label>
-            <input v-model="excForm.start_time" type="time" :disabled="anyBusy" />
+            <label for="challengeview-field-4">开始</label>
+            <input id="challengeview-field-4" v-model="excForm.start_time" type="time" :disabled="anyBusy" />
           </div>
           <div class="field">
-            <label>结束</label>
-            <input v-model="excForm.end_time" type="time" :disabled="anyBusy" />
+            <label for="challengeview-field-5">结束</label>
+            <input id="challengeview-field-5" v-model="excForm.end_time" type="time" :disabled="anyBusy" />
           </div>
-          <div v-if="excCrossMidnight" class="muted" style="align-self: flex-end; padding-bottom: 8px; font-size: 12px">
+          <div v-if="excCrossMidnight" class="muted" style="align-self: flex-end; padding-bottom: 8px; font-size: 13px">
             结束早于开始 → 视为<b>跨零点</b>，区间延到次日
           </div>
         </div>
 
         <div class="field">
-          <label>理由（会直接影响 AI 的定价与动机判断）</label>
-          <input
+          <label for="challengeview-field-6">理由（会直接影响 AI 的定价与动机判断）</label>
+          <input id="challengeview-field-6"
             v-model="excForm.reason"
             placeholder="例如：明天下午要陪家人去医院复查"
             :disabled="anyBusy"
@@ -868,7 +890,7 @@ onMounted(loadAll)
             <b>{{ excResult.exemption?.motive === 'evasive' ? 'AI 判为「明显逃避」：' : 'AI 判为「正当紧急」：' }}</b>
             {{ excResult.exemption?.motive_note }}
           </div>
-          <div v-if="excResult.penalty" class="muted" style="font-size: 12px; margin-top: 4px; color: #b7791f">
+          <div v-if="excResult.penalty" class="muted" style="font-size: 13px; margin-top: 4px; color: var(--warn)">
             额外扣点已生效：{{ excResult.penalty.name }} {{ excResult.penalty.delta }}（购买时立刻扣）
           </div>
         </div>
@@ -885,7 +907,7 @@ onMounted(loadAll)
             <span class="tag">{{ EXC_STATUS_LABEL[e.status] || e.status }}</span>
             <span v-if="e.cross_midnight" class="tag">跨零点</span>
             <span class="muted">消耗 {{ e.coin_cost }} 币<template v-if="e.extra_penalty > 0">，额外扣 {{ e.penalty_attribute }} {{ e.extra_penalty }}</template></span>
-            <div v-if="e.motive_note" class="muted" style="font-size: 12px; margin-top: 2px">{{ e.motive_note }}</div>
+            <div v-if="e.motive_note" class="muted" style="font-size: 13px; margin-top: 2px">{{ e.motive_note }}</div>
           </div>
         </div>
       </div>

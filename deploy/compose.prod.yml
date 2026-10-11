@@ -1,0 +1,121 @@
+name: game-of-life
+x-logging: &logging
+  driver: json-file
+  options: {max-size: "10m", max-file: "3"}
+x-app: &app
+  image: game-of-life-api:${RELEASE_ID:?set RELEASE_ID}
+  build: {context: .., dockerfile: deploy/Dockerfile.api}
+  restart: unless-stopped
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  logging: *logging
+  environment: &app-env
+    RUN_MODE: cloud
+    PUBLIC_ORIGIN: https://${DOMAIN:?set DOMAIN}
+    CREDENTIAL_KEY_FILE: /run/secrets/credential_keys
+    DB_PASSWORD_FILE: /run/secrets/app_password
+    AI_DAILY_LIMIT: "30"
+    AI_TIMEOUT: "90"
+  secrets: [app_password, credential_keys]
+  networks: [backend, edge]
+  depends_on: {db: {condition: service_healthy}}
+  mem_limit: 512m
+  cpus: 1.0
+  pids_limit: 100
+services:
+  db:
+    image: postgres:18.6-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gol_admin
+      POSTGRES_DB: game_of_life
+      POSTGRES_PASSWORD_FILE: /run/secrets/admin_password
+    secrets: [admin_password, app_password]
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - ./init-app-role.sql:/docker-entrypoint-initdb.d/01-app-role.sql:ro
+    networks: [backend]
+    shm_size: 128mb
+    mem_limit: 640m
+    cpus: 1.0
+    pids_limit: 100
+    logging: *logging
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U gol_admin -d game_of_life"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  migrate:
+    <<: *app
+    profiles: [ops]
+    restart: "no"
+    command: [python, -m, alembic, upgrade, head]
+    healthcheck: {disable: true}
+  api:
+    <<: *app
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/ready',timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+  worker:
+    <<: *app
+    command: [python, -m, app.worker]
+    stop_grace_period: 200s
+    healthcheck:
+      test: [CMD, python, -c, "from pathlib import Path; import time; p=Path('/tmp/gol-worker-heartbeat'); assert p.exists() and time.time()-p.stat().st_mtime<300"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+  ops:
+    <<: *app
+    profiles: [ops]
+    image: game-of-life-ops:${RELEASE_ID:?set RELEASE_ID}
+    build: {context: .., dockerfile: deploy/Dockerfile.ops}
+    restart: "no"
+    env_file: ["${OPS_CONFIG_DIR:-/etc/game-of-life/ops}/backup.env"]
+    environment:
+      <<: *app-env
+      PGSERVICE: gol_backup
+      PGSERVICEFILE: /run/ops/pg_service.conf
+      PGPASSFILE: /run/ops/pgpass
+      BACKUP_DIR: /backup
+      RESTIC_PASSWORD_FILE: /run/ops/restic-password
+      RESTIC_HOST: ${BACKUP_ID:?set stable deployment BACKUP_ID}
+      RESTIC_CACHE_DIR: /backup/restic-cache
+    volumes:
+      - ${OPS_WORK_DIR:-/var/lib/game-of-life}:/backup
+      - ${OPS_CONFIG_DIR:-/etc/game-of-life/ops}:/run/ops:ro
+    healthcheck: {disable: true}
+  caddy:
+    image: game-of-life-web:${RELEASE_ID:?set RELEASE_ID}
+    build: {context: .., dockerfile: deploy/Dockerfile.web}
+    restart: unless-stopped
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment: {DOMAIN: "${DOMAIN:?set DOMAIN}", ACME_EMAIL: "${ACME_EMAIL:?set ACME_EMAIL}"}
+    volumes: [caddy_data:/data, caddy_config:/config]
+    networks: [backend, edge]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 160m
+    cpus: 0.5
+    logging: *logging
+    depends_on: {api: {condition: service_healthy}}
+networks:
+  backend: {internal: true}
+  edge: {}
+volumes:
+  pgdata: {name: game_of_life_pg18}
+  caddy_data: {name: game_of_life_caddy_data}
+  caddy_config: {name: game_of_life_caddy_config}
+secrets:
+  admin_password: {file: "${SECRETS_DIR:?set SECRETS_DIR}/admin-password"}
+  app_password: {file: "${SECRETS_DIR:?set SECRETS_DIR}/app-password"}
+  credential_keys: {file: "${SECRETS_DIR:?set SECRETS_DIR}/credential-keys.json"}

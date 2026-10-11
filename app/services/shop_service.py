@@ -2,6 +2,7 @@
 
 **一致性铁律**：金币只有 `coin_service.grant()` 一个写入口，兑换走它。
 """
+from app.services.time_service import clock_now
 from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
@@ -10,6 +11,7 @@ from app.models import Attribute, Redemption, ShopItem, User, UserProfile
 from app.prompts.shop import build_pricing_messages
 from app.services import achievement_service, coin_service, economy_service, llm_config
 from app.services.llm_service import llm_service
+from app.services.transactions import rollback_on_error, lock_profile
 
 # 常驻物资（决策 14 / B4-1，首次访问商店时幂等预置；用户可改价或停用）
 PRESET_ITEMS = [
@@ -30,7 +32,7 @@ PRESET_DEFAULT_COIN = {
 }
 
 
-def seed_preset_items(db: Session, user: User) -> int:
+def seed_preset_items(db: Session, user: User, *, commit: bool = True) -> int:
     """幂等预置常驻物资：仅当同名 preset 物品不存在时写入。"""
     existing = {
         r.name
@@ -54,14 +56,14 @@ def seed_preset_items(db: Session, user: User) -> int:
             )
         )
         created += 1
-    if created:
+    if created and commit:
         db.commit()
     return created
 
 
 def _redemption_history(db: Session, user: User, days: int = 30) -> str:
     """近 N 天兑换历史摘要（AI 定价的情境浮动输入）。"""
-    cutoff = datetime.now() - timedelta(days=days)
+    cutoff = clock_now() - timedelta(days=days)
     rows = (
         db.query(Redemption)
         .filter(Redemption.user_id == user.id, Redemption.redeemed_at >= cutoff)
@@ -116,7 +118,10 @@ def price_item(db: Session, user: User, name: str, price_yuan: float | None) -> 
         economy_context=economy_service.snapshot(db, user),
     )
     config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_AUX)
+    db.commit()
     result = llm_service.chat_json(messages, config=config)
+    lock_profile(db, user.id)
+    llm_config.assert_current(db, config)
 
     try:
         coin_price = int(result.get("coin_price"))
@@ -154,7 +159,11 @@ def create_item_with_pricing(db: Session, user: User, name: str, price_yuan: flo
 
 def repricing(db: Session, user: User, item: ShopItem) -> ShopItem:
     """对已有物品重新定价（用于验证"情境浮动"）。"""
+    version = item.updated_at
     priced = price_item(db, user, item.name, item.price_yuan)
+    db.refresh(item)
+    if item.updated_at != version:
+        raise ValueError('物品已变化，请重新读取后定价。')
     item.coin_price = priced["coin_price"]
     item.pricing_reason = priced["pricing_reason"]
     item.worth_note = priced["worth_note"]
@@ -163,8 +172,11 @@ def repricing(db: Session, user: User, item: ShopItem) -> ShopItem:
     return item
 
 
-def redeem(db: Session, user: User, item: ShopItem, note: str = "") -> Redemption:
+@rollback_on_error
+def redeem(db: Session, user: User, item: ShopItem, note: str = "", *, commit: bool = True) -> Redemption:
     """兑换：校验启用与余额 → 扣币 → 生成待兑现的奖励券。"""
+    lock_profile(db, user.id)
+    db.refresh(item)
     if not item.enabled:
         raise ValueError("该物品已停用。")
     balance = coin_service.balance(db, user)
@@ -187,10 +199,13 @@ def redeem(db: Session, user: User, item: ShopItem, note: str = "") -> Redemptio
         shop_item_id=item.id,
         coin_spent=item.coin_price,  # 快照，防物品改价影响历史账目
         status="pending",
-        redeemed_at=datetime.now(),
+        redeemed_at=clock_now(),
         note=note,
     )
     db.add(redemption)
+    if not commit:
+        db.flush()
+        return redemption
     db.commit()
     db.refresh(redemption)
 
@@ -204,10 +219,13 @@ def redeem(db: Session, user: User, item: ShopItem, note: str = "") -> Redemptio
 
 def fulfill(db: Session, user: User, redemption: Redemption, note: str = "") -> Redemption:
     """兑现奖励券：仅状态变更，**不再动金币**。已兑现再调幂等返回。"""
+    from app.services.transactions import lock_profile
+    lock_profile(db, user.id)
+    db.refresh(redemption)
     if redemption.status == "fulfilled":
         return redemption
     redemption.status = "fulfilled"
-    redemption.fulfilled_at = datetime.now()
+    redemption.fulfilled_at = clock_now()
     if note:
         redemption.note = note
     db.commit()

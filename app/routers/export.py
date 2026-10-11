@@ -3,6 +3,7 @@
 GET /api/export?format=json → 完整数据 JSON
 GET /api/export?format=csv  → 事件列表 CSV
 """
+from app.services.time_service import clock_now
 import csv
 import io
 from datetime import datetime, date
@@ -15,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import AIJudgment, Anchor, Attribute, AttributeHistory, Event, Goal
 from app.services.user_service import get_or_create_default_user
+from app.services.auth_service import require_owner
 
 router = APIRouter()
 
@@ -45,10 +47,11 @@ def _collect_legacy(db: Session, user_id: int) -> dict:
     history = db.query(AttributeHistory).filter(AttributeHistory.user_id == user_id).order_by(AttributeHistory.created_at).all()
     goals = db.query(Goal).filter(Goal.user_id == user_id).all()
     judgments = db.query(AIJudgment).filter(AIJudgment.user_id == user_id).order_by(AIJudgment.created_at).all()
-    anchors = db.query(Anchor).all()
+    from app.services.anchor_service import list_anchors
+    anchors = list_anchors(db)
 
     return {
-        "exported_at": _dt(datetime.now()),
+        "exported_at": _dt(clock_now()),
         "events": [_event(e) for e in events],
         "attributes": [
             {"name": a.name, "value": a.current_value, "description": a.description} for a in attrs
@@ -119,7 +122,8 @@ def _encode_export(value):
 
 
 def _export_row(row):
-    return {column.name: _encode_export(getattr(row, column.name)) for column in row.__table__.columns}
+    excluded = {"password_hash", "credentials_version"}
+    return {c.name: _encode_export(getattr(row, c.name)) for c in row.__table__.columns if c.name not in excluded}
 
 
 def _collect(db: Session, user_id: int) -> dict:
@@ -131,10 +135,19 @@ def _collect(db: Session, user_id: int) -> dict:
     tables = {model.__tablename__: [_export_row(row) for row in db.query(model).filter(
         model.user_id == user_id).order_by(model.id).all()] for model in table_models}
     tables["users"] = [_export_row(row) for row in db.query(models.User).filter(models.User.id == user_id).all()]
-    tables["anchors"] = [_export_row(row) for row in db.query(models.Anchor).order_by(models.Anchor.id).all()]
+    from app.services.anchor_service import list_anchors
+    tables["anchors"] = [_export_row(row) for row in list_anchors(db)]
     tables["settings"] = [_export_row(row) for row in db.query(models.Setting).filter(
         models.Setting.user_id == user_id, models.Setting.key.in_(SAFE_EXPORT_SETTINGS)).order_by(models.Setting.id).all()]
-    return {**data, "format_version": 2, "tables": tables}
+    from app.models.access import AnchorOverride, EventDerivation
+    from app.models.analysis import AnalysisJob, DailyReview, ReviewLink, GrowthReport
+    for model in (AnchorOverride, EventDerivation, AnalysisJob, DailyReview, ReviewLink, GrowthReport):
+        rows = [_export_row(row) for row in db.query(model).filter(model.user_id == user_id).order_by(model.id).all()]
+        for row in rows:
+            row.pop('lease_token', None)
+            row.pop('config_version', None)
+        tables[model.__tablename__] = rows
+    return {**data, "format_version": 3, "tables": tables}
 
 
 @router.get("/export")
@@ -165,16 +178,20 @@ def export_data(db: Session = Depends(get_db), format: str = "json"):
 
 # ============ 备份 ============
 
-@router.post("/backup")
+@router.post("/backup", dependencies=[Depends(require_owner)])
 def create_backup():
     """手动触发数据库备份。"""
+    from app.config import settings
+    if settings.cloud:
+        from fastapi import HTTPException
+        raise HTTPException(409, "云端请使用运维备份命令，并单独保管加密主密钥。")
     from app.services.backup_service import backup_now
 
     dest = backup_now()
     return {"status": "ok", "backup_file": dest.name if dest else None}
 
 
-@router.get("/backup/list")
+@router.get("/backup/list", dependencies=[Depends(require_owner)])
 def list_backups():
     """列出已有备份。"""
     from app.services.backup_service import list_backups

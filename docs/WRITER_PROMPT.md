@@ -1,5 +1,11 @@
 # Writer 工作指令（WRITER PROMPT）
 
+> 2026-10-10 运维复审续作见 [OPS_REVIEW_FIXES_2026-10-10.md](OPS_REVIEW_FIXES_2026-10-10.md)；使用修订清单与新源码候选，不能继续把复审前包当作当前部署版本。
+
+> 2026-10-10 最新入口：[发布准备任务书](WRITER_RELEASE_READINESS_2026-10-10.md)、[本轮交付与证据](RELEASE_READINESS_DELIVERY_2026-10-10.md)、[部署清单](PREFLIGHT_DEPLOY_CHECKLIST.md)。文档中的历史约束按对应模式/轮次理解，用户当前请求与明确授权优先；不得把任务书中的待授权上云、真实迁移、真实通知当成已获授权动作。本轮源码候选完成，外部运行门槛未过。
+
+> 2026-10-09 续作入口：[下一阶段计划](NEXT_ITERATION_DEV_PLAN.md)、[实际交付与欠项](NEXT_ITERATION_DELIVERY.md)、[运维说明](../ops/README.md)。下文SQLite/.env/自动初始化约束属于历史本地模式；本轮cloud模式采用PG显式迁移、邀请认证、本人加密凭据，不得以历史默认行为绕过云端检查。A/B尚未完成全部上线验收，C候选规则未启用。
+
 > 本文件是交付给实现者（Writer）的完整工作指令，可整体复制使用。
 > 详细需求与技术方案见同目录 [PRD.md](PRD.md)。
 

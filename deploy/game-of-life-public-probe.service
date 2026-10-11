@@ -1,0 +1,10 @@
+[Unit]
+Description=Game of Life independent HTTPS probe (install on another host)
+After=network-online.target
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/game-of-life
+EnvironmentFile=/etc/game-of-life/public-probe.env
+ExecStart=/usr/bin/python3 /opt/game-of-life/ops/monitor.py --public-url ${PUBLIC_HTTPS_URL}
+NoNewPrivileges=true
+UMask=0077

@@ -9,8 +9,9 @@
  * - 未达标给**如实提示**（决策 5：只提示不扣分，扣分仍由 AI 判定）。
  * - 批量提交：逐条创建**独立事件**并各自判定（不合成一条，保证每条数据干净可追溯）。
  */
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { api } from '../api'
+import { storageKey } from '../session'
 import { toast } from '../composables/useToast'
 import EventForm from './EventForm.vue'
 import GoalsView from './GoalsView.vue'
@@ -31,6 +32,12 @@ const showNegative = ref(false)
 // 每行的一句话输入（key = item_id）
 const drafts = ref({})
 const rowState = ref({}) // { item_id: {busy, ok, err} }
+const draftKey=storageKey('checkin-drafts')
+try {
+  const saved=JSON.parse(localStorage.getItem(draftKey)||'null')
+  if(saved?.drafts && saved?.rows){drafts.value=saved.drafts;rowState.value=Object.fromEntries(Object.entries(saved.rows).map(([key,value])=>[key,{...value,busy:false}]))}
+} catch {}
+watch([drafts,rowState],()=>{try{localStorage.setItem(draftKey,JSON.stringify({drafts:drafts.value,rows:rowState.value}))}catch{}},{deep:true})
 
 const NATURE_LABEL = { planned: '规划内', optional: '可选', negative: '负面', other: '其他' }
 
@@ -139,7 +146,14 @@ async function submitOne(it) {
   try {
     let eventId = previous.savedText === text ? previous.eventId : null
     if (!eventId) {
-      const event = await api.createEvent({
+      const requestKey=previous.savedText===text && previous.requestKey ? previous.requestKey : crypto.randomUUID()
+      setRow(it.id,{requestKey,savedText:text})
+      let event
+      if(previous.savedText===text && previous.requestKey){
+        try{event=await api.submission(requestKey)}catch(e){if(e.status!==404)throw e}
+      }
+      if(!event) event = await api.createEvent({
+      client_request_id:requestKey,
       item_id: it.id,
       source: 'form',
       content: text,
@@ -150,10 +164,10 @@ async function submitOne(it) {
       setRow(it.id, { eventId, savedText: text })
     }
     const res = await api.judgeEvent(eventId)
-    const okMsg = res.needs_clarify
+    const okMsg = res.status==='queued' ? '原文已保存，分析已排队（在待处理中查看）' : res.needs_clarify
       ? '已记录，AI 有疑问（去判定中心补充）'
       : '已记录并判定'
-    setRow(it.id, { busy: false, ok: true, err: '', eventId: null, savedText: null })
+    setRow(it.id, { busy: false, ok: true, err: '', eventId: null, savedText: null, requestKey:null })
     drafts.value = { ...drafts.value, [it.id]: '' }
     await load()
     flash(`「${it.name}」${okMsg}`)
@@ -191,7 +205,7 @@ onMounted(load)
 
 <template>
   <div class="card">
-    <h2>今日盘点</h2>
+    <h1>项目与目标</h1>
     <p class="muted">
       每天从这里开始：过一遍今天该做的事，写一句话就各自独立判定；没做完的也可以在下面自由记一笔。
       未达标只做如实提示，<b>不会自动扣分</b>。
@@ -199,19 +213,19 @@ onMounted(load)
 
     <!-- v1.10 P2-1：【规划内】目标任务 + 关联打卡项目子进度（只展示，不自动达成） -->
     <template v-if="activeGoals.length">
-      <div class="muted" style="font-size: 12px; border-bottom: 1px solid #eee; padding-bottom: 4px; margin: 12px 0 8px">
+      <div class="muted" style="font-size: 13px; border-bottom: 1px solid #eee; padding-bottom: 4px; margin: 12px 0 8px">
         <b>规划内</b> · 目标任务 {{ activeGoals.length }} 个
       </div>
       <div v-for="g in activeGoals" :key="g.id" class="judgment-item">
-        <div class="row" style="align-items: center">
+        <div class="action-group" style="align-items: center">
           <b>{{ g.description || g.metric }}</b>
           <span class="tag">{{ g.metric }}</span>
-          <span v-if="g.deadline" class="muted" style="font-size: 12px; margin-left: auto">
+          <span v-if="g.deadline" class="muted" style="font-size: 13px; margin-left: auto">
             截止 {{ String(g.deadline).slice(0, 10) }}
           </span>
         </div>
         <div v-for="p in (g.progress || [])" :key="p.item_id" style="margin-top: 6px">
-          <div class="row" style="align-items: center; font-size: 12.5px">
+          <div class="action-group" style="align-items: center; font-size: 13px">
             <span>{{ p.name }}</span>
             <span class="muted" style="margin-left: auto">{{ progressText(p) }}</span>
           </div>
@@ -222,15 +236,15 @@ onMounted(load)
       </div>
     </template>
 
-    <p v-if="error" class="muted" style="color: #d33">{{ error }}</p>
-    <p v-if="hint" class="muted" style="color: #2a7f3e; font-size: 13px">✓ {{ hint }}</p>
+    <p v-if="error" class="muted" style="color: var(--danger)">{{ error }}</p>
+    <p v-if="hint" class="muted" style="color: var(--success); font-size: 13px">✓ {{ hint }}</p>
 
     <p v-if="items.length === 0 && !error" class="muted">
       还没有启用中的打卡项目。展开下面的【规划设置 → 打卡项目】建几个，再回来盘点；
       也可以直接在【自由记一笔】里写点什么。
     </p>
 
-    <div class="row" v-if="allItems.length" style="margin: 10px 0">
+    <div class="action-group" v-if="allItems.length" style="margin: 10px 0">
       <button class="btn primary" :disabled="busy || !filledCount" @click="submitAll">
         {{ busy ? '提交中…' : `提交全部${filledCount ? `（${filledCount} 条）` : ''}` }}
       </button>
@@ -238,65 +252,65 @@ onMounted(load)
 
     <!-- 规划内 -->
     <template v-if="plannedItems.length">
-      <div class="muted" style="font-size: 12px; border-bottom: 1px solid #eee; padding-bottom: 4px; margin: 12px 0 8px">
+      <div class="muted" style="font-size: 13px; border-bottom: 1px solid #eee; padding-bottom: 4px; margin: 12px 0 8px">
         <b>规划内</b> · {{ plannedItems.length }} 个
       </div>
       <div v-for="it in plannedItems" :key="it.id" class="judgment-item">
-        <div class="row" style="align-items: center">
+        <div class="action-group" style="align-items: center">
           <b>{{ it.name }}</b>
           <span class="tag" :style="isReached(it) ? 'background:#eafaf1;color:#1f9e6a' : ''">{{ statusText(it) }}</span>
-          <span v-if="it.category" class="muted" style="font-size: 12px">{{ it.category }}</span>
-          <span v-if="isReached(it)" class="muted" style="margin-left: auto; font-size: 12px; color: #1f9e6a">✓ 已达标</span>
+          <span v-if="it.category" class="muted" style="font-size: 13px">{{ it.category }}</span>
+          <span v-if="isReached(it)" class="muted" style="margin-left: auto; font-size: 13px; color: #1f9e6a">✓ 已达标</span>
         </div>
-        <p v-if="shortfallText(it)" class="muted" style="font-size: 12px; color: #b7791f; margin: 4px 0">⚠️ {{ shortfallText(it) }}</p>
-        <div class="row" style="margin-top: 6px">
+        <p v-if="shortfallText(it)" class="muted" style="font-size: 13px; color: var(--warn); margin: 4px 0">⚠️ {{ shortfallText(it) }}</p>
+        <div class="action-group" style="margin-top: 6px">
           <input v-model="drafts[it.id]" placeholder="一句话记录，如：跑了 5 公里" style="flex: 3" />
           <button class="btn small primary" style="flex: 0 0 auto" :disabled="rowState[it.id]?.busy" @click="submitOne(it)">
             {{ rowState[it.id]?.busy ? '判定中…' : '记录' }}
           </button>
         </div>
-        <p v-if="rowState[it.id]?.err" class="muted" style="color: #d33; font-size: 12px">⚠️ {{ rowState[it.id].err }}</p>
+        <p v-if="rowState[it.id]?.err" class="muted" style="color: var(--danger); font-size: 13px">⚠️ {{ rowState[it.id].err }}</p>
       </div>
     </template>
 
     <!-- 可选 -->
     <template v-if="optionalItems.length">
-      <div class="muted" style="font-size: 12px; border-bottom: 1px solid #eee; padding-bottom: 4px; margin: 12px 0 8px">
+      <div class="muted" style="font-size: 13px; border-bottom: 1px solid #eee; padding-bottom: 4px; margin: 12px 0 8px">
         <b>可选</b> · {{ optionalItems.length }} 个
       </div>
       <div v-for="it in optionalItems" :key="it.id" class="judgment-item">
-        <div class="row" style="align-items: center">
+        <div class="action-group" style="align-items: center">
           <b>{{ it.name }}</b>
           <span class="tag">{{ statusText(it) }}</span>
-          <span v-if="it.category" class="muted" style="font-size: 12px">{{ it.category }}</span>
+          <span v-if="it.category" class="muted" style="font-size: 13px">{{ it.category }}</span>
         </div>
-        <div class="row" style="margin-top: 6px">
+        <div class="action-group" style="margin-top: 6px">
           <input v-model="drafts[it.id]" placeholder="一句话记录" style="flex: 3" />
           <button class="btn small primary" style="flex: 0 0 auto" :disabled="rowState[it.id]?.busy" @click="submitOne(it)">
             {{ rowState[it.id]?.busy ? '判定中…' : '记录' }}
           </button>
         </div>
-        <p v-if="rowState[it.id]?.err" class="muted" style="color: #d33; font-size: 12px">⚠️ {{ rowState[it.id].err }}</p>
+        <p v-if="rowState[it.id]?.err" class="muted" style="color: var(--danger); font-size: 13px">⚠️ {{ rowState[it.id].err }}</p>
       </div>
     </template>
 
     <!-- 其他 -->
     <template v-if="otherItems.length">
-      <div class="muted" style="font-size: 12px; border-bottom: 1px solid #eee; padding-bottom: 4px; margin: 12px 0 8px">
+      <div class="muted" style="font-size: 13px; border-bottom: 1px solid #eee; padding-bottom: 4px; margin: 12px 0 8px">
         <b>其他</b> · {{ otherItems.length }} 个
       </div>
       <div v-for="it in otherItems" :key="it.id" class="judgment-item">
-        <div class="row" style="align-items: center">
+        <div class="action-group" style="align-items: center">
           <b>{{ it.name }}</b>
           <span class="tag">{{ statusText(it) }}</span>
         </div>
-        <div class="row" style="margin-top: 6px">
+        <div class="action-group" style="margin-top: 6px">
           <input v-model="drafts[it.id]" placeholder="一句话记录" style="flex: 3" />
           <button class="btn small primary" style="flex: 0 0 auto" :disabled="rowState[it.id]?.busy" @click="submitOne(it)">
             {{ rowState[it.id]?.busy ? '判定中…' : '记录' }}
           </button>
         </div>
-        <p v-if="rowState[it.id]?.err" class="muted" style="color: #d33; font-size: 12px">⚠️ {{ rowState[it.id].err }}</p>
+        <p v-if="rowState[it.id]?.err" class="muted" style="color: var(--danger); font-size: 13px">⚠️ {{ rowState[it.id].err }}</p>
       </div>
     </template>
 
@@ -306,29 +320,29 @@ onMounted(load)
         class="judgment-item"
         style="cursor: pointer; display: flex; align-items: center; margin-top: 12px"
         @click="showNegative = !showNegative"
-      >
+       role="button" tabindex="0" @keydown.enter.self.prevent="showNegative = !showNegative" @keydown.space.self.prevent="showNegative = !showNegative">
         <b>负面项 {{ negativeItems.length }} 个</b>
-        <span class="muted" style="font-size: 12px; margin-left: 8px">如实记一次扣一次分（不会去重）</span>
+        <span class="muted" style="font-size: 13px; margin-left: 8px">如实记一次扣一次分（不会去重）</span>
         <span class="muted" style="margin-left: auto">{{ showNegative ? '▾' : '▸' }}</span>
       </div>
       <template v-if="showNegative">
         <div v-for="it in negativeItems" :key="it.id" class="judgment-item" style="margin-left: 12px">
-          <div class="row" style="align-items: center">
+          <div class="action-group" style="align-items: center">
             <b>{{ it.name }}</b>
             <span class="tag">{{ statusText(it) }}</span>
           </div>
-          <div class="row" style="margin-top: 6px">
+          <div class="action-group" style="margin-top: 6px">
             <input v-model="drafts[it.id]" placeholder="如实记一笔，如：久坐 3 小时" style="flex: 3" />
             <button class="btn small danger" style="flex: 0 0 auto" :disabled="rowState[it.id]?.busy" @click="submitOne(it)">
               {{ rowState[it.id]?.busy ? '判定中…' : '记录' }}
             </button>
           </div>
-          <p v-if="rowState[it.id]?.err" class="muted" style="color: #d33; font-size: 12px">⚠️ {{ rowState[it.id].err }}</p>
+          <p v-if="rowState[it.id]?.err" class="muted" style="color: var(--danger); font-size: 13px">⚠️ {{ rowState[it.id].err }}</p>
         </div>
       </template>
     </template>
 
-    <div class="row" style="margin-top: 12px" v-if="items.length">
+    <div class="action-group" style="margin-top: 12px" v-if="items.length">
       <button class="btn small" @click="emit('go-judgments')">去判定中心确认入账 →</button>
       <button class="btn small" @click="load">刷新</button>
     </div>
@@ -345,12 +359,12 @@ onMounted(load)
   <!-- ============ v1.10 P2-1：规划设置（折叠；目标 + 打卡项目管理） ============ -->
   <div class="card">
     <div
-      class="row"
+      class="action-group"
       style="align-items: center; cursor: pointer; user-select: none"
       @click="showPlanning = !showPlanning"
-    >
+     role="button" tabindex="0" @keydown.enter.self.prevent="showPlanning = !showPlanning" @keydown.space.self.prevent="showPlanning = !showPlanning">
       <h2 style="margin: 0">规划设置</h2>
-      <span class="muted" style="font-size: 12px; margin-left: 8px">目标与打卡项目（增删改停用、给项目选所属目标）</span>
+      <span class="muted" style="font-size: 13px; margin-left: 8px">目标与打卡项目（增删改停用、给项目选所属目标）</span>
       <span class="muted" style="margin-left: auto">{{ showPlanning ? '▾' : '▸' }}</span>
     </div>
     <template v-if="showPlanning">

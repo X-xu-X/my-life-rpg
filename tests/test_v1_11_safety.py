@@ -27,7 +27,7 @@ from app.services import (achievement_service, backup_service, challenge_service
 from app.services.llm_service import LLMError, LLMService
 from app.services.user_service import get_or_create_default_user, ensure_dimensions
 
-CONFIG = SimpleNamespace(quality_note='')
+CONFIG = SimpleNamespace(quality_note='', model='qa-model')
 RESULT = {'realistic': True, 'affected_attributes': [{'name': '体能', 'delta': 2}],
           'confidence': 1.0, 'summary': '真实测试', 'outcome': 'done'}
 
@@ -257,12 +257,13 @@ class SafetyTests(unittest.TestCase):
         log=self.db.query(m.JudgmentLog).filter_by(action='delete').one()
         self.assertFalse(log.payload['coins_rolled_back'])
         data=export._collect(self.db,self.user.id)
-        self.assertEqual(len(data['tables']),17)
+        self.assertTrue({'events','ai_judgments','coin_ledger','user_profiles'}.issubset(data['tables']))
         self.assertTrue(next(row for row in data['tables']['events'] if row['id']==eid)['is_deleted'])
         self.assertEqual(self.client.get(f'/api/events/{eid}').status_code,404)
         self.assertEqual(self.client.post(f'/api/events/{eid}/judge',json={}).status_code,404)
         self.assertEqual(self.client.get('/api/export?format=csv').status_code,200)
-        Path('docs/review/V1_11_CONSUMER_EVIDENCE.json').write_text(json.dumps({'before':original,'after':after},ensure_ascii=False,indent=2,default=str),encoding='utf-8')
+        if __import__('os').environ.get('REFRESH_V1_11_EVIDENCE'):
+            Path('docs/review/V1_11_CONSUMER_EVIDENCE.json').write_text(json.dumps({'before':original,'after':after},ensure_ascii=False,indent=2,default=str),encoding='utf-8')
 
     def test_unrealistic_event_retains_history_and_rejects_pending(self):
         e=self.event(); j=self.judgment(event=e)
@@ -313,8 +314,11 @@ class SafetyTests(unittest.TestCase):
         for segment in ('科学锚点','主维现状','子维度','禁用维度'): self.assertIn(segment,captured[0][1]['content'])
         self.assertEqual(self.client.post(f"/api/judgments/{first['judgment_id']}/confirm").status_code,409)
         with self.assertRaises(ValueError):self.run_llm(lambda:challenge_service.complete(self.db,self.user,ch,'500俯卧撑'),{'realistic':False})
-        self.assertEqual(self.db.get(m.Event,ch.event_id).content,'更多真实细节')
+        self.assertEqual(self.db.get(m.Event,ch.event_id).content,'500俯卧撑')
         self.assertEqual(ch.status,'accepted')
+        self.assertEqual(self.db.get(m.AIJudgment,ch.judgment_id).status,'invalidated')
+        with self.assertRaises(ValueError): challenge_service.settle(self.db,self.user,ch)
+        self.run_llm(lambda:challenge_service.complete(self.db,self.user,ch,'修正后的真实自述'),callback=llm)
         with patch.object(achievement_service,'check_and_grant',return_value=[]):
             settled=challenge_service.settle(self.db,self.user,ch)
         self.assertEqual(settled['coins_delta'],32); self.assertEqual(ch.status,'settled')

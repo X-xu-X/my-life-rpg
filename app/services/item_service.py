@@ -10,6 +10,7 @@
 - 事件计数用 `Event.item_id` 精确归集，不靠标题/类别模糊匹配。
 - 达成率只做展示，**不自动扣分**——扣分仍由 AI 判定负责（决策 5）。
 """
+from app.services.time_service import clock_now
 from datetime import datetime, timedelta
 
 from sqlalchemy import func
@@ -20,7 +21,7 @@ from app.models import CheckinItem, Event
 
 def period_start(frequency_type: str, now: datetime | None = None) -> datetime | None:
     """返回「本期」起点；none 返回 None（不计算达成率）。"""
-    now = now or datetime.now()
+    now = now or clock_now()
     start_of_today = now.replace(hour=0, minute=0, second=0, microsecond=0)
     if frequency_type == "daily":
         return start_of_today

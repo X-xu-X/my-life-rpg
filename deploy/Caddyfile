@@ -1,0 +1,45 @@
+{
+    email {$ACME_EMAIL}
+    admin off
+}
+{$DOMAIN} {
+    encode zstd gzip
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options nosniff
+        Referrer-Policy no-referrer
+        X-Frame-Options DENY
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    }
+    request_body {
+        max_size 256KB
+    }
+    # Preserve ordering: block original internal paths before rewriting the public alias.
+    route {
+        @internal path /api/health /api/ready /docs* /openapi.json /redoc*
+        respond @internal 404
+        # Coarse availability only: API + DB, no user/session or model calls.
+        handle /service-status {
+            header Cache-Control "no-store"
+            rewrite * /api/ready
+            reverse_proxy api:8000 {
+                transport http {
+                    dial_timeout 3s
+                    response_header_timeout 5s
+                }
+            }
+        }
+        handle /api/* {
+            reverse_proxy api:8000 {
+                transport http {
+                    dial_timeout 5s
+                    response_header_timeout 210s
+                }
+            }
+        }
+        handle {
+            root * /srv
+            file_server
+        }
+    }
+}

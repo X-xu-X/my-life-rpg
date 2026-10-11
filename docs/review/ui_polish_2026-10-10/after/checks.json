@@ -1,0 +1,3418 @@
+{
+  "phase": "after",
+  "tested_at": "2026-10-10T14:23:07.104Z",
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Edg/154.0.4258.62",
+    "revision": "@49f7c5590dad654f33b924537ccc8be227c5a43a",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0",
+    "jsVersion": "15.4.11.9"
+  },
+  "sourceHashes": {
+    "frontend/index.html": "85d4ad6d5df20e05135293fa94f05c60a43f8efdbb4f4f0daa0faf4a3caba2ac",
+    "frontend/src/App.vue": "fd73b68fe68e339226da56db5f85afe25f57e715aa0df9c8e8d05fcf97afc209",
+    "frontend/src/styles.css": "6a2f6cf557747f38e5b50cf6307b34a24056a1eccd20cb82f0023aa01a42833d",
+    "frontend/src/ui-layout.css": "df5f162f9d11d7a95e94fdc8c629441475482c4c53677af972a8825e9cf46326",
+    "frontend/src/design-tokens.css": "20279437eec3975be613f175eee4c0b7d9dd2cb5f342c7b9c78d0af01a7d59aa",
+    "frontend/src/components/AnchorsView.vue": "f150b14839babc8a68ede7aeb4c6ef8b8d62524277e12957bc40437217f0fd2d",
+    "frontend/src/components/AttributePanel.vue": "6e2e3fb5478ce93c3fcfb4da2e781e2ccc800273d6a329c9390d46347479364f",
+    "frontend/src/components/AuthView.vue": "7d9d6b7a215d69f84f10761bc685148f7c70f4c25251b546602883f77c63a9ee",
+    "frontend/src/components/ChallengeView.vue": "01df53d1fa79dcd961d6b380f5a18642c031825937cf359dbd1ed39fbf553543",
+    "frontend/src/components/EventForm.vue": "db42cba4be40a30af9339ecadbd13797377c6a0b6afe3529b71084efff520988",
+    "frontend/src/components/GoalsView.vue": "bf828007b5bf88b56f1a288334fbba66089066b7ca8a89ce62e0684f32682105",
+    "frontend/src/components/HomeView.vue": "b408921f7267ea8b96fbfc6e62d73784dba9949c9f5a7dc575ceee27acf2c444",
+    "frontend/src/components/ItemManager.vue": "31dc7357c3f74a6b1c47812dd65765ea0a0e58f088cf44023d708e2ef39510b5",
+    "frontend/src/components/JournalView.vue": "1e521d168a490a505d24a25b94e97b1f029ddfcaf089784d5a312ac7edefc1c8",
+    "frontend/src/components/JudgmentList.vue": "5a15f9262f5837ba32215e375f64224e4e8869c2aad551f9efca31b9235fd3b0",
+    "frontend/src/components/MyView.vue": "b0b962a9cc3870edf857af499fed2414853c3156a221398e50eeec75f20007bd",
+    "frontend/src/components/Onboarding.vue": "7ef67ec27cccdf31aba8fddca7756f48dd7f9d598b145e5c9c04d1fc2bbfc482",
+    "frontend/src/components/PendingView.vue": "31123d6b465f75de99d5438ff3762327cabdb7d65cce914f1866805366e22be3",
+    "frontend/src/components/RecordComposer.vue": "c9252d2e3d3ef8daef54ee5463d17ca9de59decd3c0b058ce596249a7ce0c9f5",
+    "frontend/src/components/RecordDetail.vue": "5a6b5fdb1a9d0763f8d3683a60feda98494d5cd406d0367901267d8344dd7bfe",
+    "frontend/src/components/RecordList.vue": "d32d332c8b0b16c9c8f94321871049fcf26beaacf4b677d6227966d8d65970b7",
+    "frontend/src/components/ReportHistory.vue": "009e8b87516dc7fa9f07f5afeb8c491c6415a782fff8420b0a343a729f606bae",
+    "frontend/src/components/ReviewView.vue": "ba03c53af62c6624efb92c0c8edeee74b3715ab17667190f91a060b58e69391b",
+    "frontend/src/components/SettingsView.vue": "81df99a4bda637921c184de916fe6ae3f8ce11dbbb776489ae851d141c232b4f",
+    "frontend/src/components/TimelineView.vue": "a2016e14b42ba3063cc31a2bf7062b5c85df76c0ea8e91f3c1ab12828812ba41",
+    "frontend/src/components/ToastHost.vue": "658ada048b1bf4684483e93bc69254aea8703d2c143cb0bedec45d86f1395a12",
+    "frontend/src/components/TodayCheckin.vue": "fa84f4543ff4d5917d53c15e2f95aa1402a93a526b6ea0fe72c5e624fd3ee712",
+    "frontend/src/components/ui\\AppIcon.vue": "25960f16b5794c48be8c981e2b08b2b91d577d26e67917d04b111e14562bf108",
+    "frontend/src/components/ui\\PageHeader.vue": "b1d8bcde57669c7fb71a3d04f60cc7e6201db1423ece6716962f3680d346b92a",
+    "frontend/src/components/ui\\RecordPreview.vue": "1d977a4fb3505f0eba122f8ad5cf911f2b4678de8517e5371b535ec3c8835a01"
+  },
+  "checks": [
+    {
+      "name": "layout 360 /",
+      "status": "PASS",
+      "details": {
+        "width": 360,
+        "scrollWidth": 345,
+        "firstRecord": {
+          "x": 16,
+          "y": 790.640625,
+          "width": 313,
+          "height": 221.0625,
+          "bottom": 1011.703125
+        },
+        "save": {
+          "x": 33,
+          "y": 555.5,
+          "width": 279,
+          "height": 44,
+          "bottom": 599.5
+        },
+        "links": {
+          "x": 16,
+          "y": 632.5,
+          "width": 313,
+          "height": 74.140625,
+          "bottom": 706.640625
+        },
+        "nav": {
+          "x": 0,
+          "y": 736,
+          "width": 345,
+          "height": 64,
+          "bottom": 800
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 360 /journal",
+      "status": "PASS",
+      "details": {
+        "width": 360,
+        "scrollWidth": 345,
+        "firstRecord": {
+          "x": 16,
+          "y": 335.75,
+          "width": 313,
+          "height": 221.0625,
+          "bottom": 556.8125
+        },
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 736,
+          "width": 345,
+          "height": 64,
+          "bottom": 800
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 360 /events/101",
+      "status": "PASS",
+      "details": {
+        "width": 360,
+        "scrollWidth": 345,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 736,
+          "width": 345,
+          "height": 64,
+          "bottom": 800
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 360 /growth",
+      "status": "PASS",
+      "details": {
+        "width": 360,
+        "scrollWidth": 345,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 736,
+          "width": 345,
+          "height": 64,
+          "bottom": 800
+        },
+        "radar": {
+          "x": 33,
+          "y": 2642.515625,
+          "width": 279,
+          "height": 360,
+          "bottom": 3002.515625
+        },
+        "growth": {
+          "x": 33,
+          "y": 2761.375,
+          "width": 279,
+          "height": 320,
+          "bottom": 3081.375
+        },
+        "heatmap": {
+          "x": 33,
+          "y": 602.8125,
+          "width": 640,
+          "height": 220,
+          "bottom": 822.8125
+        }
+      }
+    },
+    {
+      "name": "layout 360 /reports",
+      "status": "PASS",
+      "details": {
+        "width": 360,
+        "scrollWidth": 360,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 736,
+          "width": 360,
+          "height": 64,
+          "bottom": 800
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 360 /me",
+      "status": "PASS",
+      "details": {
+        "width": 360,
+        "scrollWidth": 345,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 736,
+          "width": 345,
+          "height": 64,
+          "bottom": 800
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 360 /checkin",
+      "status": "PASS",
+      "details": {
+        "width": 360,
+        "scrollWidth": 345,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 736,
+          "width": 345,
+          "height": 64,
+          "bottom": 800
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 360 /pending",
+      "status": "PASS",
+      "details": {
+        "width": 360,
+        "scrollWidth": 360,
+        "firstRecord": {
+          "x": 16,
+          "y": 253.671875,
+          "width": 328,
+          "height": 221.0625,
+          "bottom": 474.734375
+        },
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 736,
+          "width": 360,
+          "height": 64,
+          "bottom": 800
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 360 /judgments",
+      "status": "PASS",
+      "details": {
+        "width": 360,
+        "scrollWidth": 360,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 736,
+          "width": 360,
+          "height": 64,
+          "bottom": 800
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 360 /review",
+      "status": "PASS",
+      "details": {
+        "width": 360,
+        "scrollWidth": 345,
+        "firstRecord": {
+          "x": 16,
+          "y": 411.890625,
+          "width": 313,
+          "height": 221.0625,
+          "bottom": 632.953125
+        },
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 736,
+          "width": 345,
+          "height": 64,
+          "bottom": 800
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 360 /challenges",
+      "status": "PASS",
+      "details": {
+        "width": 360,
+        "scrollWidth": 345,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 736,
+          "width": 345,
+          "height": 64,
+          "bottom": 800
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 360 /onboarding",
+      "status": "PASS",
+      "details": {
+        "width": 360,
+        "scrollWidth": 345,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 736,
+          "width": 345,
+          "height": 64,
+          "bottom": 800
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 360 /anchors",
+      "status": "PASS",
+      "details": {
+        "width": 360,
+        "scrollWidth": 360,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 736,
+          "width": 360,
+          "height": 64,
+          "bottom": 800
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 360 /settings",
+      "status": "PASS",
+      "details": {
+        "width": 360,
+        "scrollWidth": 345,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 736,
+          "width": 345,
+          "height": 64,
+          "bottom": 800
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 390 /",
+      "status": "PASS",
+      "details": {
+        "width": 390,
+        "scrollWidth": 375,
+        "firstRecord": {
+          "x": 16,
+          "y": 770.5,
+          "width": 343,
+          "height": 221.0625,
+          "bottom": 991.5625
+        },
+        "save": {
+          "x": 33,
+          "y": 535.359375,
+          "width": 309,
+          "height": 44,
+          "bottom": 579.359375
+        },
+        "links": {
+          "x": 16,
+          "y": 612.359375,
+          "width": 343,
+          "height": 74.140625,
+          "bottom": 686.5
+        },
+        "nav": {
+          "x": 0,
+          "y": 780,
+          "width": 375,
+          "height": 64,
+          "bottom": 844
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 390 /journal",
+      "status": "PASS",
+      "details": {
+        "width": 390,
+        "scrollWidth": 375,
+        "firstRecord": {
+          "x": 16,
+          "y": 335.75,
+          "width": 343,
+          "height": 221.0625,
+          "bottom": 556.8125
+        },
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 780,
+          "width": 375,
+          "height": 64,
+          "bottom": 844
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 390 /events/101",
+      "status": "PASS",
+      "details": {
+        "width": 390,
+        "scrollWidth": 375,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 780,
+          "width": 375,
+          "height": 64,
+          "bottom": 844
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 390 /growth",
+      "status": "PASS",
+      "details": {
+        "width": 390,
+        "scrollWidth": 375,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 780,
+          "width": 375,
+          "height": 64,
+          "bottom": 844
+        },
+        "radar": {
+          "x": 33,
+          "y": 2614.515625,
+          "width": 309,
+          "height": 360,
+          "bottom": 2974.515625
+        },
+        "growth": {
+          "x": 33,
+          "y": 2733.375,
+          "width": 309,
+          "height": 320,
+          "bottom": 3053.375
+        },
+        "heatmap": {
+          "x": 33,
+          "y": 574.8125,
+          "width": 640,
+          "height": 220,
+          "bottom": 794.8125
+        }
+      }
+    },
+    {
+      "name": "layout 390 /reports",
+      "status": "PASS",
+      "details": {
+        "width": 390,
+        "scrollWidth": 390,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 780,
+          "width": 390,
+          "height": 64,
+          "bottom": 844
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 390 /me",
+      "status": "PASS",
+      "details": {
+        "width": 390,
+        "scrollWidth": 375,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 780,
+          "width": 375,
+          "height": 64,
+          "bottom": 844
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 390 /checkin",
+      "status": "PASS",
+      "details": {
+        "width": 390,
+        "scrollWidth": 375,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 780,
+          "width": 375,
+          "height": 64,
+          "bottom": 844
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 390 /pending",
+      "status": "PASS",
+      "details": {
+        "width": 390,
+        "scrollWidth": 390,
+        "firstRecord": {
+          "x": 16,
+          "y": 233.53125,
+          "width": 358,
+          "height": 221.0625,
+          "bottom": 454.59375
+        },
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 780,
+          "width": 390,
+          "height": 64,
+          "bottom": 844
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 390 /judgments",
+      "status": "PASS",
+      "details": {
+        "width": 390,
+        "scrollWidth": 390,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 780,
+          "width": 390,
+          "height": 64,
+          "bottom": 844
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 390 /review",
+      "status": "PASS",
+      "details": {
+        "width": 390,
+        "scrollWidth": 375,
+        "firstRecord": {
+          "x": 16,
+          "y": 411.890625,
+          "width": 343,
+          "height": 221.0625,
+          "bottom": 632.953125
+        },
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 780,
+          "width": 375,
+          "height": 64,
+          "bottom": 844
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 390 /challenges",
+      "status": "PASS",
+      "details": {
+        "width": 390,
+        "scrollWidth": 375,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 780,
+          "width": 375,
+          "height": 64,
+          "bottom": 844
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 390 /onboarding",
+      "status": "PASS",
+      "details": {
+        "width": 390,
+        "scrollWidth": 375,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 780,
+          "width": 375,
+          "height": 64,
+          "bottom": 844
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 390 /anchors",
+      "status": "PASS",
+      "details": {
+        "width": 390,
+        "scrollWidth": 390,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 780,
+          "width": 390,
+          "height": 64,
+          "bottom": 844
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 390 /settings",
+      "status": "PASS",
+      "details": {
+        "width": 390,
+        "scrollWidth": 375,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 780,
+          "width": 375,
+          "height": 64,
+          "bottom": 844
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 768 /",
+      "status": "PASS",
+      "details": {
+        "width": 768,
+        "scrollWidth": 753,
+        "firstRecord": {
+          "x": 24,
+          "y": 703.75,
+          "width": 705,
+          "height": 221.0625,
+          "bottom": 924.8125
+        },
+        "save": {
+          "x": 610,
+          "y": 460.609375,
+          "width": 94,
+          "height": 44,
+          "bottom": 504.609375
+        },
+        "links": {
+          "x": 24,
+          "y": 545.609375,
+          "width": 705,
+          "height": 74.140625,
+          "bottom": 619.75
+        },
+        "nav": {
+          "x": 0,
+          "y": 936,
+          "width": 753,
+          "height": 64,
+          "bottom": 1000
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 768 /journal",
+      "status": "PASS",
+      "details": {
+        "width": 768,
+        "scrollWidth": 768,
+        "firstRecord": {
+          "x": 24,
+          "y": 253.609375,
+          "width": 720,
+          "height": 221.0625,
+          "bottom": 474.671875
+        },
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 936,
+          "width": 768,
+          "height": 64,
+          "bottom": 1000
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 768 /events/101",
+      "status": "PASS",
+      "details": {
+        "width": 768,
+        "scrollWidth": 753,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 936,
+          "width": 753,
+          "height": 64,
+          "bottom": 1000
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 768 /growth",
+      "status": "PASS",
+      "details": {
+        "width": 768,
+        "scrollWidth": 753,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 936,
+          "width": 753,
+          "height": 64,
+          "bottom": 1000
+        },
+        "radar": {
+          "x": 49,
+          "y": 2508.5625,
+          "width": 655,
+          "height": 360,
+          "bottom": 2868.5625
+        },
+        "growth": {
+          "x": 49,
+          "y": 2663.5625,
+          "width": 655,
+          "height": 320,
+          "bottom": 2983.5625
+        },
+        "heatmap": {
+          "x": 49,
+          "y": 492.140625,
+          "width": 655,
+          "height": 220,
+          "bottom": 712.140625
+        }
+      }
+    },
+    {
+      "name": "layout 768 /reports",
+      "status": "PASS",
+      "details": {
+        "width": 768,
+        "scrollWidth": 768,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 936,
+          "width": 768,
+          "height": 64,
+          "bottom": 1000
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 768 /me",
+      "status": "PASS",
+      "details": {
+        "width": 768,
+        "scrollWidth": 768,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 936,
+          "width": 768,
+          "height": 64,
+          "bottom": 1000
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 768 /checkin",
+      "status": "PASS",
+      "details": {
+        "width": 768,
+        "scrollWidth": 753,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 936,
+          "width": 753,
+          "height": 64,
+          "bottom": 1000
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 768 /pending",
+      "status": "PASS",
+      "details": {
+        "width": 768,
+        "scrollWidth": 768,
+        "firstRecord": {
+          "x": 24,
+          "y": 233.53125,
+          "width": 720,
+          "height": 221.0625,
+          "bottom": 454.59375
+        },
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 936,
+          "width": 768,
+          "height": 64,
+          "bottom": 1000
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 768 /judgments",
+      "status": "PASS",
+      "details": {
+        "width": 768,
+        "scrollWidth": 768,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 936,
+          "width": 768,
+          "height": 64,
+          "bottom": 1000
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 768 /review",
+      "status": "PASS",
+      "details": {
+        "width": 768,
+        "scrollWidth": 753,
+        "firstRecord": {
+          "x": 24,
+          "y": 303.609375,
+          "width": 705,
+          "height": 221.0625,
+          "bottom": 524.671875
+        },
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 936,
+          "width": 753,
+          "height": 64,
+          "bottom": 1000
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 768 /challenges",
+      "status": "PASS",
+      "details": {
+        "width": 768,
+        "scrollWidth": 768,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 936,
+          "width": 768,
+          "height": 64,
+          "bottom": 1000
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 768 /onboarding",
+      "status": "PASS",
+      "details": {
+        "width": 768,
+        "scrollWidth": 753,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 936,
+          "width": 753,
+          "height": 64,
+          "bottom": 1000
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 768 /anchors",
+      "status": "PASS",
+      "details": {
+        "width": 768,
+        "scrollWidth": 768,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 936,
+          "width": 768,
+          "height": 64,
+          "bottom": 1000
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 768 /settings",
+      "status": "PASS",
+      "details": {
+        "width": 768,
+        "scrollWidth": 753,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 936,
+          "width": 753,
+          "height": 64,
+          "bottom": 1000
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1024 /",
+      "status": "PASS",
+      "details": {
+        "width": 1024,
+        "scrollWidth": 1009,
+        "firstRecord": {
+          "x": 248,
+          "y": 693.359375,
+          "width": 729,
+          "height": 221.0625,
+          "bottom": 914.421875
+        },
+        "save": {
+          "x": 858,
+          "y": 450.21875,
+          "width": 94,
+          "height": 44,
+          "bottom": 494.21875
+        },
+        "links": {
+          "x": 248,
+          "y": 535.21875,
+          "width": 729,
+          "height": 74.140625,
+          "bottom": 609.359375
+        },
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1024 /journal",
+      "status": "PASS",
+      "details": {
+        "width": 1024,
+        "scrollWidth": 1024,
+        "firstRecord": {
+          "x": 248,
+          "y": 243.21875,
+          "width": 744,
+          "height": 221.0625,
+          "bottom": 464.28125
+        },
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1024 /events/101",
+      "status": "PASS",
+      "details": {
+        "width": 1024,
+        "scrollWidth": 1009,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1024 /growth",
+      "status": "PASS",
+      "details": {
+        "width": 1024,
+        "scrollWidth": 1009,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": {
+          "x": 273,
+          "y": 2492.703125,
+          "width": 679,
+          "height": 360,
+          "bottom": 2852.703125
+        },
+        "growth": {
+          "x": 273,
+          "y": 2671.5625,
+          "width": 679,
+          "height": 340,
+          "bottom": 3011.5625
+        },
+        "heatmap": {
+          "x": 273,
+          "y": 476.28125,
+          "width": 679,
+          "height": 220,
+          "bottom": 696.28125
+        }
+      }
+    },
+    {
+      "name": "layout 1024 /reports",
+      "status": "PASS",
+      "details": {
+        "width": 1024,
+        "scrollWidth": 1024,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1024 /me",
+      "status": "PASS",
+      "details": {
+        "width": 1024,
+        "scrollWidth": 1024,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1024 /checkin",
+      "status": "PASS",
+      "details": {
+        "width": 1024,
+        "scrollWidth": 1009,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1024 /pending",
+      "status": "PASS",
+      "details": {
+        "width": 1024,
+        "scrollWidth": 1024,
+        "firstRecord": {
+          "x": 248,
+          "y": 223.140625,
+          "width": 744,
+          "height": 221.0625,
+          "bottom": 444.203125
+        },
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1024 /judgments",
+      "status": "PASS",
+      "details": {
+        "width": 1024,
+        "scrollWidth": 1024,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1024 /review",
+      "status": "PASS",
+      "details": {
+        "width": 1024,
+        "scrollWidth": 1009,
+        "firstRecord": {
+          "x": 248,
+          "y": 293.21875,
+          "width": 729,
+          "height": 221.0625,
+          "bottom": 514.28125
+        },
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1024 /challenges",
+      "status": "PASS",
+      "details": {
+        "width": 1024,
+        "scrollWidth": 1024,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1024 /onboarding",
+      "status": "PASS",
+      "details": {
+        "width": 1024,
+        "scrollWidth": 1009,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1024 /anchors",
+      "status": "PASS",
+      "details": {
+        "width": 1024,
+        "scrollWidth": 1024,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1024 /settings",
+      "status": "PASS",
+      "details": {
+        "width": 1024,
+        "scrollWidth": 1009,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1440 /",
+      "status": "PASS",
+      "details": {
+        "width": 1440,
+        "scrollWidth": 1425,
+        "firstRecord": {
+          "x": 410.5,
+          "y": 693.359375,
+          "width": 820,
+          "height": 221.0625,
+          "bottom": 914.421875
+        },
+        "save": {
+          "x": 1111.5,
+          "y": 450.21875,
+          "width": 94,
+          "height": 44,
+          "bottom": 494.21875
+        },
+        "links": {
+          "x": 410.5,
+          "y": 535.21875,
+          "width": 820,
+          "height": 74.140625,
+          "bottom": 609.359375
+        },
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1440 /journal",
+      "status": "PASS",
+      "details": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "firstRecord": {
+          "x": 328,
+          "y": 243.21875,
+          "width": 1000,
+          "height": 221.0625,
+          "bottom": 464.28125
+        },
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1440 /events/101",
+      "status": "PASS",
+      "details": {
+        "width": 1440,
+        "scrollWidth": 1425,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1440 /growth",
+      "status": "PASS",
+      "details": {
+        "width": 1440,
+        "scrollWidth": 1425,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": {
+          "x": 951.890625,
+          "y": 942.703125,
+          "width": 343.609375,
+          "height": 360,
+          "bottom": 1302.703125
+        },
+        "growth": {
+          "x": 345.5,
+          "y": 2541.5625,
+          "width": 950,
+          "height": 340,
+          "bottom": 2881.5625
+        },
+        "heatmap": {
+          "x": 345.5,
+          "y": 476.28125,
+          "width": 950,
+          "height": 220,
+          "bottom": 696.28125
+        }
+      }
+    },
+    {
+      "name": "layout 1440 /reports",
+      "status": "PASS",
+      "details": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1440 /me",
+      "status": "PASS",
+      "details": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1440 /checkin",
+      "status": "PASS",
+      "details": {
+        "width": 1440,
+        "scrollWidth": 1425,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1440 /pending",
+      "status": "PASS",
+      "details": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "firstRecord": {
+          "x": 418,
+          "y": 223.140625,
+          "width": 820,
+          "height": 221.0625,
+          "bottom": 444.203125
+        },
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1440 /judgments",
+      "status": "PASS",
+      "details": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1440 /review",
+      "status": "PASS",
+      "details": {
+        "width": 1440,
+        "scrollWidth": 1425,
+        "firstRecord": {
+          "x": 410.5,
+          "y": 293.21875,
+          "width": 820,
+          "height": 221.0625,
+          "bottom": 514.28125
+        },
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1440 /challenges",
+      "status": "PASS",
+      "details": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1440 /onboarding",
+      "status": "PASS",
+      "details": {
+        "width": 1440,
+        "scrollWidth": 1425,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1440 /anchors",
+      "status": "PASS",
+      "details": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1440 /settings",
+      "status": "PASS",
+      "details": {
+        "width": 1440,
+        "scrollWidth": 1425,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "V01 settings identity and private draft",
+      "status": "PASS",
+      "details": {
+        "same": true,
+        "model": "ui-fiction-model",
+        "provider": "openai",
+        "key": true,
+        "stored": false,
+        "hash": "#/settings",
+        "focus": "H2"
+      }
+    },
+    {
+      "name": "V02 slow /",
+      "status": "PASS"
+    },
+    {
+      "name": "V03 stale data /",
+      "status": "PASS"
+    },
+    {
+      "name": "V03 retry /",
+      "status": "PASS"
+    },
+    {
+      "name": "V03 initial failure /",
+      "status": "PASS"
+    },
+    {
+      "name": "V03 true empty /",
+      "status": "PASS"
+    },
+    {
+      "name": "V02 slow /journal",
+      "status": "PASS"
+    },
+    {
+      "name": "V03 stale data /journal",
+      "status": "PASS"
+    },
+    {
+      "name": "V03 retry /journal",
+      "status": "PASS"
+    },
+    {
+      "name": "V03 initial failure /journal",
+      "status": "PASS"
+    },
+    {
+      "name": "V03 true empty /journal",
+      "status": "PASS"
+    },
+    {
+      "name": "V02 slow /pending",
+      "status": "PASS"
+    },
+    {
+      "name": "V03 stale data /pending",
+      "status": "PASS"
+    },
+    {
+      "name": "V03 retry /pending",
+      "status": "PASS"
+    },
+    {
+      "name": "V03 initial failure /pending",
+      "status": "PASS"
+    },
+    {
+      "name": "V03 true empty /pending",
+      "status": "PASS"
+    },
+    {
+      "name": "V02 slow /growth",
+      "status": "PASS"
+    },
+    {
+      "name": "V03 stale data /growth",
+      "status": "PASS"
+    },
+    {
+      "name": "V03 retry /growth",
+      "status": "PASS"
+    },
+    {
+      "name": "V03 initial failure /growth",
+      "status": "PASS"
+    },
+    {
+      "name": "V03 true empty /growth",
+      "status": "PASS"
+    },
+    {
+      "name": "V04 search keyboard 360",
+      "status": "PASS"
+    },
+    {
+      "name": "V04 pure query 360",
+      "status": "PASS"
+    },
+    {
+      "name": "V04 search keyboard 390",
+      "status": "PASS"
+    },
+    {
+      "name": "V04 pure query 390",
+      "status": "PASS"
+    },
+    {
+      "name": "V04 search keyboard 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "V04 pure query 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "pagination empty batch",
+      "status": "PASS"
+    },
+    {
+      "name": "pagination reset",
+      "status": "FAIL"
+    },
+    {
+      "name": "V05 collapsed radar has no instance",
+      "status": "PASS"
+    },
+    {
+      "name": "V05 chart boundary 759",
+      "status": "PASS",
+      "details": {
+        "width": 759,
+        "available": 712,
+        "columns": "712px",
+        "wide": false,
+        "open": true,
+        "radarWidth": 678,
+        "canvases": 1,
+        "dimension": "专注",
+        "overflow": false
+      }
+    },
+    {
+      "name": "V05 chart boundary 760",
+      "status": "PASS",
+      "details": {
+        "width": 760,
+        "available": 697,
+        "columns": "697px",
+        "wide": false,
+        "open": true,
+        "radarWidth": 647,
+        "canvases": 1,
+        "dimension": "专注",
+        "overflow": false
+      }
+    },
+    {
+      "name": "V05 chart boundary 1023",
+      "status": "PASS",
+      "details": {
+        "width": 1023,
+        "available": 820,
+        "columns": "820px",
+        "wide": false,
+        "open": true,
+        "radarWidth": 770,
+        "canvases": 1,
+        "dimension": "专注",
+        "overflow": false
+      }
+    },
+    {
+      "name": "V05 chart boundary 1024",
+      "status": "PASS",
+      "details": {
+        "width": 1024,
+        "available": 729,
+        "columns": "729px",
+        "wide": false,
+        "open": true,
+        "radarWidth": 679,
+        "canvases": 1,
+        "dimension": "专注",
+        "overflow": false
+      }
+    },
+    {
+      "name": "V05 chart boundary 1200",
+      "status": "PASS",
+      "details": {
+        "width": 1200,
+        "available": 905,
+        "columns": "533.391px 355.609px",
+        "wide": true,
+        "open": true,
+        "radarWidth": 306,
+        "canvases": 1,
+        "dimension": "专注",
+        "overflow": false
+      }
+    },
+    {
+      "name": "V05 chart boundary 1440",
+      "status": "PASS",
+      "details": {
+        "width": 1440,
+        "available": 1000,
+        "columns": "590.391px 393.609px",
+        "wide": true,
+        "open": true,
+        "radarWidth": 344,
+        "canvases": 1,
+        "dimension": "专注",
+        "overflow": false
+      }
+    },
+    {
+      "name": "V05 chart boundary 390",
+      "status": "PASS",
+      "details": {
+        "width": 390,
+        "available": 343,
+        "columns": "343px",
+        "wide": false,
+        "open": true,
+        "radarWidth": 309,
+        "canvases": 1,
+        "dimension": "专注",
+        "overflow": false
+      }
+    },
+    {
+      "name": "V05 manual close retained",
+      "status": "PASS"
+    },
+    {
+      "name": "V06 unknown preserves input",
+      "status": "PASS"
+    },
+    {
+      "name": "V06 receipt no duplicate",
+      "status": "PASS",
+      "details": {
+        "posts": 1,
+        "uniqueKeys": 1
+      }
+    },
+    {
+      "name": "V06 saved original versus analysis failure",
+      "status": "PASS"
+    },
+    {
+      "name": "V06 time draft restored",
+      "status": "PASS"
+    },
+    {
+      "name": "V06 use now clears time",
+      "status": "PASS"
+    },
+    {
+      "name": "V07 full conflict comparison",
+      "status": "PASS",
+      "details": {
+        "note": 3000,
+        "server": 3200,
+        "disabled": true
+      }
+    },
+    {
+      "name": "V07 explicit conflict choice",
+      "status": "PASS"
+    },
+    {
+      "name": "V09 restriction confirmed",
+      "status": "PASS"
+    },
+    {
+      "name": "V09 restriction low",
+      "status": "PASS"
+    },
+    {
+      "name": "V09 restriction challenge",
+      "status": "PASS"
+    },
+    {
+      "name": "V09 restriction never",
+      "status": "PASS"
+    },
+    {
+      "name": "V09 restriction ready",
+      "status": "PASS"
+    },
+    {
+      "name": "V09 restriction none",
+      "status": "PASS"
+    },
+    {
+      "name": "V10 text 200 percent",
+      "status": "PASS",
+      "details": {
+        "overflow": false,
+        "link": true
+      }
+    },
+    {
+      "name": "V11 brand and nav",
+      "status": "PASS"
+    },
+    {
+      "name": "V08 one primary login",
+      "status": "PASS"
+    },
+    {
+      "name": "V08 busy prevents switching login",
+      "status": "PASS"
+    },
+    {
+      "name": "V08 one primary register",
+      "status": "PASS"
+    },
+    {
+      "name": "V08 busy prevents switching register",
+      "status": "PASS"
+    },
+    {
+      "name": "V08 recovery explicit register",
+      "status": "PASS"
+    },
+    {
+      "name": "V08 one primary recover",
+      "status": "PASS"
+    },
+    {
+      "name": "V08 busy prevents switching recover",
+      "status": "PASS"
+    },
+    {
+      "name": "V08 recovery explicit recover",
+      "status": "PASS"
+    }
+  ],
+  "requests": [
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?date=2026-10-10",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/101",
+      "method": "GET"
+    },
+    {
+      "path": "/api/judgments",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes/history",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/heatmap",
+      "method": "GET"
+    },
+    {
+      "path": "/api/subdimensions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/reports",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items?enabled=true",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?pure=false",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items?enabled=true",
+      "method": "GET"
+    },
+    {
+      "path": "/api/judgments",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items?enabled=true",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items/stats",
+      "method": "GET"
+    },
+    {
+      "path": "/api/goals",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/judgments",
+      "method": "GET"
+    },
+    {
+      "path": "/api/daily-reviews/2026-10-10?timezone=Asia%2FShanghai",
+      "method": "GET"
+    },
+    {
+      "path": "/api/daily-reviews",
+      "method": "GET"
+    },
+    {
+      "path": "/api/coins?limit=50",
+      "method": "GET"
+    },
+    {
+      "path": "/api/challenges/current",
+      "method": "GET"
+    },
+    {
+      "path": "/api/shop/items",
+      "method": "GET"
+    },
+    {
+      "path": "/api/exemptions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/stagnation",
+      "method": "GET"
+    },
+    {
+      "path": "/api/redemptions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/achievements/check",
+      "method": "POST"
+    },
+    {
+      "path": "/api/onboarding/status",
+      "method": "GET"
+    },
+    {
+      "path": "/api/achievements",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/anchors",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items",
+      "method": "GET"
+    },
+    {
+      "path": "/api/settings",
+      "method": "GET"
+    },
+    {
+      "path": "/api/llm-config",
+      "method": "GET"
+    },
+    {
+      "path": "/api/goals",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?date=2026-10-10",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/101",
+      "method": "GET"
+    },
+    {
+      "path": "/api/judgments",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes/history",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/heatmap",
+      "method": "GET"
+    },
+    {
+      "path": "/api/subdimensions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/reports",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items?enabled=true",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?pure=false",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items?enabled=true",
+      "method": "GET"
+    },
+    {
+      "path": "/api/judgments",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items?enabled=true",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items/stats",
+      "method": "GET"
+    },
+    {
+      "path": "/api/goals",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/judgments",
+      "method": "GET"
+    },
+    {
+      "path": "/api/daily-reviews/2026-10-10?timezone=Asia%2FShanghai",
+      "method": "GET"
+    },
+    {
+      "path": "/api/daily-reviews",
+      "method": "GET"
+    },
+    {
+      "path": "/api/coins?limit=50",
+      "method": "GET"
+    },
+    {
+      "path": "/api/challenges/current",
+      "method": "GET"
+    },
+    {
+      "path": "/api/shop/items",
+      "method": "GET"
+    },
+    {
+      "path": "/api/exemptions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/stagnation",
+      "method": "GET"
+    },
+    {
+      "path": "/api/redemptions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/achievements/check",
+      "method": "POST"
+    },
+    {
+      "path": "/api/onboarding/status",
+      "method": "GET"
+    },
+    {
+      "path": "/api/achievements",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/anchors",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items",
+      "method": "GET"
+    },
+    {
+      "path": "/api/settings",
+      "method": "GET"
+    },
+    {
+      "path": "/api/llm-config",
+      "method": "GET"
+    },
+    {
+      "path": "/api/goals",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?date=2026-10-10",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/101",
+      "method": "GET"
+    },
+    {
+      "path": "/api/judgments",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes/history",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/heatmap",
+      "method": "GET"
+    },
+    {
+      "path": "/api/subdimensions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/reports",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items?enabled=true",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?pure=false",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items?enabled=true",
+      "method": "GET"
+    },
+    {
+      "path": "/api/judgments",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items?enabled=true",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items/stats",
+      "method": "GET"
+    },
+    {
+      "path": "/api/goals",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/judgments",
+      "method": "GET"
+    },
+    {
+      "path": "/api/daily-reviews/2026-10-10?timezone=Asia%2FShanghai",
+      "method": "GET"
+    },
+    {
+      "path": "/api/daily-reviews",
+      "method": "GET"
+    },
+    {
+      "path": "/api/coins?limit=50",
+      "method": "GET"
+    },
+    {
+      "path": "/api/challenges/current",
+      "method": "GET"
+    },
+    {
+      "path": "/api/shop/items",
+      "method": "GET"
+    },
+    {
+      "path": "/api/exemptions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/stagnation",
+      "method": "GET"
+    },
+    {
+      "path": "/api/redemptions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/achievements/check",
+      "method": "POST"
+    },
+    {
+      "path": "/api/onboarding/status",
+      "method": "GET"
+    },
+    {
+      "path": "/api/achievements",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/anchors",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items",
+      "method": "GET"
+    },
+    {
+      "path": "/api/settings",
+      "method": "GET"
+    },
+    {
+      "path": "/api/llm-config",
+      "method": "GET"
+    },
+    {
+      "path": "/api/goals",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?date=2026-10-10",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/101",
+      "method": "GET"
+    },
+    {
+      "path": "/api/judgments",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes/history",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/heatmap",
+      "method": "GET"
+    },
+    {
+      "path": "/api/subdimensions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/reports",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items?enabled=true",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?pure=false",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items?enabled=true",
+      "method": "GET"
+    },
+    {
+      "path": "/api/judgments",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items?enabled=true",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items/stats",
+      "method": "GET"
+    },
+    {
+      "path": "/api/goals",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/judgments",
+      "method": "GET"
+    },
+    {
+      "path": "/api/daily-reviews/2026-10-10?timezone=Asia%2FShanghai",
+      "method": "GET"
+    },
+    {
+      "path": "/api/daily-reviews",
+      "method": "GET"
+    },
+    {
+      "path": "/api/coins?limit=50",
+      "method": "GET"
+    },
+    {
+      "path": "/api/challenges/current",
+      "method": "GET"
+    },
+    {
+      "path": "/api/shop/items",
+      "method": "GET"
+    },
+    {
+      "path": "/api/exemptions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/stagnation",
+      "method": "GET"
+    },
+    {
+      "path": "/api/redemptions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/achievements/check",
+      "method": "POST"
+    },
+    {
+      "path": "/api/onboarding/status",
+      "method": "GET"
+    },
+    {
+      "path": "/api/achievements",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/anchors",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items",
+      "method": "GET"
+    },
+    {
+      "path": "/api/settings",
+      "method": "GET"
+    },
+    {
+      "path": "/api/llm-config",
+      "method": "GET"
+    },
+    {
+      "path": "/api/goals",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?date=2026-10-10",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/101",
+      "method": "GET"
+    },
+    {
+      "path": "/api/judgments",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes/history",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/heatmap",
+      "method": "GET"
+    },
+    {
+      "path": "/api/subdimensions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/reports",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items?enabled=true",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?pure=false",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items?enabled=true",
+      "method": "GET"
+    },
+    {
+      "path": "/api/judgments",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items?enabled=true",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items/stats",
+      "method": "GET"
+    },
+    {
+      "path": "/api/goals",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/judgments",
+      "method": "GET"
+    },
+    {
+      "path": "/api/daily-reviews/2026-10-10?timezone=Asia%2FShanghai",
+      "method": "GET"
+    },
+    {
+      "path": "/api/daily-reviews",
+      "method": "GET"
+    },
+    {
+      "path": "/api/coins?limit=50",
+      "method": "GET"
+    },
+    {
+      "path": "/api/challenges/current",
+      "method": "GET"
+    },
+    {
+      "path": "/api/shop/items",
+      "method": "GET"
+    },
+    {
+      "path": "/api/exemptions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/stagnation",
+      "method": "GET"
+    },
+    {
+      "path": "/api/redemptions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/achievements/check",
+      "method": "POST"
+    },
+    {
+      "path": "/api/onboarding/status",
+      "method": "GET"
+    },
+    {
+      "path": "/api/achievements",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/anchors",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items",
+      "method": "GET"
+    },
+    {
+      "path": "/api/settings",
+      "method": "GET"
+    },
+    {
+      "path": "/api/llm-config",
+      "method": "GET"
+    },
+    {
+      "path": "/api/goals",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?date=2026-10-10",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?date=2026-10-10",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?date=2026-10-10",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?date=2026-10-10",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?date=2026-10-10",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes/history",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/heatmap",
+      "method": "GET"
+    },
+    {
+      "path": "/api/subdimensions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes/history",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/heatmap",
+      "method": "GET"
+    },
+    {
+      "path": "/api/subdimensions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes/history",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/heatmap",
+      "method": "GET"
+    },
+    {
+      "path": "/api/subdimensions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes/history",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/heatmap",
+      "method": "GET"
+    },
+    {
+      "path": "/api/subdimensions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes/history",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/heatmap",
+      "method": "GET"
+    },
+    {
+      "path": "/api/subdimensions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?q=%E6%B2%B3%E8%BE%B9&pure=true",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?q=%E6%B2%B3%E8%BE%B9&pure=true",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?q=%E6%B2%B3%E8%BE%B9&pure=true",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?q=%E6%B2%B3%E8%BE%B9&pure=true&cursor=102",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes/history",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/heatmap",
+      "method": "GET"
+    },
+    {
+      "path": "/api/subdimensions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?date=2026-10-10",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events",
+      "method": "POST"
+    },
+    {
+      "path": "/api/event-submissions/25bb31ff-47dd-4b1b-93f7-e6dbecf2bae4",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?date=2026-10-10",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events",
+      "method": "POST"
+    },
+    {
+      "path": "/api/events?date=2026-10-10",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/103/analysis-jobs",
+      "method": "POST"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?date=2026-10-10",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/daily-reviews/2026-10-10?timezone=Asia%2FShanghai",
+      "method": "GET"
+    },
+    {
+      "path": "/api/daily-reviews",
+      "method": "GET"
+    },
+    {
+      "path": "/api/daily-reviews/2026-10-10",
+      "method": "PUT"
+    },
+    {
+      "path": "/api/daily-reviews/2026-10-10?timezone=Asia%2FShanghai",
+      "method": "GET"
+    },
+    {
+      "path": "/api/daily-reviews",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/101",
+      "method": "GET"
+    },
+    {
+      "path": "/api/judgments",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/101",
+      "method": "GET"
+    },
+    {
+      "path": "/api/judgments",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/101",
+      "method": "GET"
+    },
+    {
+      "path": "/api/judgments",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/101",
+      "method": "GET"
+    },
+    {
+      "path": "/api/judgments",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/101",
+      "method": "GET"
+    },
+    {
+      "path": "/api/judgments",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/101",
+      "method": "GET"
+    },
+    {
+      "path": "/api/judgments",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes/history",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/heatmap",
+      "method": "GET"
+    },
+    {
+      "path": "/api/subdimensions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/login",
+      "method": "POST"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes/history",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/heatmap",
+      "method": "GET"
+    },
+    {
+      "path": "/api/subdimensions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/register",
+      "method": "POST"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes/history",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/heatmap",
+      "method": "GET"
+    },
+    {
+      "path": "/api/subdimensions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/auth/recover",
+      "method": "POST"
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    }
+  ],
+  "unknown": [],
+  "runtime": [],
+  "saves": [
+    {
+      "key": "25bb31ff-47dd-4b1b-93f7-e6dbecf2bae4",
+      "contentLength": 11,
+      "payloadHash": "1aefee3d7b6b79f30e815057fe528bcb64551a56b32a779469e73696b9271e11",
+      "intent": "later"
+    },
+    {
+      "key": "67959424-252c-4d80-89c1-56be43aa4daa",
+      "contentLength": 11,
+      "payloadHash": "dfb41bc74303c71a77897f8ff9243d57914d9895635ea91cc99e49aca2ecca7c",
+      "intent": "now"
+    }
+  ],
+  "limitations": [
+    "Desktop Edge simulated viewports; no physical phone or screen reader",
+    "All APIs mocked; no database, model, financial or deployment proof"
+  ]
+}

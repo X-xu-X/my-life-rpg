@@ -176,7 +176,7 @@ onMounted(load)
     <h2>手账本</h2>
     <p class="muted">你的生活时间线——日记、事件和 AI 判定都在这里，按时间回顾你的每一天。</p>
 
-    <p v-if="error" class="muted" style="color: #d33">{{ error }}</p>
+    <p v-if="error" class="muted" style="color: var(--danger)">{{ error }}</p>
     <p v-if="events.length === 0 && !error" class="muted">还没有记录，去「记录事件」写第一条吧。</p>
 
     <template v-if="events.length > 0">
@@ -198,7 +198,7 @@ onMounted(load)
         <span class="muted seg-count">{{ filteredEvents.length }} / {{ events.length }} 条</span>
       </div>
 
-      <p class="muted" style="font-size: 12px">
+      <p class="muted" style="font-size: 13px">
         点击记录行展开详情；组头可折叠（搜索时自动展开命中项）。搜索范围为你自己写的内容（标题 / 正文 / 类别 / 参数），不含 AI 判定文字。
       </p>
 
@@ -212,25 +212,25 @@ onMounted(load)
 
     <div v-for="g in groupedEvents" :key="g.key" style="margin-bottom: 12px">
       <div
-        class="row"
+        class="action-group"
         style="align-items: center; cursor: pointer; padding: 6px 4px; border-bottom: 1px solid #eee; user-select: none"
         @click="toggleGroup(g.key)"
-      >
+       role="button" tabindex="0" @keydown.enter.self.prevent="toggleGroup(g.key)" @keydown.space.self.prevent="toggleGroup(g.key)">
         <b>{{ g.label }}</b>
-        <span class="muted" style="font-size: 12px">{{ g.dateRange }}</span>
-        <span class="muted" style="font-size: 12px">{{ g.items.length }} 条</span>
+        <span class="muted" style="font-size: 13px">{{ g.dateRange }}</span>
+        <span class="muted" style="font-size: 13px">{{ g.items.length }} 条</span>
         <span class="muted" style="margin-left: auto">{{ groupIsOpen(g.key) ? '▾' : '▸' }}</span>
       </div>
 
       <template v-if="groupIsOpen(g.key)">
         <div v-for="e in g.items" :key="e.id" class="judgment-item">
           <!-- 摘要行（v1.6 B2：默认收起） -->
-          <div class="row" style="align-items: center; cursor: pointer" @click="toggleItem(e.id)">
-            <span class="muted" style="font-size: 12px">{{ fmtTime(e.created_at) }}</span>
+          <div class="action-group" style="align-items: center; cursor: pointer" @click="toggleItem(e.id)" role="button" tabindex="0" @keydown.enter.self.prevent="toggleItem(e.id)" @keydown.space.self.prevent="toggleItem(e.id)">
+            <span class="muted" style="font-size: 13px">{{ fmtTime(e.created_at) }}</span>
             <b>{{ e.title || '未命名记录' }}</b>
             <span v-if="e.origin === 'challenge'" class="tag" title="由挑战结算生成">挑战</span>
             <span class="tag">{{ e.category }}</span>
-            <span class="muted" style="font-size: 12px">{{ changeSummary(e.id) }}</span>
+            <span class="muted" style="font-size: 13px">{{ changeSummary(e.id) }}</span>
             <span class="muted" style="margin-left: auto">{{ itemIsOpen(e.id) ? '▾' : '▸' }}</span>
           </div>
 
@@ -250,13 +250,13 @@ onMounted(load)
             <!-- 判定明细 -->
             <div v-if="judgmentFor(e.id)" class="judgment-item" style="margin-bottom: 6px">
               <span class="tag">{{ STATUS_LABEL[judgmentFor(e.id).status] || judgmentFor(e.id).status }}</span>
-              <span class="muted" style="font-size: 12px">
+              <span class="muted" style="font-size: 13px">
                 置信度 {{ ((judgmentFor(e.id).confidence || 1) * 100).toFixed(0) }}%
               </span>
               <div v-for="a in judgmentFor(e.id).suggested_changes" :key="a.name" style="margin-top: 4px">
                 <span class="attr-name">{{ a.name }}</span>
                 <span :class="a.delta >= 0 ? 'positive' : 'negative'">{{ a.delta >= 0 ? '+' : '' }}{{ a.delta }}</span>
-                <span class="muted" style="font-size: 12px">{{ a.reason }}</span>
+                <span class="muted" style="font-size: 13px">{{ a.reason }}</span>
                 <div class="evidence">依据：{{ a.evidence }}</div>
               </div>
               <!-- AI 分析过程 -->
@@ -265,7 +265,7 @@ onMounted(load)
                 <div v-for="(step, idx) in judgmentFor(e.id).analysis" :key="idx" class="step">{{ step }}</div>
               </div>
             </div>
-            <div v-else class="muted" style="font-size: 12px; margin-bottom: 6px">尚未判定</div>
+            <div v-else class="muted" style="font-size: 13px; margin-bottom: 6px">尚未判定</div>
 
             <button class="btn small danger" @click="remove(e.id)">删除</button>
           </template>

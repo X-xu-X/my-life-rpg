@@ -5,6 +5,7 @@
 - 长期记忆 = 五类摘要（长期目标/关键经历/性格/偏好/当前状态），存 UserProfile.long_term_memory。
 - 每天自动更新一次（maybe_update_memory 检查间隔），失败不影响主流程。
 """
+from app.services.time_service import clock_now
 import json
 from datetime import datetime, timedelta
 
@@ -14,6 +15,7 @@ from app import prompts
 from app.models import Event, User, UserProfile
 from app.services import llm_config
 from app.services.llm_service import llm_service
+from app.services.transactions import lock_profile
 
 # 记忆更新间隔（每天一次）
 MEMORY_UPDATE_INTERVAL_HOURS = 24
@@ -36,7 +38,7 @@ def get_long_term_memory(db: Session, user_id: int) -> dict:
 
 def _events_summary(db: Session, user_id: int, days: int = 30, limit: int = 50) -> str:
     """近 N 天事件摘要（供记忆压缩）。"""
-    cutoff = datetime.now() - timedelta(days=days)
+    cutoff = clock_now() - timedelta(days=days)
     events = (
         db.query(Event)
         .filter(Event.user_id == user_id, Event.is_deleted.is_(False), Event.created_at >= cutoff, Event.is_pure.is_(False))
@@ -64,11 +66,20 @@ def update_long_term_memory(db: Session, user: User) -> dict | None:
     try:
         # v1.4：走判定模型组（judge），缺失自动回退；失败不影响主流程
         config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_JUDGE)
+        version = profile.memory_updated_at
+        db.commit()
         result = llm_service.chat_json(messages, config=config)
+        lock_profile(db, user.id)
+        llm_config.assert_current(db, config)
+        db.refresh(profile)
+        if profile.memory_updated_at != version:
+            db.rollback()
+            return None
     except Exception:
+        db.rollback()
         return None  # 记忆更新失败不影响主流程
     profile.long_term_memory = json.dumps(result, ensure_ascii=False)
-    profile.memory_updated_at = datetime.now()
+    profile.memory_updated_at = clock_now()
     db.commit()
     return result
 
@@ -78,7 +89,7 @@ def maybe_update_memory(db: Session, user: User) -> dict:
     profile = _get_profile(db, user)
     needs_update = True
     if profile and profile.memory_updated_at:
-        age = datetime.now() - profile.memory_updated_at
+        age = clock_now() - profile.memory_updated_at
         needs_update = age > timedelta(hours=MEMORY_UPDATE_INTERVAL_HOURS)
     if needs_update:
         update_long_term_memory(db, user)

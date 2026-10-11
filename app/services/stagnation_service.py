@@ -11,6 +11,7 @@
 问询历史存在 `settings` 表（key=`stagnation_checks`），**不写 judgment_logs**
 ——该表 `judgment_id` 是 NOT NULL，而停滞扣分没有对应判定，硬写会破坏外键语义。
 """
+from app.services.time_service import clock_now, stored_time
 from datetime import datetime, timedelta
 
 from sqlalchemy import or_
@@ -74,7 +75,7 @@ def detect(db: Session, user: User, now: datetime | None = None) -> list[dict]:
     created_at；若该维度无任何流水，则用 user_profiles.created_at 起算。
     排除：用户已关闭判定的维度、以及处于冷却期内的维度。
     """
-    now = now or datetime.now()
+    now = now or clock_now()
     profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
     anchor_time = profile.created_at if profile and profile.created_at else now
 
@@ -101,7 +102,7 @@ def detect(db: Session, user: User, now: datetime | None = None) -> list[dict]:
         asked_raw = checks.get(attr.name)
         if asked_raw:
             try:
-                asked_at = datetime.fromisoformat(str(asked_raw))
+                asked_at = stored_time(datetime.fromisoformat(str(asked_raw)))
                 if (now - asked_at).days < STAGNATION_COOLDOWN_DAYS:
                     continue
             except ValueError:
@@ -111,6 +112,7 @@ def detect(db: Session, user: User, now: datetime | None = None) -> list[dict]:
                 "name": attr.name,
                 "days": days,
                 "last_at": last_at.isoformat() if last_at else None,
+                "version": attr.updated_at.isoformat(),
             }
         )
     result.sort(key=lambda x: x["days"], reverse=True)
@@ -118,7 +120,7 @@ def detect(db: Session, user: User, now: datetime | None = None) -> list[dict]:
 
 
 @rollback_on_error
-def answer(db: Session, user: User, name: str, stopped: bool, note: str = "") -> dict:
+def answer(db: Session, user: User, name: str, stopped: bool, note: str = "", *, commit=True) -> dict:
     """回答停滞问询。
 
     - `stopped=True`（确实停了）：小幅扣分 −0.3 → 写 attribute_history（**event_id=NULL**）
@@ -133,14 +135,14 @@ def answer(db: Session, user: User, name: str, stopped: bool, note: str = "") ->
         Attribute.name == name, Attribute.parent_id.is_(None)).populate_existing().first()
     if attr is None or name in _disabled_attributes(db, user.id):
         raise ValueError("该主维度不存在或已关闭判定。")
-    now = datetime.now()
+    now = clock_now()
     checks = _get_checks(db, user.id)
 
     # 冷却期内重复回答 → 幂等返回，不重复扣分
     asked_raw = checks.get(name)
     if asked_raw:
         try:
-            asked_at = datetime.fromisoformat(str(asked_raw))
+            asked_at = stored_time(datetime.fromisoformat(str(asked_raw)))
             if (now - asked_at).days < STAGNATION_COOLDOWN_DAYS:
                 return {
                     "name": name,
@@ -191,7 +193,7 @@ def answer(db: Session, user: User, name: str, stopped: bool, note: str = "") ->
     # 记录问询时间（两条分支都重置计时：stopped=False 时也重置，避免反复打扰）
     checks[name] = now.isoformat()
     _set_checks(db, user.id, checks)
-    db.commit()
+    if commit: db.commit()
 
     return {
         "name": name,

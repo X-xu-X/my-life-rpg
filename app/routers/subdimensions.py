@@ -13,6 +13,7 @@ from app.database import get_db
 from app.schemas import SubdimensionAcceptIn
 from app.services import subdimension_service
 from app.services.user_service import get_or_create_default_user
+from app.services.llm_service import LLMError
 
 router = APIRouter()
 
@@ -49,6 +50,8 @@ def propose_subdimensions(attr_id: int, db: Session = Depends(get_db)):
         proposal = subdimension_service.propose(db, user, attr)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except LLMError as e:
+        raise HTTPException(status_code=503, detail=str(e))
     return {"proposal": proposal}
 
 
@@ -74,5 +77,8 @@ def accept_subdimensions(attr_id: int, body: SubdimensionAcceptIn, db: Session =
 def dismiss_subdimensions(attr_id: int, db: Session = Depends(get_db)):
     """忽略本次提议（不创建任何子维度）。"""
     user, attr = _attr_or_404(db, attr_id)
-    subdimension_service.dismiss(db, user, attr)
+    try:
+        subdimension_service.dismiss(db, user, attr)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
     return {"ok": True}

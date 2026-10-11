@@ -1,0 +1,42 @@
+ M frontend/index.html
+ M frontend/package-lock.json
+ M frontend/package.json
+ M frontend/src/App.vue
+ M frontend/src/api.js
+ M frontend/src/components/AnchorsView.vue
+ M frontend/src/components/AttributePanel.vue
+ M frontend/src/components/ChallengeView.vue
+ M frontend/src/components/EventForm.vue
+ M frontend/src/components/GoalsView.vue
+ M frontend/src/components/ItemManager.vue
+ M frontend/src/components/JournalView.vue
+ M frontend/src/components/JudgmentList.vue
+ M frontend/src/components/Onboarding.vue
+ M frontend/src/components/SettingsView.vue
+ M frontend/src/components/TimelineView.vue
+ M frontend/src/components/ToastHost.vue
+ M frontend/src/components/TodayCheckin.vue
+ M frontend/src/composables/useDateGroups.js
+ M frontend/src/main.js
+ M frontend/src/styles.css
+?? docs/UI_POLISH_DELIVERY.md
+?? docs/review/ui_polish_2026-10-10/
+?? frontend/public/
+?? frontend/src/components/AuthView.vue
+?? frontend/src/components/HomeView.vue
+?? frontend/src/components/MyView.vue
+?? frontend/src/components/PendingView.vue
+?? frontend/src/components/RecordComposer.vue
+?? frontend/src/components/RecordDetail.vue
+?? frontend/src/components/RecordList.vue
+?? frontend/src/components/ReportHistory.vue
+?? frontend/src/components/ReviewView.vue
+?? frontend/src/components/ui/
+?? frontend/src/composables/useExemptionPurchase.js
+?? frontend/src/composables/useRedemption.js
+?? frontend/src/design-tokens.css
+?? frontend/src/router.js
+?? frontend/src/session.js
+?? frontend/src/ui-layout.css
+?? frontend/vite.ui-mock.config.js
+?? tests/browser_ui_polish.mjs

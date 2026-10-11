@@ -40,10 +40,22 @@ class LLMConfig:
     base_url: str
     model: str
     quality_note: str = ""  # 非空时前端标注（如"判定质量一般"）
+    user_id: int | None = None
+    config_id: int | None = None
+    config_version: int = 0
 
 
 def read_group(db: Session, user_id: int, setting_key: str) -> dict | None:
     """读取某配置组（dict），缺失/未启用/字段不全返回 None。"""
+    if settings.cloud:
+        from app.models.access import LLMCredential
+        from app.services.credentials import decrypt, PROVIDERS
+        row = db.query(LLMCredential).filter_by(user_id=user_id,
+            group="primary" if setting_key == SETTING_KEY_PRIMARY else "aux").first()
+        if not row or not row.enabled or not row.encrypted_key or not row.model:
+            return None
+        return {"api_key": decrypt(row), "base_url": PROVIDERS[row.provider_id], "model": row.model,
+                "user_id": user_id, "config_id": row.id, "config_version": row.config_version}
     row = db.query(Setting).filter(Setting.user_id == user_id, Setting.key == setting_key).first()
     if row is None or not isinstance(row.value, dict):
         return None
@@ -60,12 +72,14 @@ def _from_group(group: dict, quality_note: str = "") -> LLMConfig:
         base_url=str(group["base_url"]),
         model=str(group["model"]),
         quality_note=quality_note,
+        user_id=group.get("user_id"), config_id=group.get("config_id"),
+        config_version=group.get("config_version", 0),
     )
 
 
 def _env_config() -> LLMConfig | None:
     """回退 .env 默认配置；未配置返回 None。"""
-    if not settings.llm_ready:
+    if settings.cloud or not settings.llm_ready:
         return None
     return LLMConfig(
         api_key=settings.deepseek_api_key,
@@ -78,6 +92,8 @@ def resolve_llm_config(db: Session, user_id: int, purpose: str) -> LLMConfig:
     """按用户与用途解析 LLM 配置（见模块 docstring 优先级）。"""
     primary = read_group(db, user_id, SETTING_KEY_PRIMARY)
     aux = read_group(db, user_id, SETTING_KEY_AUX)
+    if settings.cloud and not (primary or aux):
+        raise LLMError("MODEL_NOT_CONFIGURED：原文已保存，分析前请绑定自己的模型。")
 
     if purpose == PURPOSE_AUX:
         # 周报等辅助用途：首选 aux，缺失回退 primary，再回退 .env
@@ -113,3 +129,13 @@ def mask_key(api_key: str) -> str:
     if not key:
         return ""
     return f"{key[:3]}****{key[-4:]}" if len(key) > 8 else "****"
+
+
+def assert_current(db, config):
+    """模型结果写回时在用户锁内复核密钥版本。"""
+    if not settings.cloud:
+        return
+    from app.models.access import LLMCredential
+    row = db.query(LLMCredential).filter_by(id=config.config_id,user_id=config.user_id).populate_existing().first()
+    if row is None or not row.enabled or row.config_version != config.config_version:
+        raise ValueError('模型配置已变化，请重新发起分析。')

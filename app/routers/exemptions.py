@@ -12,6 +12,11 @@ from app.schemas import ExemptionIn
 from app.services import coin_service, exemption_service
 from app.services.llm_service import LLMError
 from app.services.user_service import get_or_create_default_user
+from app.services import receipts
+from app.services.transactions import lock_profile
+from fastapi.encoders import jsonable_encoder
+from uuid import UUID
+from app.models.access import RequestReceipt
 
 router = APIRouter()
 
@@ -31,6 +36,14 @@ def list_exemptions(db: Session = Depends(get_db)):
     }
 
 
+@router.get('/exemption-submissions/{request_key}')
+def submission(request_key: UUID, db: Session = Depends(get_db)):
+    user=get_or_create_default_user(db)
+    row=db.query(RequestReceipt).filter_by(user_id=user.id,operation='exemption-buy',request_key=str(request_key)).first()
+    if row is None:raise HTTPException(404,'购买回执尚不存在；可沿用原操作标识恢复。')
+    return row.response_snapshot
+
+
 @router.post("/exemptions")
 def buy_exemption(body: ExemptionIn, db: Session = Depends(get_db)):
     """购买一张豁免券（AI 定价 + 判动机 → 扣币 → 落库）。
@@ -41,6 +54,10 @@ def buy_exemption(body: ExemptionIn, db: Session = Depends(get_db)):
     """
     user = get_or_create_default_user(db)
     try:
+        lock_profile(db,user.id)
+        fingerprint,prior=receipts.replay(db,user.id,'exemption-buy',body,require_version=False)
+        if prior is not None:return prior
+        db.commit()
         result = exemption_service.buy(
             db,
             user,
@@ -49,15 +66,21 @@ def buy_exemption(body: ExemptionIn, db: Session = Depends(get_db)):
             start_time=body.start_time,
             end_time=body.end_time,
             reason=body.reason,
+            commit=False,
+            before_write=lambda:receipts.replay(db,user.id,'exemption-buy',body,require_version=False)[1],
         )
     except LLMError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     except ValueError as exc:
+        db.rollback()
         raise HTTPException(status_code=400, detail=str(exc))
-
+    if 'replayed' in result:return result['replayed']
     row = result["exemption"]
-    return {
+    response = jsonable_encoder({
         "exemption": exemption_service.serialize(row),
         "penalty": result["penalty"],
         "balance": result["balance"],
-    }
+    })
+    receipts.record(db,user.id,'exemption-buy',body,fingerprint,row.id,response)
+    db.commit()
+    return response

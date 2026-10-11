@@ -5,6 +5,7 @@
 - 到期未达成：扣「规划力」
 - 修改/取消/达成/失败：记审计流水（goal.audit）
 """
+from app.services.time_service import clock_now
 import math
 from datetime import datetime
 from app.constants import ATTRIBUTE_DIMENSIONS_SET
@@ -102,13 +103,13 @@ def _append_audit(goal: Goal, action: str, detail: str) -> None:
     """追加一条目标操作审计。"""
     audit = list(goal.audit or [])
     audit.append(
-        {"action": action, "detail": detail, "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        {"action": action, "detail": detail, "created_at": clock_now().strftime("%Y-%m-%d %H:%M:%S")}
     )
     goal.audit = audit
 
 
 @rollback_on_error
-def achieve_goal(db: Session, goal: Goal) -> tuple[Goal, list[dict]]:
+def achieve_goal(db: Session, goal: Goal, *, commit=True) -> tuple[Goal, list[dict]]:
     """标记目标达成，触发奖励结算（规划力 +reward，关联属性 +reward）。"""
     if not _claim_goal(db, goal, "achieved"):
         return goal, []
@@ -130,13 +131,14 @@ def achieve_goal(db: Session, goal: Goal) -> tuple[Goal, list[dict]]:
             applied.append(r2)
     goal.status = "achieved"
     _append_audit(goal, "achieve", "目标达成，奖励已入账")
-    db.commit()
-    db.refresh(goal)
+    if commit:
+        db.commit()
+        db.refresh(goal)
     return goal, applied
 
 
 @rollback_on_error
-def fail_goal(db: Session, goal: Goal) -> tuple[Goal, list[dict]]:
+def fail_goal(db: Session, goal: Goal, *, commit=True) -> tuple[Goal, list[dict]]:
     """标记目标未达成，触发扣分结算（规划力 +penalty）。"""
     if not _claim_goal(db, goal, "failed"):
         return goal, []
@@ -151,31 +153,34 @@ def fail_goal(db: Session, goal: Goal) -> tuple[Goal, list[dict]]:
         applied.append(r)
     goal.status = "failed"
     _append_audit(goal, "fail", "目标到期未达成，规划力扣分")
-    db.commit()
-    db.refresh(goal)
+    if commit:
+        db.commit()
+        db.refresh(goal)
     return goal, applied
 
 
 @rollback_on_error
-def cancel_goal(db: Session, goal: Goal) -> Goal:
+def cancel_goal(db: Session, goal: Goal, *, commit=True) -> Goal:
     """取消目标（记审计，不结算点数）。"""
     if not _claim_goal(db, goal, "cancelled"):
         return goal
     goal.status = "cancelled"
     _append_audit(goal, "cancel", "用户取消目标")
-    db.commit()
-    db.refresh(goal)
+    if commit:
+        db.commit()
+        db.refresh(goal)
     return goal
 
 
 @rollback_on_error
-def update_goal(db: Session, goal: Goal, data: dict) -> Goal:
+def update_goal(db: Session, goal: Goal, data: dict, *, commit=True) -> Goal:
     """修改目标（记审计）。"""
     _claim_goal(db, goal, "active")
     validate_goal(data)
     for k, v in data.items():
         setattr(goal, k, v)
     _append_audit(goal, "update", "用户修改目标")
-    db.commit()
-    db.refresh(goal)
+    if commit:
+        db.commit()
+        db.refresh(goal)
     return goal

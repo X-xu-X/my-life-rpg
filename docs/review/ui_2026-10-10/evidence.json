@@ -1,0 +1,1199 @@
+{
+  "date": "2026-10-10",
+  "mode": "Current Vue source rendered by local Vite; every /api request intercepted with synthetic read-only fixtures; no backend/database/model connected",
+  "results": [
+    {
+      "label": "today-empty",
+      "route": "/",
+      "width": 390,
+      "height": 844,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "scrollWidth": 390,
+      "scrollHeight": 1120,
+      "firstRow": null,
+      "firstTitle": null,
+      "firstContent": null,
+      "composer": {
+        "x": 16,
+        "y": 207.375,
+        "width": 358,
+        "height": 505.53125,
+        "fontSize": "16px",
+        "lineHeight": "25.6px"
+      },
+      "links": [
+        {
+          "x": 16,
+          "y": 736.90625,
+          "width": 172,
+          "height": 86.78125,
+          "fontSize": "16px",
+          "lineHeight": "25.6px"
+        },
+        {
+          "x": 202,
+          "y": 736.90625,
+          "width": 172,
+          "height": 86.78125,
+          "fontSize": "16px",
+          "lineHeight": "25.6px"
+        }
+      ],
+      "headings": [
+        {
+          "text": "今天，也值得记下来。",
+          "x": 16,
+          "y": 107.1875,
+          "width": 358,
+          "height": 38.390625,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        },
+        {
+          "text": "今日片段",
+          "x": 16,
+          "y": 857.6875,
+          "width": 72,
+          "height": 28.796875,
+          "fontSize": "18px",
+          "lineHeight": "28.8px"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "label": "today",
+      "route": "/",
+      "width": 390,
+      "height": 844,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "scrollWidth": 390,
+      "scrollHeight": 1589,
+      "firstRow": {
+        "x": 16,
+        "y": 886.484375,
+        "width": 358,
+        "height": 307.71875,
+        "fontSize": "16px",
+        "lineHeight": "25.6px"
+      },
+      "firstTitle": {
+        "x": 59.046875,
+        "y": 906.484375,
+        "width": 314.953125,
+        "height": 48,
+        "fontSize": "15px",
+        "lineHeight": "24px"
+      },
+      "firstContent": {
+        "x": 59.046875,
+        "y": 960.484375,
+        "width": 314.953125,
+        "height": 179.125,
+        "fontSize": "14px",
+        "lineHeight": "22.4px"
+      },
+      "composer": {
+        "x": 16,
+        "y": 207.375,
+        "width": 358,
+        "height": 505.53125,
+        "fontSize": "16px",
+        "lineHeight": "25.6px"
+      },
+      "links": [
+        {
+          "x": 16,
+          "y": 736.90625,
+          "width": 172,
+          "height": 86.78125,
+          "fontSize": "16px",
+          "lineHeight": "25.6px"
+        },
+        {
+          "x": 202,
+          "y": 736.90625,
+          "width": 172,
+          "height": 86.78125,
+          "fontSize": "16px",
+          "lineHeight": "25.6px"
+        }
+      ],
+      "headings": [
+        {
+          "text": "今天，也值得记下来。",
+          "x": 16,
+          "y": 107.1875,
+          "width": 358,
+          "height": 38.390625,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        },
+        {
+          "text": "今日片段",
+          "x": 16,
+          "y": 857.6875,
+          "width": 72,
+          "height": 28.796875,
+          "fontSize": "18px",
+          "lineHeight": "28.8px"
+        },
+        {
+          "text": "今天在河边跑了三公里，最后一段慢下来，感觉终于能喘口气",
+          "x": 59.046875,
+          "y": 906.484375,
+          "width": 314.953125,
+          "height": 48,
+          "fontSize": "15px",
+          "lineHeight": "24px"
+        },
+        {
+          "text": "重新理解了一个一直没学懂的知识点",
+          "x": 59.046875,
+          "y": 1214.203125,
+          "width": 314.953125,
+          "height": 24,
+          "fontSize": "15px",
+          "lineHeight": "24px"
+        },
+        {
+          "text": "晚饭后和朋友聊了最近的困惑",
+          "x": 59.046875,
+          "y": 1363.578125,
+          "width": 314.953125,
+          "height": 24,
+          "fontSize": "15px",
+          "lineHeight": "24px"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "label": "journal",
+      "route": "/journal",
+      "width": 390,
+      "height": 844,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "scrollWidth": 390,
+      "scrollHeight": 1383,
+      "firstRow": {
+        "x": 16,
+        "y": 333.765625,
+        "width": 358,
+        "height": 492.84375,
+        "fontSize": "16px",
+        "lineHeight": "25.6px"
+      },
+      "firstTitle": {
+        "x": 94.5625,
+        "y": 353.765625,
+        "width": 279.4375,
+        "height": 115.171875,
+        "fontSize": "24px",
+        "lineHeight": "38.4px"
+      },
+      "firstContent": {
+        "x": 94.5625,
+        "y": 480.9375,
+        "width": 279.4375,
+        "height": 291.078125,
+        "fontSize": "14px",
+        "lineHeight": "22.4px"
+      },
+      "composer": null,
+      "links": [],
+      "headings": [
+        {
+          "text": "那些平常的日子。",
+          "x": 16,
+          "y": 107.1875,
+          "width": 358,
+          "height": 38.390625,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        },
+        {
+          "text": "今天在河边跑了三公里，最后一段慢下来，感觉终于能喘口气",
+          "x": 94.5625,
+          "y": 353.765625,
+          "width": 279.4375,
+          "height": 115.171875,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        },
+        {
+          "text": "重新理解了一个一直没学懂的知识点",
+          "x": 94.5625,
+          "y": 846.609375,
+          "width": 279.4375,
+          "height": 76.78125,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        },
+        {
+          "text": "晚饭后和朋友聊了最近的困惑",
+          "x": 94.5625,
+          "y": 1054.765625,
+          "width": 279.4375,
+          "height": 76.78125,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "label": "journal-360",
+      "route": "/journal",
+      "width": 360,
+      "height": 800,
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "scrollWidth": 360,
+      "scrollHeight": 1530,
+      "firstRow": {
+        "x": 16,
+        "y": 413.5625,
+        "width": 328,
+        "height": 537.625,
+        "fontSize": "16px",
+        "lineHeight": "25.6px"
+      },
+      "firstTitle": {
+        "x": 94.5625,
+        "y": 433.5625,
+        "width": 249.4375,
+        "height": 115.171875,
+        "fontSize": "24px",
+        "lineHeight": "38.4px"
+      },
+      "firstContent": {
+        "x": 94.5625,
+        "y": 560.734375,
+        "width": 249.4375,
+        "height": 335.859375,
+        "fontSize": "14px",
+        "lineHeight": "22.4px"
+      },
+      "composer": null,
+      "links": [],
+      "headings": [
+        {
+          "text": "那些平常的日子。",
+          "x": 16,
+          "y": 107.1875,
+          "width": 328,
+          "height": 38.390625,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        },
+        {
+          "text": "今天在河边跑了三公里，最后一段慢下来，感觉终于能喘口气",
+          "x": 94.5625,
+          "y": 433.5625,
+          "width": 249.4375,
+          "height": 115.171875,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        },
+        {
+          "text": "重新理解了一个一直没学懂的知识点",
+          "x": 94.5625,
+          "y": 971.1875,
+          "width": 249.4375,
+          "height": 76.78125,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        },
+        {
+          "text": "晚饭后和朋友聊了最近的困惑",
+          "x": 94.5625,
+          "y": 1201.734375,
+          "width": 249.4375,
+          "height": 76.78125,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "label": "detail",
+      "route": "/events/1002",
+      "width": 390,
+      "height": 844,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "scrollWidth": 390,
+      "scrollHeight": 1223,
+      "firstRow": null,
+      "firstTitle": null,
+      "firstContent": null,
+      "composer": null,
+      "links": [],
+      "headings": [
+        {
+          "text": "重新理解了一个一直没学懂的知识点",
+          "x": 35,
+          "y": 151.78125,
+          "width": 320,
+          "height": 76.78125,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        },
+        {
+          "text": "分析与建议",
+          "x": 52,
+          "y": 437.53125,
+          "width": 286,
+          "height": 38.390625,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "label": "pending",
+      "route": "/pending",
+      "width": 390,
+      "height": 844,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "scrollWidth": 390,
+      "scrollHeight": 844,
+      "firstRow": {
+        "x": 16,
+        "y": 244.5625,
+        "width": 358,
+        "height": 259.734375,
+        "fontSize": "16px",
+        "lineHeight": "25.6px"
+      },
+      "firstTitle": {
+        "x": 44,
+        "y": 264.5625,
+        "width": 330,
+        "height": 48,
+        "fontSize": "15px",
+        "lineHeight": "24px"
+      },
+      "firstContent": {
+        "x": 44,
+        "y": 318.5625,
+        "width": 330,
+        "height": 156.734375,
+        "fontSize": "14px",
+        "lineHeight": "22.4px"
+      },
+      "composer": null,
+      "links": [],
+      "headings": [
+        {
+          "text": "留到有空时。",
+          "x": 16,
+          "y": 93.984375,
+          "width": 358,
+          "height": 38.390625,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        },
+        {
+          "text": "待补充 · 1",
+          "x": 16,
+          "y": 194.171875,
+          "width": 358,
+          "height": 38.390625,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        },
+        {
+          "text": "今天在河边跑了三公里，最后一段慢下来，感觉终于能喘口气",
+          "x": 44,
+          "y": 264.5625,
+          "width": 330,
+          "height": 48,
+          "fontSize": "15px",
+          "lineHeight": "24px"
+        },
+        {
+          "text": "待确认 · 1",
+          "x": 16,
+          "y": 504.296875,
+          "width": 358,
+          "height": 38.390625,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        },
+        {
+          "text": "重新理解了一个一直没学懂的知识点",
+          "x": 57.34375,
+          "y": 574.6875,
+          "width": 316.65625,
+          "height": 24,
+          "fontSize": "15px",
+          "lineHeight": "24px"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "label": "review",
+      "route": "/review",
+      "width": 390,
+      "height": 844,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "scrollWidth": 390,
+      "scrollHeight": 1359,
+      "firstRow": {
+        "x": 16,
+        "y": 339.15625,
+        "width": 358,
+        "height": 330.109375,
+        "fontSize": "16px",
+        "lineHeight": "25.6px"
+      },
+      "firstTitle": {
+        "x": 16,
+        "y": 359.15625,
+        "width": 358,
+        "height": 48,
+        "fontSize": "15px",
+        "lineHeight": "24px"
+      },
+      "firstContent": {
+        "x": 16,
+        "y": 413.15625,
+        "width": 358,
+        "height": 201.515625,
+        "fontSize": "14px",
+        "lineHeight": "22.4px"
+      },
+      "composer": null,
+      "links": [],
+      "headings": [
+        {
+          "text": "把今天轻轻收好。",
+          "x": 16,
+          "y": 132.78125,
+          "width": 358,
+          "height": 38.390625,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        },
+        {
+          "text": "今天在河边跑了三公里，最后一段慢下来，感觉终于能喘口气",
+          "x": 16,
+          "y": 359.15625,
+          "width": 358,
+          "height": 48,
+          "fontSize": "15px",
+          "lineHeight": "24px"
+        },
+        {
+          "text": "重新理解了一个一直没学懂的知识点",
+          "x": 16,
+          "y": 689.265625,
+          "width": 358,
+          "height": 24,
+          "fontSize": "15px",
+          "lineHeight": "24px"
+        },
+        {
+          "text": "晚饭后和朋友聊了最近的困惑",
+          "x": 16,
+          "y": 838.640625,
+          "width": 358,
+          "height": 24,
+          "fontSize": "15px",
+          "lineHeight": "24px"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "label": "growth",
+      "route": "/growth",
+      "width": 390,
+      "height": 844,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "scrollWidth": 390,
+      "scrollHeight": 3926,
+      "firstRow": null,
+      "firstTitle": null,
+      "firstContent": null,
+      "composer": null,
+      "links": [],
+      "headings": [
+        {
+          "text": "属性面板",
+          "x": 35,
+          "y": 308.171875,
+          "width": 320,
+          "height": 38.390625,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        },
+        {
+          "text": "月度活动热力图",
+          "x": 35,
+          "y": 470.9375,
+          "width": 320,
+          "height": 29.9375,
+          "fontSize": "18.72px",
+          "lineHeight": "29.952px"
+        },
+        {
+          "text": "能力数值",
+          "x": 35,
+          "y": 811.25,
+          "width": 135,
+          "height": 29.9375,
+          "fontSize": "18.72px",
+          "lineHeight": "29.952px"
+        },
+        {
+          "text": "能力雷达图",
+          "x": 220,
+          "y": 811.25,
+          "width": 135,
+          "height": 29.9375,
+          "fontSize": "18.72px",
+          "lineHeight": "29.952px"
+        },
+        {
+          "text": "成长趋势",
+          "x": 35,
+          "y": 2886.390625,
+          "width": 320,
+          "height": 29.9375,
+          "fontSize": "18.72px",
+          "lineHeight": "29.952px"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "label": "me",
+      "route": "/me",
+      "width": 390,
+      "height": 844,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "scrollWidth": 390,
+      "scrollHeight": 844,
+      "firstRow": null,
+      "firstTitle": null,
+      "firstContent": null,
+      "composer": null,
+      "links": [],
+      "headings": [
+        {
+          "text": "按自己的节奏。",
+          "x": 16,
+          "y": 107.1875,
+          "width": 358,
+          "height": 38.390625,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "label": "settings",
+      "route": "/settings",
+      "width": 390,
+      "height": 844,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "scrollWidth": 390,
+      "scrollHeight": 4570,
+      "firstRow": null,
+      "firstTitle": null,
+      "firstContent": null,
+      "composer": null,
+      "links": [],
+      "headings": [
+        {
+          "text": "设置",
+          "x": 35,
+          "y": 79.390625,
+          "width": 320,
+          "height": 38.390625,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        },
+        {
+          "text": "游戏化扩展模块",
+          "x": 35,
+          "y": 218.578125,
+          "width": 320,
+          "height": 29.9375,
+          "fontSize": "18.72px",
+          "lineHeight": "29.952px"
+        },
+        {
+          "text": "属性维度开关",
+          "x": 35,
+          "y": 902.875,
+          "width": 320,
+          "height": 29.9375,
+          "fontSize": "18.72px",
+          "lineHeight": "29.952px"
+        },
+        {
+          "text": "AI 模型（自带 Key，BYOK）",
+          "x": 35,
+          "y": 1109,
+          "width": 320,
+          "height": 29.9375,
+          "fontSize": "18.72px",
+          "lineHeight": "29.952px"
+        },
+        {
+          "text": "打卡项目",
+          "x": 35,
+          "y": 2794.25,
+          "width": 320,
+          "height": 29.9375,
+          "fontSize": "18.72px",
+          "lineHeight": "29.952px"
+        },
+        {
+          "text": "数据导出（个人数据主权）",
+          "x": 35,
+          "y": 3858.84375,
+          "width": 320,
+          "height": 29.9375,
+          "fontSize": "18.72px",
+          "lineHeight": "29.952px"
+        },
+        {
+          "text": "数据备份",
+          "x": 35,
+          "y": 4110.375,
+          "width": 320,
+          "height": 29.9375,
+          "fontSize": "18.72px",
+          "lineHeight": "29.952px"
+        },
+        {
+          "text": "成长报告",
+          "x": 35,
+          "y": 4261.90625,
+          "width": 320,
+          "height": 29.9375,
+          "fontSize": "18.72px",
+          "lineHeight": "29.952px"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "label": "today-desktop",
+      "route": "/",
+      "width": 1440,
+      "height": 1000,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "scrollWidth": 1425,
+      "scrollHeight": 1304,
+      "firstRow": {
+        "x": 372.5,
+        "y": 806.6875,
+        "width": 928,
+        "height": 171.765625,
+        "fontSize": "16px",
+        "lineHeight": "25.6px"
+      },
+      "firstTitle": {
+        "x": 423.546875,
+        "y": 826.6875,
+        "width": 876.953125,
+        "height": 24,
+        "fontSize": "15px",
+        "lineHeight": "24px"
+      },
+      "firstContent": {
+        "x": 423.546875,
+        "y": 856.6875,
+        "width": 876.953125,
+        "height": 67.171875,
+        "fontSize": "14px",
+        "lineHeight": "22.4px"
+      },
+      "composer": {
+        "x": 372.5,
+        "y": 201.78125,
+        "width": 928,
+        "height": 423.328125,
+        "fontSize": "16px",
+        "lineHeight": "25.6px"
+      },
+      "links": [
+        {
+          "x": 372.5,
+          "y": 649.109375,
+          "width": 457,
+          "height": 94.78125,
+          "fontSize": "16px",
+          "lineHeight": "25.6px"
+        },
+        {
+          "x": 843.5,
+          "y": 649.109375,
+          "width": 457,
+          "height": 94.78125,
+          "fontSize": "16px",
+          "lineHeight": "25.6px"
+        }
+      ],
+      "headings": [
+        {
+          "text": "今天，也值得记下来。",
+          "x": 372.5,
+          "y": 88.796875,
+          "width": 928,
+          "height": 51.1875,
+          "fontSize": "32px",
+          "lineHeight": "51.2px"
+        },
+        {
+          "text": "今日片段",
+          "x": 372.5,
+          "y": 777.890625,
+          "width": 72,
+          "height": 28.796875,
+          "fontSize": "18px",
+          "lineHeight": "28.8px"
+        },
+        {
+          "text": "今天在河边跑了三公里，最后一段慢下来，感觉终于能喘口气",
+          "x": 423.546875,
+          "y": 826.6875,
+          "width": 876.953125,
+          "height": 24,
+          "fontSize": "15px",
+          "lineHeight": "24px"
+        },
+        {
+          "text": "重新理解了一个一直没学懂的知识点",
+          "x": 423.546875,
+          "y": 998.453125,
+          "width": 518,
+          "height": 24,
+          "fontSize": "15px",
+          "lineHeight": "24px"
+        },
+        {
+          "text": "晚饭后和朋友聊了最近的困惑",
+          "x": 423.546875,
+          "y": 1125.4375,
+          "width": 406,
+          "height": 24,
+          "fontSize": "15px",
+          "lineHeight": "24px"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "label": "journal-desktop",
+      "route": "/journal",
+      "width": 1440,
+      "height": 1000,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "scrollWidth": 1440,
+      "scrollHeight": 1000,
+      "firstRow": {
+        "x": 380,
+        "y": 267.375,
+        "width": 928,
+        "height": 214.546875,
+        "fontSize": "16px",
+        "lineHeight": "25.6px"
+      },
+      "firstTitle": {
+        "x": 466.5625,
+        "y": 287.375,
+        "width": 841.4375,
+        "height": 38.390625,
+        "fontSize": "24px",
+        "lineHeight": "38.4px"
+      },
+      "firstContent": {
+        "x": 466.5625,
+        "y": 337.765625,
+        "width": 841.4375,
+        "height": 89.5625,
+        "fontSize": "14px",
+        "lineHeight": "22.4px"
+      },
+      "composer": null,
+      "links": [],
+      "headings": [
+        {
+          "text": "那些平常的日子。",
+          "x": 380,
+          "y": 88.796875,
+          "width": 928,
+          "height": 51.1875,
+          "fontSize": "32px",
+          "lineHeight": "51.2px"
+        },
+        {
+          "text": "今天在河边跑了三公里，最后一段慢下来，感觉终于能喘口气",
+          "x": 466.5625,
+          "y": 287.375,
+          "width": 841.4375,
+          "height": 38.390625,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        },
+        {
+          "text": "重新理解了一个一直没学懂的知识点",
+          "x": 466.5625,
+          "y": 501.921875,
+          "width": 518,
+          "height": 38.390625,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        },
+        {
+          "text": "晚饭后和朋友聊了最近的困惑",
+          "x": 466.5625,
+          "y": 649.296875,
+          "width": 406,
+          "height": 38.390625,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        }
+      ],
+      "errors": []
+    },
+    {
+      "label": "growth-desktop",
+      "route": "/growth",
+      "width": 1440,
+      "height": 1000,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "scrollWidth": 1425,
+      "scrollHeight": 2288,
+      "firstRow": null,
+      "firstTitle": null,
+      "firstContent": null,
+      "composer": null,
+      "links": [],
+      "headings": [
+        {
+          "text": "属性面板",
+          "x": 393.5,
+          "y": 252.578125,
+          "width": 274,
+          "height": 38.390625,
+          "fontSize": "24px",
+          "lineHeight": "38.4px"
+        },
+        {
+          "text": "月度活动热力图",
+          "x": 393.5,
+          "y": 348.96875,
+          "width": 886,
+          "height": 29.9375,
+          "fontSize": "18.72px",
+          "lineHeight": "29.952px"
+        },
+        {
+          "text": "能力数值",
+          "x": 393.5,
+          "y": 674.09375,
+          "width": 416,
+          "height": 29.9375,
+          "fontSize": "18.72px",
+          "lineHeight": "29.952px"
+        },
+        {
+          "text": "能力雷达图",
+          "x": 863.5,
+          "y": 674.09375,
+          "width": 416,
+          "height": 29.9375,
+          "fontSize": "18.72px",
+          "lineHeight": "29.952px"
+        },
+        {
+          "text": "成长趋势",
+          "x": 393.5,
+          "y": 1673.46875,
+          "width": 886,
+          "height": 29.9375,
+          "fontSize": "18.72px",
+          "lineHeight": "29.952px"
+        }
+      ],
+      "errors": []
+    }
+  ],
+  "requests": [
+    {
+      "path": "/api/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/events",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/events",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/events",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/events",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/events/1002",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/judgments",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/daily-reviews/2026-10-10",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/daily-reviews",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/attributes/history",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/events/heatmap",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/subdimensions",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/items",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/settings",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/llm-config",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/goals",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/events",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/events",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/attributes/history",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/events/heatmap",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/subdimensions",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/auth/me",
+      "method": "GET",
+      "status": 401
+    }
+  ],
+  "errors": [],
+  "contrast": {
+    "mutedOnWhite": 4.0061399103242,
+    "mutedOnBackground": 3.7420930756399726,
+    "primaryOnWhite": 4.280555662388748
+  },
+  "limits": [
+    "Chromium viewport emulation, not physical keyboard or Safari",
+    "Synthetic content demonstrates layout, not backend behavior",
+    "Only listed screens and fixture states inspected"
+  ]
+}

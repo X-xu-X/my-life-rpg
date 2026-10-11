@@ -4,6 +4,7 @@
 - 用 SQLite backup API（在线安全复制，不锁库）
 - 保留最近 N 份，更旧的自动清理
 """
+from app.services.time_service import clock_now
 import sqlite3
 from contextlib import closing
 from uuid import uuid4
@@ -28,7 +29,7 @@ def backup_now() -> Path | None:
         if not db_path.is_file():
             return None
         BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-        stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        stamp = clock_now().strftime("%Y%m%d_%H%M%S_%f")
         dest = BACKUP_DIR / f"game_of_life_{stamp}_{uuid4().hex[:8]}.db"
         with closing(sqlite3.connect(db_path.as_uri() + "?mode=ro", uri=True)) as src:
             with closing(sqlite3.connect(str(dest))) as dst:

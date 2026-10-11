@@ -55,7 +55,15 @@ def _evaluate(db: Session, profile: UserProfile, conversation: list[dict]) -> di
     """让 AI 基于当前问答评估把握度并出题。返回 {questions, hint, confidence}。"""
     # v1.4：走判定模型组（judge）
     config = llm_config.resolve_llm_config(db, profile.user_id, llm_config.PURPOSE_JUDGE)
+    snapshot = dict(profile.onboarding_state or {})
+    db.commit()
     result = llm_service.chat_json(prompts.build_question_messages(conversation), config=config)
+    lock_profile(db, profile.user_id)
+    llm_config.assert_current(db, config)
+    db.refresh(profile)
+    if profile.onboarding_completed or (profile.onboarding_state or {}) != snapshot:
+        db.rollback()
+        raise ValueError("建档状态已变化，请重新打开。")
     questions = result.get("questions", [])
     hint = result.get("hint", "")
     confidence = int(result.get("confidence", 0))
@@ -176,8 +184,11 @@ def _generate_panel(db: Session, profile: UserProfile, conversation: list[dict])
     _assert_unbuilt_profile(db, profile)
     # v1.4：走判定模型组（judge）
     config = llm_config.resolve_llm_config(db, profile.user_id, llm_config.PURPOSE_JUDGE)
+    db.commit()  # 释放建档锁；模型调用后重新校验，不能持锁等待网络。
     result = llm_service.chat_json(prompts.build_panel_messages(conversation), config=config)
+    _assert_unbuilt_profile(db, profile)
     panel = _parse_initial_panel(result.get("attributes"))
+    llm_config.assert_current(db, config)
     summary = result.get("summary", "")
 
     # v1.9 F1：解析并夹取启动资金（80~200，整数；非法/缺失取保底 80）
@@ -198,6 +209,7 @@ def _generate_panel(db: Session, profile: UserProfile, conversation: list[dict])
     # 沉淀画像：原始问答 + 空的补充信息列表（后续补充长期信息追加到这里）
     profile.basic_profile = {"conversation": conversation, "supplements": []}
     profile.onboarding_completed = True
+    profile.baseline_kind = "questionnaire"
     profile.onboarding_state = {}
 
     # 同步 attributes 表当前值
@@ -248,6 +260,7 @@ def _clamp_initial_coins(raw) -> int:
     return max(INITIAL_COINS_MIN, min(INITIAL_COINS_MAX, value))
 
 
+@rollback_on_error
 def supplement_profile(db: Session, detail: str) -> dict:
     """补充长期信息（首次引导后）。AI 客观评估，返回调整建议（待用户确认）。"""
     user = get_or_create_default_user(db)
@@ -257,7 +270,7 @@ def supplement_profile(db: Session, detail: str) -> dict:
         raise ValueError("尚未完成首次属性建档，请先完成引导问卷。")
 
     # 收集客观记录：当前属性面板 + 历史事件判定流水
-    attrs = db.query(Attribute).filter(Attribute.user_id == user.id).all()
+    attrs = db.query(Attribute).filter(Attribute.user_id == user.id).order_by(Attribute.id).all()
     current_attributes = [
         {"name": a.name, "value": a.current_value, "description": a.description} for a in attrs
     ]
@@ -280,15 +293,23 @@ def supplement_profile(db: Session, detail: str) -> dict:
 
     # v1.4：走判定模型组（judge）
     config = llm_config.resolve_llm_config(db, profile.user_id, llm_config.PURPOSE_JUDGE)
-    result = llm_service.chat_json(
-        prompts.build_supplement_messages(
+    snapshot = (profile.basic_profile, profile.pending_adjustment,
+                [(a.id, a.current_value, a.updated_at) for a in attrs])
+    messages = prompts.build_supplement_messages(
             basic_profile=profile.basic_profile or {},
             current_attributes=current_attributes,
             history=history,
             supplement_text=detail,
-        ),
-        config=config,
-    )
+        )
+    db.commit()
+    result = llm_service.chat_json(messages, config=config)
+    lock_profile(db, user.id)
+    llm_config.assert_current(db, config)
+    db.refresh(profile)
+    current = db.query(Attribute).filter(Attribute.user_id == user.id).order_by(Attribute.id).populate_existing().all()
+    if (profile.basic_profile, profile.pending_adjustment,
+        [(a.id, a.current_value, a.updated_at) for a in current]) != snapshot:
+        raise ValueError('档案或属性已变化，请重新提交补充信息。')
     adjustments = judge_service._parse_changes(result.get("adjustments"))
     explanation = result.get("explanation", "")
 

@@ -6,6 +6,10 @@ from app.database import get_db
 from app.schemas import StagnationAnswerIn
 from app.services import stagnation_service
 from app.services.user_service import get_or_create_default_user
+from app.services import receipts
+from app.services.transactions import lock_profile
+from app.models import Attribute
+from fastapi.encoders import jsonable_encoder
 
 router = APIRouter()
 
@@ -31,7 +35,18 @@ def answer_stagnation(name: str, body: StagnationAnswerIn, db: Session = Depends
     """
     user = get_or_create_default_user(db)
     try:
-        return stagnation_service.answer(db, user, name, body.stopped, body.note)
+        lock_profile(db,user.id)
+        attr=db.query(Attribute).filter_by(user_id=user.id,name=name,parent_id=None).first()
+        if attr is None:
+            from app.config import settings
+            raise HTTPException(404 if settings.cloud else 400,'维度不存在')
+        fingerprint,prior=receipts.replay(db,user.id,f'stagnation:{name}',body)
+        if prior is not None:return prior
+        if body.expected_version is not None and body.expected_version != attr.updated_at:
+            raise HTTPException(409,'维度状态已变化，请重新读取。')
+        result=jsonable_encoder(stagnation_service.answer(db,user,name,body.stopped,body.note,commit=False))
+        receipts.record(db,user.id,f'stagnation:{name}',body,fingerprint,attr.id,result)
+        db.commit();return result
     except ValueError as exc:
         db.rollback()
         raise HTTPException(400, str(exc)) from exc

@@ -10,6 +10,7 @@
 - dispute：反驳复核（客观，不迎合）
 - 全程写 judgment_logs 审计
 """
+from app.services.time_service import clock_now
 import json
 import math
 from datetime import datetime, timedelta
@@ -87,7 +88,7 @@ def _clamp_attribute_value(value: float, max_value: float) -> float:
 
 def _recent_same_category_count(db: Session, user_id: int, event: Event) -> int:
     """近 30 天同类别事件次数（累积效应：坚持上浮 / 频繁加重）。"""
-    cutoff = datetime.now() - timedelta(days=30)
+    cutoff = clock_now() - timedelta(days=30)
     return (
         db.query(func.count(Event.id))
         .filter(
@@ -114,7 +115,7 @@ def _attribute_context(db: Session, user_id: int) -> str:
 
 def _recent_events_context(db: Session, user_id: int, exclude_event_id: int, days: int = 7, limit: int = 10) -> str:
     """用户近期生活记录摘要（AI 上下文记忆：跨会话记住用户近况）。"""
-    cutoff = datetime.now() - timedelta(days=days)
+    cutoff = clock_now() - timedelta(days=days)
     events = (
         db.query(Event)
         .filter(
@@ -145,7 +146,7 @@ def _recent_24h_context(db: Session, user_id: int, exclude_event_id: int, limit:
     本条是否与已记录的某件事是同一件事**，不得当作"要一起判定的内容"给分——
     注入文本里会明确标注这一用途，避免 AI 误用。
     """
-    cutoff = datetime.now() - timedelta(hours=24)
+    cutoff = clock_now() - timedelta(hours=24)
     events = (
         db.query(Event)
         .filter(
@@ -179,7 +180,7 @@ def _get_disabled_attributes(db: Session, user_id: int) -> set[str]:
 
 def _today_events_context(db: Session, user_id: int, exclude_event_id: int) -> str:
     """当天已记录的事件摘要（事件去重：日记提到同一件事时，不重复加事实分）。"""
-    start_of_day = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    start_of_day = clock_now().replace(hour=0, minute=0, second=0, microsecond=0)
     events = (
         db.query(Event)
         .filter(
@@ -304,12 +305,13 @@ def _ensure_attribute(db: Session, user_id: int, name: str) -> Attribute:
 
 
 def _event_version(event):
-    return (event.event_type, event.source, event.item_id, event.is_pure, event.origin,
+    return (event.content_version, event.event_type, event.source, event.item_id, event.is_pure, event.origin,
             event.title, event.category, event.content, event.occurred_at,
             json.dumps(event.params or {}, sort_keys=True, ensure_ascii=False))
 
 
 def _lock_event(db, event_id, user_id, version=None):
+    lock_profile(db, user_id)
     changed = db.query(Event).filter(Event.id == event_id, Event.user_id == user_id,
         Event.is_deleted.is_(False)).update(
         {Event.id: Event.id}, synchronize_session=False)
@@ -409,7 +411,7 @@ def _apply_exemption(db: Session, user, event: Event, changes: list[dict]) -> tu
 
     返回 `(changes, hit)`；`hit` 为 None 表示本次没有券生效。
     """
-    at = event.occurred_at or event.created_at or datetime.now()
+    at = event.occurred_at or event.created_at or clock_now()
     return exemption_service.apply_to_changes(changes, at, db, user)
 
 
@@ -460,7 +462,7 @@ def _prior_snapshot(judgment: AIJudgment) -> dict:
 # ============ 判定 ============
 
 @rollback_on_error
-def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgment:
+def judge_event(db: Session, event: Event, clarification: str = "", *, before_write=None, commit_result=True) -> AIJudgment:
     """对事件触发 AI 判定，生成判定记录。
 
     幂等约束（v1.5 A1 统一重判链路）：
@@ -504,7 +506,8 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
 
     anchors_text = format_anchors_text(db)
     # 长期记忆：每天检查更新一次（失败不影响判定）
-    memory = memory_service.maybe_update_memory(db, user)
+    from app.config import settings
+    memory = memory_service.get_long_term_memory(db, user.id) if settings.cloud else memory_service.maybe_update_memory(db, user)
     memory_text = memory_service.format_memory_text(memory)
     # 维度开关：关闭判定的维度不分析不加点
     disabled = _get_disabled_attributes(db, user.id)
@@ -539,7 +542,10 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
     prior_version = (current.id, current.updated_at) if current is not None else None
     db.commit()  # 保存追问回答并释放读事务；模型响应须通过版本检查才可写入
     result = llm_service.chat_json(messages, config=config)
+    if before_write:
+        before_write(db)
     event = _lock_event(db, event.id, user.id, version)
+    llm_config.assert_current(db, config)
     rows = db.query(AIJudgment).filter(AIJudgment.event_id == event.id,
         AIJudgment.user_id == user.id).order_by((AIJudgment.status == "invalidated").asc(), AIJudgment.id.desc()).populate_existing().all()
     if any(j.status == "confirmed" for j in rows):
@@ -551,6 +557,8 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
 
     # 真实性甄别（v1.2）：事件明显不符合科学常理 → 拒绝判定，累计不实提交第 3 次起减诚信
     if not result.get("realistic", True):
+        if settings.cloud:
+            raise ValueError("MODEL_FACT_REJECTED：请修正事实后再分析。")
         _handle_unrealistic(db, user.id, event, str(result.get("realistic_reason", "事件不符合常理")))
 
     # 信息缺口（v1.2）：AI 认为描述不足（无论是否已补充）→ 继续追问，直到信息足够
@@ -634,7 +642,10 @@ def judge_event(db: Session, event: Event, clarification: str = "") -> AIJudgmen
                 "exemption": exemption_hit,  # v1.10 M2：本次生效的豁免券（无则 None）
             },
         )
-    db.commit()
+    if commit_result:
+        db.commit()
+    else:
+        db.flush()
     db.refresh(judgment)
     return judgment
 
@@ -703,6 +714,12 @@ def confirm(db: Session, judgment: AIJudgment, *, commit: bool = True) -> AIJudg
     user = get_or_create_default_user(db)
     lock_profile(db, user.id)
     _lock_event(db, judgment.event_id, user.id)
+    from app.config import settings
+    if settings.cloud:
+        from app.models import UserProfile
+        profile = db.query(UserProfile).filter_by(user_id=user.id).one()
+        if not profile.onboarding_completed:
+            raise ValueError("记录已保存；确认结算前请先选择角色基线。")
     _require_reviewable(db, judgment, allow_challenge=True)
     claimed = db.query(AIJudgment).filter(
         AIJudgment.id == judgment.id, AIJudgment.user_id == user.id,
@@ -773,7 +790,7 @@ def confirm(db: Session, judgment: AIJudgment, *, commit: bool = True) -> AIJudg
 # ============ 补充信息重判 ============
 
 @rollback_on_error
-def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
+def supplement(db: Session, judgment: AIJudgment, detail: str, *, before_write=None, commit_result=True) -> AIJudgment:
     """用户补充信息，AI 重新判定。"""
     _require_reviewable(db, judgment)
     user = get_or_create_default_user(db)
@@ -807,7 +824,10 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
     prior_updated_at = judgment.updated_at
     db.commit()
     result = llm_service.chat_json(messages, config=config)
+    if before_write:
+        before_write(db)
     event = _lock_event(db, event.id, user.id, version)
+    llm_config.assert_current(db, config)
     _require_reviewable(db, judgment)
     if judgment.updated_at != prior_updated_at:
         raise ValueError("判定已被修订，请刷新后重试。")
@@ -840,7 +860,10 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
             "exemption": exemption_hit,  # v1.10 M2
         },
     )
-    db.commit()
+    if commit_result:
+        db.commit()
+    else:
+        db.flush()
     db.refresh(judgment)
     return judgment
 
@@ -848,7 +871,7 @@ def supplement(db: Session, judgment: AIJudgment, detail: str) -> AIJudgment:
 # ============ 反驳复核 ============
 
 @rollback_on_error
-def dispute(db: Session, judgment: AIJudgment, detail: str) -> dict:
+def dispute(db: Session, judgment: AIJudgment, detail: str, *, before_write=None, commit_result=True) -> dict:
     """用户反驳，AI 依据事实复核（客观，不迎合）。
 
     返回 {judgment, result}：result 含 conclusion/explanation/confidence。
@@ -879,7 +902,10 @@ def dispute(db: Session, judgment: AIJudgment, detail: str) -> dict:
     prior_updated_at = judgment.updated_at
     db.commit()
     result = llm_service.chat_json(messages, config=config)
+    if before_write:
+        before_write(db)
     event = _lock_event(db, event.id, user.id, version)
+    llm_config.assert_current(db, config)
     _require_reviewable(db, judgment)
     if judgment.updated_at != prior_updated_at:
         raise ValueError("判定已被修订，请刷新后重试。")
@@ -926,7 +952,10 @@ def dispute(db: Session, judgment: AIJudgment, detail: str) -> dict:
         )
 
     judgment.confidence = _parse_confidence(result.get("confidence"))
-    db.commit()
+    if commit_result:
+        db.commit()
+    else:
+        db.flush()
     db.refresh(judgment)
     return {
         "judgment": judgment,
@@ -938,7 +967,7 @@ def dispute(db: Session, judgment: AIJudgment, detail: str) -> dict:
 # ============ 事件删除（误提交兜底，v1.1） ============
 
 @rollback_on_error
-def delete_event(db: Session, event: Event) -> None:
+def delete_event(db: Session, event: Event, *, commit: bool = True) -> None:
     """逻辑删除；按真实入账流水反向记账，审计和金币完整保留。"""
     user = get_or_create_default_user(db)
     lock_profile(db, user.id)
@@ -976,4 +1005,5 @@ def delete_event(db: Session, event: Event) -> None:
         _log(db, judgment.id, user.id, "delete", detail=f"删除事件（event_id={event.id}）",
              payload={"source_history_ids": [h.id for h in histories], "reversed_changes": reversed_changes,
                       "coins_rolled_back": False, "coins_note": "日常/成就/挑战金币不随事件删除回滚"})
-    db.commit()
+    if commit:
+        db.commit()

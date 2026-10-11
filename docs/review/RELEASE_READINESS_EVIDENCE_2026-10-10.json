@@ -1,0 +1,518 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-10-10T03:06:16.162249+00:00",
+  "release_id": "rr-20261010-22ce20e6-2cee7bc912b7",
+  "source": {
+    "release_id": "rr-20261010-22ce20e6-2cee7bc912b7",
+    "runtime_sha256": "2cee7bc912b795b2be4d4bea2de3e18c464cbe27a95b88f7cdc26dfc9f3c553e",
+    "git_head": "22ce20e6117db979df38f5c49cc1c2d7c1694ce8",
+    "worktree": "includes uncommitted A/B baseline and release-readiness changes",
+    "target_platforms": [
+      "linux/amd64",
+      "linux/arm64"
+    ],
+    "image_status": "NOT_BUILT",
+    "dependency_locks": [
+      "requirements.lock",
+      "frontend/package-lock.json"
+    ]
+  },
+  "delivery_state": "SOURCE_CANDIDATE_COMPLETE; LINUX_IMAGES_NOT_BUILT; NOT_PUBLICLY_DEPLOYED; INVITATIONS_BLOCKED",
+  "gates": {
+    "RR01": "PASS",
+    "RR02": "PASS",
+    "RR03": "PASS",
+    "RR04": "PASS",
+    "RR05": "PASS",
+    "RR06": "PASS",
+    "RR07": "PASS",
+    "RR08": "BLOCKED",
+    "RR09": "BLOCKED",
+    "RR10": "BLOCKED",
+    "RR11": "BLOCKED",
+    "RR12": "BLOCKED"
+  },
+  "checks": [
+    {
+      "id": "RR01",
+      "tasks": [
+        "R01"
+      ],
+      "original_tests": [
+        "T13"
+      ],
+      "status": "PASS",
+      "scope": "local synthetic validation",
+      "source_release": "rr-20261010-22ce20e6-2cee7bc912b7",
+      "tested_at": "2026-10-10T03:06:16.162249+00:00",
+      "environment": "Windows 11 / Python3.13.14 / PostgreSQL18.6 / synthetic provider",
+      "database": "disposable SQLite and/or PG QA schema only; never real SQLite",
+      "commands": [
+        "$env:TEST_PG_URL=\"postgresql+psycopg://gol_test@127.0.0.1:55432/gol_next_test\"; .venv/Scripts/python.exe -m unittest discover -s tests -p \"test_*.py\" -v"
+      ],
+      "expected": "两组供应商变化必须重绑或清空；非法变更回滚，替身请求Key与目标一致",
+      "actual": "配置及替身验证通过；未调用真实供应商",
+      "test_cases": [
+        "test_credentials_keep_replace_rotate_clear_and_explicit_test",
+        "test_provider_binding_atomic_keep_replace_clear_both_groups"
+      ],
+      "evidence": [
+        "RELEASE_TEST_LOG_2026-10-10.txt"
+      ],
+      "remaining_risk": "真实供应商、目标Linux和真机仍按外部门槛验证",
+      "owner": "Writer：本地代码和工具；用户/获授权实施者：目标环境验收"
+    },
+    {
+      "id": "RR02",
+      "tasks": [
+        "R02"
+      ],
+      "original_tests": [
+        "T05",
+        "T06",
+        "T10"
+      ],
+      "status": "PASS",
+      "scope": "local synthetic validation",
+      "source_release": "rr-20261010-22ce20e6-2cee7bc912b7",
+      "tested_at": "2026-10-10T03:06:16.162249+00:00",
+      "environment": "Windows 11 / Python3.13.14 / PostgreSQL18.6 / synthetic provider",
+      "database": "disposable SQLite and/or PG QA schema only; never real SQLite",
+      "commands": [
+        "$env:TEST_PG_URL=\"postgresql+psycopg://gol_test@127.0.0.1:55432/gol_next_test\"; .venv/Scripts/python.exe -m unittest discover -s tests -p \"test_*.py\" -v"
+      ],
+      "expected": "丢响应、双击、刷新、读取失败仍一笔逻辑兑换；显式第二次购买可成功",
+      "actual": "实际Vue/composable/api→HTTP→PG；80→73→66，2券/2流水；账号迟到保护",
+      "test_cases": [
+        "test_frontend_real_http_redemption_chain",
+        "test_redemption_replay_receipt_ownership_conflict_and_fault_rollback"
+      ],
+      "evidence": [
+        "RELEASE_TEST_LOG_2026-10-10.txt"
+      ],
+      "remaining_risk": "真实供应商、目标Linux和真机仍按外部门槛验证",
+      "owner": "Writer：本地代码和工具；用户/获授权实施者：目标环境验收"
+    },
+    {
+      "id": "RR03",
+      "tasks": [
+        "R03"
+      ],
+      "original_tests": [
+        "T15"
+      ],
+      "status": "PASS",
+      "scope": "local synthetic validation",
+      "source_release": "rr-20261010-22ce20e6-2cee7bc912b7",
+      "tested_at": "2026-10-10T03:06:16.162249+00:00",
+      "environment": "Windows 11 / Python3.13.14 / PostgreSQL18.6 / synthetic provider",
+      "database": "disposable SQLite and/or PG QA schema only; never real SQLite",
+      "commands": [
+        "$env:TEST_PG_URL=\"postgresql+psycopg://gol_test@127.0.0.1:55432/gol_next_test\"; .venv/Scripts/python.exe -m unittest discover -s tests -p \"test_*.py\" -v"
+      ],
+      "expected": "ID故意不同，引用按语义映射，缺目标/跨用户阻断且回滚",
+      "actual": "合成SQLite→PG通过；_challenge_id/exemption/数组/普通整数对照；旧40保留",
+      "test_cases": [
+        "test_import_forced_id_difference_all_semantic_paths_and_atomic_failure",
+        "test_semantic_paths_lists_no_integer_replacement_missing_cross_user"
+      ],
+      "evidence": [
+        "RELEASE_TEST_LOG_2026-10-10.txt"
+      ],
+      "remaining_risk": "真实供应商、目标Linux和真机仍按外部门槛验证",
+      "owner": "Writer：本地代码和工具；用户/获授权实施者：目标环境验收"
+    },
+    {
+      "id": "RR04",
+      "tasks": [
+        "R04"
+      ],
+      "original_tests": [
+        "T07",
+        "T08",
+        "T09",
+        "T10",
+        "T11",
+        "T12"
+      ],
+      "status": "PASS",
+      "scope": "local synthetic validation",
+      "source_release": "rr-20261010-22ce20e6-2cee7bc912b7",
+      "tested_at": "2026-10-10T03:06:16.162249+00:00",
+      "environment": "Windows 11 / Python3.13.14 / PostgreSQL18.6 / synthetic provider",
+      "database": "disposable SQLite and/or PG QA schema only; never real SQLite",
+      "commands": [
+        "$env:TEST_PG_URL=\"postgresql+psycopg://gol_test@127.0.0.1:55432/gol_next_test\"; .venv/Scripts/python.exe -m unittest discover -s tests -p \"test_*.py\" -v"
+      ],
+      "expected": "真实PG竞争及实际写点失败不重复结算，相关表同进退",
+      "actual": "PG多连接竞争/回滚和37项旧规则回归通过；99路由、55业务写策略已登记",
+      "test_cases": [
+        "test_confirmation_delete_race_and_achievement_delete_race",
+        "test_expiry_settle_abandon_race_and_baseline_duplicate",
+        "test_all_business_routes_require_auth_and_confirmation_fault_stages_rollback",
+        "test_exemption_replay_and_config_change_during_model_prevents_writes"
+      ],
+      "evidence": [
+        "RELEASE_TEST_LOG_2026-10-10.txt"
+      ],
+      "remaining_risk": "真实供应商、目标Linux和真机仍按外部门槛验证",
+      "owner": "Writer：本地代码和工具；用户/获授权实施者：目标环境验收"
+    },
+    {
+      "id": "RR05",
+      "tasks": [
+        "R05"
+      ],
+      "original_tests": [
+        "T01",
+        "T02",
+        "T03",
+        "T06"
+      ],
+      "status": "PASS",
+      "scope": "local synthetic validation",
+      "source_release": "rr-20261010-22ce20e6-2cee7bc912b7",
+      "tested_at": "2026-10-10T03:06:16.162249+00:00",
+      "environment": "Windows 11 / Python3.13.14 / PostgreSQL18.6 / synthetic provider",
+      "database": "disposable SQLite and/or PG QA schema only; never real SQLite",
+      "commands": [
+        "$env:TEST_PG_URL=\"postgresql+psycopg://gol_test@127.0.0.1:55432/gol_next_test\"; .venv/Scripts/python.exe -m unittest discover -s tests -p \"test_*.py\" -v"
+      ],
+      "expected": "无会话拒绝全部业务路由；双账号归属/认证消费竞态一致",
+      "actual": "91受保护method/path逐项401；资源族/嵌套/导出及认证HTTP矩阵通过；非所有参数排列穷举",
+      "test_cases": [
+        "test_cross_user_all_resource_action_families",
+        "test_invitation_recovery_concurrent_consumption_sessions_expiry_origin_throttle",
+        "test_all_business_routes_require_auth_and_confirmation_fault_stages_rollback"
+      ],
+      "evidence": [
+        "RELEASE_TEST_LOG_2026-10-10.txt"
+      ],
+      "remaining_risk": "真实供应商、目标Linux和真机仍按外部门槛验证",
+      "owner": "Writer：本地代码和工具；用户/获授权实施者：目标环境验收"
+    },
+    {
+      "id": "RR06",
+      "tasks": [
+        "R06"
+      ],
+      "original_tests": [
+        "T19",
+        "T20"
+      ],
+      "status": "PASS",
+      "scope": "local synthetic validation",
+      "source_release": "rr-20261010-22ce20e6-2cee7bc912b7",
+      "tested_at": "2026-10-10T03:06:16.162249+00:00",
+      "environment": "Windows 11 / Python3.13.14 / PostgreSQL18.6 / synthetic provider",
+      "database": "disposable SQLite and/or PG QA schema only; never real SQLite",
+      "commands": [
+        "$env:TEST_PG_URL=\"postgresql+psycopg://gol_test@127.0.0.1:55432/gol_next_test\"; .venv/Scripts/python.exe -m unittest discover -s tests -p \"test_*.py\" -v"
+      ],
+      "expected": "真实worker崩溃可接管、旧token禁写；持续小块仍被总截止杀进程并释放锁",
+      "actual": "真实进程+PG+本机慢HTTP替身通过；90秒配置用缩短测试预算验证机制；Linux信号和真实供应商未验证",
+      "test_cases": [
+        "test_model_deadline_reaps_child_releases_pg_lock_and_allows_next_call",
+        "test_real_worker_crashes_claim_request_before_write_and_recovers",
+        "test_real_workers_dual_claim_cancel_edit_delete_key_and_lease_late_results",
+        "test_wall_clock_bounds_continuous_http_chunks_not_read_timeout"
+      ],
+      "evidence": [
+        "RELEASE_TEST_LOG_2026-10-10.txt"
+      ],
+      "remaining_risk": "真实供应商、目标Linux和真机仍按外部门槛验证",
+      "owner": "Writer：本地代码和工具；用户/获授权实施者：目标环境验收"
+    },
+    {
+      "id": "RR07",
+      "tasks": [
+        "R07"
+      ],
+      "original_tests": [
+        "T07",
+        "T21",
+        "T22"
+      ],
+      "status": "PASS",
+      "scope": "local synthetic validation",
+      "source_release": "rr-20261010-22ce20e6-2cee7bc912b7",
+      "tested_at": "2026-10-10T03:06:16.162249+00:00",
+      "environment": "Windows 11 / Python3.13.14 / PostgreSQL18.6 / synthetic provider",
+      "database": "disposable SQLite and/or PG QA schema only; never real SQLite",
+      "commands": [
+        "$env:TEST_PG_URL=\"postgresql+psycopg://gol_test@127.0.0.1:55432/gol_next_test\"; .venv/Scripts/python.exe -m unittest discover -s tests -p \"test_*.py\" -v"
+      ],
+      "expected": "同追问双回答冲突、旧判定版本409，旧日回顾可定位且报告保留来源版本",
+      "actual": "HTTP模拟双设备通过；Z/+00版本比较；前端保留原版本；浏览器历史入口通过；非真实双手机",
+      "test_cases": [
+        "test_timezone_dst_and_backfill_review_uses_occurred_day",
+        "test_question_two_devices_stale_after_first_completed",
+        "test_reviews_timezone_history_conflict_and_report_sources"
+      ],
+      "evidence": [
+        "RELEASE_TEST_LOG_2026-10-10.txt"
+      ],
+      "remaining_risk": "真实供应商、目标Linux和真机仍按外部门槛验证",
+      "owner": "Writer：本地代码和工具；用户/获授权实施者：目标环境验收"
+    },
+    {
+      "id": "RR08",
+      "tasks": [
+        "R08"
+      ],
+      "original_tests": [
+        "T16"
+      ],
+      "status": "BLOCKED",
+      "scope": "external acceptance",
+      "source_release": "rr-20261010-22ce20e6-2cee7bc912b7",
+      "tested_at": null,
+      "environment": "target Linux / remote / real phone unavailable",
+      "database": "NOT_CONNECTED",
+      "commands": [],
+      "expected": "Linux镜像/Compose/权限/迁移/TLS/重启实际通过",
+      "actual": "BLOCKED：无Docker、目标访问、架构/域名确认；仅静态拓扑/编译/语法和本机PG迁移头通过",
+      "test_cases": [],
+      "evidence": [],
+      "remaining_risk": "BLOCKED：无Docker、目标访问、架构/域名确认；仅静态拓扑/编译/语法和本机PG迁移头通过",
+      "owner": "Writer：本地代码和工具；用户/获授权实施者：目标环境验收"
+    },
+    {
+      "id": "RR09",
+      "tasks": [
+        "R09"
+      ],
+      "original_tests": [
+        "T16"
+      ],
+      "status": "BLOCKED",
+      "scope": "external acceptance",
+      "source_release": "rr-20261010-22ce20e6-2cee7bc912b7",
+      "tested_at": null,
+      "environment": "target Linux / remote / real phone unavailable",
+      "database": "NOT_CONNECTED",
+      "commands": [],
+      "expected": "2GB目标机30分钟代表负载、内存/Swap/OOM/磁盘达标",
+      "actual": "BLOCKED：采集脚本和负载清单已交付，未采集目标性能数据",
+      "test_cases": [],
+      "evidence": [],
+      "remaining_risk": "BLOCKED：采集脚本和负载清单已交付，未采集目标性能数据",
+      "owner": "Writer：本地代码和工具；用户/获授权实施者：目标环境验收"
+    },
+    {
+      "id": "RR10",
+      "tasks": [
+        "R10"
+      ],
+      "original_tests": [
+        "T17"
+      ],
+      "status": "BLOCKED",
+      "scope": "external acceptance",
+      "source_release": "rr-20261010-22ce20e6-2cee7bc912b7",
+      "tested_at": null,
+      "environment": "target Linux / remote / real phone unavailable",
+      "database": "NOT_CONNECTED",
+      "commands": [],
+      "expected": "独立仓库和异机恢复、全表/登录/核账/离线钥、实际RPO/RTO",
+      "actual": "BLOCKED：缺独立仓库/异机访问/离线副本；本轮未执行远端恢复，RPO24h/RTO4h只是目标",
+      "test_cases": [],
+      "evidence": [],
+      "remaining_risk": "BLOCKED：缺独立仓库/异机访问/离线副本；本轮未执行远端恢复，RPO24h/RTO4h只是目标",
+      "owner": "Writer：本地代码和工具；用户/获授权实施者：目标环境验收"
+    },
+    {
+      "id": "RR11",
+      "tasks": [
+        "R10"
+      ],
+      "original_tests": [
+        "T17"
+      ],
+      "status": "BLOCKED",
+      "scope": "external acceptance",
+      "source_release": "rr-20261010-22ce20e6-2cee7bc912b7",
+      "tested_at": "2026-10-10T03:06:16.162249+00:00",
+      "environment": "Windows 11 / Python3.13.14 / PostgreSQL18.6 / synthetic provider",
+      "database": "NOT_CONNECTED",
+      "commands": [
+        "$env:TEST_PG_URL=\"postgresql+psycopg://gol_test@127.0.0.1:55432/gol_next_test\"; .venv/Scripts/python.exe -m unittest discover -s tests -p \"test_*.py\" -v"
+      ],
+      "expected": "真实故障告警到达；远端/恢复分类与安全清理保留失败及最新验证包",
+      "actual": "BLOCKED（完整门槛）；5项替身测试PASS，dump/backup/check/forget均非零不推进成功；真实通知/远端故障待授权验收",
+      "test_cases": [
+        "test_backup_remote_password_disk_alert_failures_do_not_update_success",
+        "test_cleanup_classification_keep_failed_latest_verified_and_path_guard",
+        "test_monitor_detects_stale_backup_worker_api_disk_and_no_secret_payload",
+        "test_symlink_and_checksum_never_classified_or_deleted"
+      ],
+      "evidence": [
+        "RELEASE_TEST_LOG_2026-10-10.txt"
+      ],
+      "remaining_risk": "BLOCKED（完整门槛）；5项替身测试PASS，dump/backup/check/forget均非零不推进成功；真实通知/远端故障待授权验收",
+      "owner": "Writer：本地代码和工具；用户/获授权实施者：目标环境验收"
+    },
+    {
+      "id": "RR12",
+      "tasks": [
+        "R08"
+      ],
+      "original_tests": [
+        "T16",
+        "T18",
+        "T06"
+      ],
+      "status": "BLOCKED",
+      "scope": "external acceptance",
+      "source_release": "rr-20261010-22ce20e6-2cee7bc912b7",
+      "tested_at": null,
+      "environment": "target Linux / remote / real phone unavailable",
+      "database": "NOT_CONNECTED",
+      "commands": [],
+      "expected": "真实手机软键盘、长文、弱网、蜂窝/电脑关机可用",
+      "actual": "BLOCKED：Edge39视口PASS；无真机、公网、蜂窝及电脑关机实测",
+      "test_cases": [],
+      "evidence": [],
+      "remaining_risk": "BLOCKED：Edge39视口PASS；无真机、公网、蜂窝及电脑关机实测",
+      "owner": "Writer：本地代码和工具；用户/获授权实施者：目标环境验收"
+    }
+  ],
+  "environment": {
+    "os": "Windows-11-10.0.26200-SP0",
+    "python": "3.13.14",
+    "node": "v25.6.0",
+    "postgres": "18.6 portable loopback:55432; gol_next_test random qa_* schemas; gol_browser_test synthetic",
+    "real_database_opened": false,
+    "real_migration": false,
+    "real_provider_calls": 0,
+    "real_notifications_sent": 0,
+    "docker_available": false
+  },
+  "runs": [
+    {
+      "kind": "full_regression",
+      "command": "$env:TEST_PG_URL=\"postgresql+psycopg://gol_test@127.0.0.1:55432/gol_next_test\"; .venv/Scripts/python.exe -m unittest discover -s tests -p \"test_*.py\" -v",
+      "exit_code": 0,
+      "tests": 82,
+      "skipped": 0,
+      "duration_seconds": 96.279,
+      "completed_at": "2026-10-10T02:52:30.737895+00:00"
+    },
+    {
+      "kind": "targeted_http_after_expanding_version_assertions",
+      "command": "python -m unittest discover -s tests -p test_release_readiness.py -v",
+      "exit_code": 0,
+      "tests": 11,
+      "completed_at": "2026-10-10T03:03:53.758052+00:00"
+    },
+    {
+      "kind": "targeted_ops_after_expanding_fault_stages",
+      "command": "python -m unittest discover -s tests -p test_release_ops.py -v",
+      "exit_code": 0,
+      "tests": 5,
+      "duration_seconds": 0.181
+    },
+    {
+      "kind": "frontend_logic",
+      "commands": [
+        "node tests/frontend_v1_11.mjs",
+        "node tests/frontend_next.mjs"
+      ],
+      "exit_code": 0
+    },
+    {
+      "kind": "frontend_build",
+      "command": "npm run build (cwd frontend)",
+      "exit_code": 0,
+      "modules": 605,
+      "duration_seconds": 7.9,
+      "warning": "existing ECharts chunk >500kB"
+    },
+    {
+      "kind": "browser",
+      "command": "QA_EVIDENCE=docs/review/RELEASE_BROWSER_EVIDENCE_2026-10-10.json node tests/browser_next_iteration.mjs",
+      "exit_code": 0,
+      "tested_at": "2026-10-10T03:01:52.567Z",
+      "pages": 39,
+      "widths": [
+        360,
+        390,
+        1440
+      ],
+      "real_phone": false,
+      "real_public_tls": false
+    },
+    {
+      "kind": "static",
+      "commands": [
+        "compileall app/ops/tests",
+        "PyYAML Compose topology, no PG/API published port, readonly app containers, LF",
+        "sh -n ops/*.sh"
+      ],
+      "exit_code": 0,
+      "limitation": "shell parse only; no Docker/systemd execution"
+    },
+    {
+      "kind": "migration_metadata",
+      "commands": [
+        "alembic current",
+        "alembic check"
+      ],
+      "exit_code": 0,
+      "database": "gol_next_test synthetic root",
+      "head": "b004_reports",
+      "new_operations": 0
+    }
+  ],
+  "route_inventory": {
+    "method_paths": 99,
+    "business_writes": 55,
+    "protected_http_unauth_checks": 91,
+    "file": "RELEASE_ROUTE_INVENTORY_2026-10-10.json"
+  },
+  "budgets": {
+    "call_wall_seconds": 90,
+    "supplier_attempts_total": 2,
+    "sdk_retries": 0,
+    "lease_seconds": 240,
+    "stop_grace_seconds": 200,
+    "heartbeat_seconds": 300,
+    "billing_exactly_once": false,
+    "linux_parent_death_signal_test": "NOT_RUN"
+  },
+  "prior_failures_fixed": [
+    "FastAPI lazy included routes were omitted by inventory; now enumerated and all 91 HTTP checks execute",
+    "local stagnation unknown-dimension status regression restored to400; cloud404 retained",
+    "PG test fixture required event_type / detached id / lifespan context / raw SQL schema qualification corrected",
+    "shell parser attempt used nonexistent bash then MSYS was sandbox-blocked; actual bundled sh -n outside sandbox passed; intermediate misleading shell output not used as evidence"
+  ],
+  "limits": [
+    "All provider requests synthetic; no actual billing verification",
+    "Ops failures injected at command boundaries, not live remote/password/disk-full experiments",
+    "Symlink predicate simulated on Windows; real Linux filesystem/symlink/UID acceptance pending",
+    "No new migration or real SQLite read/import",
+    "No actual target 30-minute measurement, TLS issuance/renewal, host reboot, independent recovery, notification delivery, or real phone"
+  ],
+  "original_gate_review": {
+    "T01_T22_still_required": true,
+    "external_blockers": [
+      "T16 target runtime/restarts",
+      "T17 independent backup/restore",
+      "T18 real phone"
+    ],
+    "T13_backup_decryption_target_acceptance": "BLOCKED with T17",
+    "C01_C02": "NOT_IMPLEMENTED_BY_SCOPE"
+  },
+  "source_archive": {
+    "name": "rr-20261010-22ce20e6-2cee7bc912b7.zip",
+    "checksum_file": "rr-20261010-22ce20e6-2cee7bc912b7.sha256",
+    "manifest": "rr-20261010-22ce20e6-2cee7bc912b7.manifest.json",
+    "verification_receipt": "rr-20261010-22ce20e6-2cee7bc912b7.verification.json",
+    "note": "Archive verification receipt is generated after packaging outside the immutable source archive."
+  },
+  "evidence_hashes": {
+    "docs/review/RELEASE_TEST_LOG_2026-10-10.txt": "0e797787efd8521e5d41b72b0ce0c1178f2609087341ccba01fe7efa7b7da430",
+    "docs/review/RELEASE_BROWSER_EVIDENCE_2026-10-10.json": "8910b7f0a7eeb3e3d0a52445b7434b4eb99d77ced2466c5a440c3315ca14f73a",
+    "docs/review/RELEASE_ROUTE_INVENTORY_2026-10-10.json": "56fd7c3090c8607b82d558354cc5107219671429bc82ca02be5d7fbb81ec2b82"
+  }
+}

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, nextTick, onMounted, watch } from 'vue'
 import { api } from '../api'
+import { storageKey } from '../session'
 import { toast } from '../composables/useToast'
 
 const emit = defineEmits(['created'])
@@ -26,7 +27,7 @@ const pendingAdjustment = ref(null)
 const supplementNote = ref('')
 
 // ============ 草稿缓存：问卷作答写一半不丢 ============
-const CACHE_KEY = 'game_of_life_onboarding_draft'
+const CACHE_KEY = storageKey('game_of_life_onboarding_draft')
 
 onMounted(() => {
   try {
@@ -251,7 +252,7 @@ onMounted(loadStatus)
 
 <template>
   <div class="card">
-    <h2>角色档案（Onboarding）</h2>
+    <h1>角色档案</h1>
     <p class="muted">
       首次使用时 AI 会持续提问，直到对你有足够把握（≥95%）才自动生成初始属性面板；之后只能补充长期信息。
     </p>
@@ -278,8 +279,8 @@ onMounted(loadStatus)
     <!-- 作答区 -->
     <div v-if="phase === 'asking' && currentQuestions.length" class="card" style="margin-top: 12px">
       <div v-for="q in currentQuestions" :key="q" class="field">
-        <label>{{ q }}</label>
-        <input v-model="answerInputs[q]" placeholder="你的回答…" @keyup.enter="submit" />
+        <label :for="'onboarding-answer-'+currentQuestions.indexOf(q)">{{ q }}</label>
+        <input :id="'onboarding-answer-'+currentQuestions.indexOf(q)" v-model="answerInputs[q]" placeholder="你的回答…" @keyup.enter="submit" />
       </div>
       <button class="btn primary" :disabled="busy" @click="submit">
         <template v-if="busy"><span class="spinner"></span>AI 正在评估…</template>
@@ -329,14 +330,14 @@ onMounted(loadStatus)
             <div class="muted">{{ adj.reason }}</div>
             <div class="evidence">依据：{{ adj.evidence }}</div>
           </div>
-          <div v-if="pendingAdjustment.adjustments.length" class="row" style="margin-top: 8px">
+          <div v-if="pendingAdjustment.adjustments.length" class="action-group" style="margin-top: 8px">
             <button class="btn primary" :disabled="busy" @click="confirmSupplement">
               <template v-if="busy">应用中…</template>
               <template v-else>确认调整</template>
             </button>
             <button class="btn" :disabled="busy" @click="ignoreSupplement">忽略</button>
           </div>
-          <div v-else class="row" style="margin-top: 8px">
+          <div v-else class="action-group" style="margin-top: 8px">
             <button class="btn" @click="ignoreSupplement">知道了</button>
           </div>
         </div>
@@ -351,7 +352,7 @@ onMounted(loadStatus)
           已解锁 {{ achSummary.unlocked }} / {{ achSummary.total }}
         </span>
       </h3>
-      <p class="muted" style="font-size: 12px">
+      <p class="muted" style="font-size: 13px">
         徽章只发金币、不发属性点——点数只能靠真实行为挣。AI 发现值得纪念的里程碑时会提议追授，由你决定是否接受。
       </p>
       <div class="ach-grid">
@@ -368,7 +369,7 @@ onMounted(loadStatus)
               {{ a.name }}
               <span v-if="a.kind === 'discovered'" class="tag" style="margin-left: 4px">AI 追授</span>
             </div>
-            <div class="muted" style="font-size: 12px">
+            <div class="muted" style="font-size: 13px">
               <template v-if="a.unlocked">解锁于 {{ fmtDate(a.unlocked_at) }} · +{{ a.coin_reward }} 币</template>
               <template v-else>{{ a.description }}（{{ a.current }}/{{ a.target }}）</template>
             </div>
@@ -377,6 +378,6 @@ onMounted(loadStatus)
       </div>
     </div>
 
-    <p v-if="error" class="muted" style="color: #d33">{{ error }}</p>
+    <p v-if="error" class="muted" style="color: var(--danger)">{{ error }}</p>
   </div>
 </template>

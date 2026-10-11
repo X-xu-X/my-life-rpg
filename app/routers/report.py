@@ -1,4 +1,5 @@
 """成长周报/月报路由：基于一段时间的数据，AI 生成成长总结与建议。"""
+from app.services.time_service import clock_now
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -7,27 +8,30 @@ from sqlalchemy.orm import Session
 from app import prompts
 from app.database import get_db
 from app.models import AIJudgment, Attribute, AttributeHistory, Event, Goal, Setting
+from app.models.analysis import GrowthReport
 from app.services import llm_config, memory_service
 from app.services.llm_service import LLMError, llm_service
 from app.services.user_service import get_or_create_default_user
+from app.services.transactions import lock_profile
 
 router = APIRouter()
 
 
-@router.get("/report")
+@router.post("/report")
+@router.post("/reports")
 def generate_report(db: Session = Depends(get_db), period: str = "week"):
     """生成成长报告。period=week（近 7 天）或 month（近 30 天）。"""
     if period not in ("week", "month"):
         raise HTTPException(status_code=400, detail="period 只支持 week/month")
     user = get_or_create_default_user(db)
     days = 7 if period == "week" else 30
-    now = datetime.now()
+    now = clock_now()
     start = now - timedelta(days=days)
 
     # 事件统计
     events = (
         db.query(Event)
-        .filter(Event.user_id == user.id, Event.is_deleted.is_(False), Event.created_at >= start)
+        .filter(Event.user_id == user.id, Event.is_deleted.is_(False), Event.occurred_at >= start, Event.occurred_at <= now)
         .all()
     )
     by_cat: dict[str, int] = {}
@@ -89,14 +93,49 @@ def generate_report(db: Session = Depends(get_db), period: str = "week"):
     try:
         # v1.4：周报走辅助模型组（aux），缺失自动回退判定组/.env
         config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_AUX)
+        source_versions = [{"id":event.id,"version":event.content_version} for event in events]
+        db.commit()  # 模型请求不持有数据库锁。
         report = llm_service.chat_json(messages, config=config)
+        lock_profile(db, user.id)
+        llm_config.assert_current(db, config)
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(409, str(exc)) from exc
     except LLMError as exc:
         raise HTTPException(status_code=503, detail=f"报告生成失败：{exc}")
 
-    return {
+    payload = {
         "period": period,
         "start": start.strftime("%Y-%m-%d"),
         "end": now.strftime("%Y-%m-%d"),
         "stats": stats,
         "report": report,
     }
+    row = GrowthReport(user_id=user.id, period=period, timezone=user.timezone, payload=payload,
+        provenance={"events":source_versions,"rule_version":"legacy-v1.11","model":config.model})
+    db.add(row)
+    db.commit()
+    return {"id":row.id, **payload}
+
+
+@router.get('/reports')
+def list_reports(db: Session = Depends(get_db)):
+    user=get_or_create_default_user(db)
+    return {'items':[{'id':r.id,'period':r.period,'timezone':r.timezone,'created_at':r.created_at,
+        'start':r.payload.get('start'),'end':r.payload.get('end')}
+        for r in db.query(GrowthReport).filter_by(user_id=user.id).order_by(GrowthReport.id.desc()).limit(100).all()]}
+
+
+@router.get('/reports/{report_id}')
+def get_report(report_id: int, db: Session = Depends(get_db)):
+    row = db.get(GrowthReport, report_id)
+    if row is None:
+        raise HTTPException(404, '报告不存在。')
+    sources=[]
+    for source in row.provenance.get('events',[]):
+        event=db.get(Event,source['id'])
+        state='unavailable' if event is None else ('deleted' if event.is_deleted else (
+            'edited' if event.content_version!=source['version'] else 'original'))
+        sources.append({**source,'state':state,'current_version':event.content_version if event else None})
+    return {"id":row.id, **row.payload, "provenance":row.provenance, 'sources':sources,
+        'timezone':row.timezone, "created_at":row.created_at}

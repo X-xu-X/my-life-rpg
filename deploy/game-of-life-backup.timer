@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily Game of Life independent backup
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+RandomizedDelaySec=10m
+Persistent=true
+Unit=game-of-life-backup.service
+
+[Install]
+WantedBy=timers.target

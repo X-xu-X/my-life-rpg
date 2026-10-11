@@ -12,6 +12,21 @@ router = APIRouter()
 @router.get("/achievements")
 def list_achievements(db: Session = Depends(get_db)):
     user = get_or_create_default_user(db)
+    from app.config import settings
+    if settings.cloud:
+        return achievement_service.wall(db, user)
+    try:
+        achievement_service.check_and_grant(db, user)
+    except IntegrityError:
+        db.rollback()
+    return achievement_service.wall(db, user)
+
+
+@router.post("/achievements/check")
+def check_achievements(db: Session = Depends(get_db)):
+    user = get_or_create_default_user(db)
+    from app.services.transactions import lock_profile
+    lock_profile(db, user.id)
     try:
         achievement_service.check_and_grant(db, user)
     except IntegrityError:

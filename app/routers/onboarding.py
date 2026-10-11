@@ -27,6 +27,9 @@ def create_questions(db: Session = Depends(get_db)):
     """开始（或恢复）首次引导，AI 生成/继续提问。已完成则返回锁定提示。"""
     try:
         return onboarding_service.start_questions(db)
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(409, str(exc)) from exc
     except LLMError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
 

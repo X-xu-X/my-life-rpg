@@ -1,4 +1,5 @@
 import { ref, computed, watch } from 'vue'
+import { storageKey as accountStorageKey, localDate } from '../session'
 
 /**
  * 按日期分组 + 折叠状态（v1.6 B2 抽取为公共 composable）。
@@ -14,6 +15,7 @@ import { ref, computed, watch } from 'vue'
  * @param {{storageKey: string, getTime?: (item: any) => string}} options
  */
 export function useDateGroups(items, { storageKey, getTime = (item) => item.created_at }) {
+  storageKey = accountStorageKey(storageKey)
   let cached = { today: true }
   try {
     const value = JSON.parse(localStorage.getItem(storageKey) || 'null')
@@ -44,20 +46,20 @@ export function useDateGroups(items, { storageKey, getTime = (item) => item.crea
     { key: 'earlier', label: '更早' },
   ]
 
-  const fmt = (d) => `${`${d.getMonth() + 1}`.padStart(2, '0')}-${`${d.getDate()}`.padStart(2, '0')}`
+  const fmt = (value) => localDate(value).slice(5)
 
   const groups = computed(() => {
-    const now = new Date()
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const startOfYesterday = new Date(startOfToday.getTime() - 86400000)
-    const monday = new Date(startOfToday)
-    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7)) // 本周一 0 点
+    const today = localDate()
+    const calendar = new Date(today + 'T00:00:00Z')
+    const yesterday = new Date(calendar.getTime() - 86400000).toISOString().slice(0,10)
+    calendar.setUTCDate(calendar.getUTCDate() - ((calendar.getUTCDay() + 6) % 7))
+    const monday = calendar.toISOString().slice(0,10)
 
     const buckets = { today: [], yesterday: [], thisweek: [], earlier: [] }
     for (const item of items.value || []) {
-      const d = new Date(getTime(item))
-      if (d >= startOfToday) buckets.today.push(item)
-      else if (d >= startOfYesterday) buckets.yesterday.push(item)
+      const d = localDate(getTime(item))
+      if (d >= today) buckets.today.push(item)
+      else if (d >= yesterday) buckets.yesterday.push(item)
       else if (d >= monday) buckets.thisweek.push(item)
       else buckets.earlier.push(item)
     }
@@ -68,8 +70,8 @@ export function useDateGroups(items, { storageKey, getTime = (item) => item.crea
       // 组头日期：今天/昨天显示当天日期；范围组显示首尾日期（组内按时间倒序）
       const dateRange =
         key === 'today' || key === 'yesterday'
-          ? fmt(new Date(getTime(list[0])))
-          : `${fmt(new Date(getTime(list[list.length - 1])))} ~ ${fmt(new Date(getTime(list[0])))}`
+          ? fmt(getTime(list[0]))
+          : `${fmt(getTime(list[list.length - 1]))} ~ ${fmt(getTime(list[0]))}`
       return { key, label, items: list, dateRange }
     }).filter(Boolean)
   })

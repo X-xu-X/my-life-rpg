@@ -1,0 +1,19 @@
+# 与数据库一致的 pg_dump/pg_restore；镜像验收见交付说明。
+FROM postgres:18.6-bookworm
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-venv restic openssh-client ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && python3 -m venv /opt/venv \
+    && useradd --uid 10001 --create-home appuser
+ENV PATH=/opt/venv/bin:$PATH PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+WORKDIR /app
+COPY requirements.lock ./
+RUN pip install --no-cache-dir -r requirements.lock
+COPY app ./app
+COPY alembic ./alembic
+COPY alembic.ini ./
+COPY ops ./ops
+COPY deploy/entrypoint.py ./entrypoint.py
+USER 10001:10001
+ENTRYPOINT ["python", "entrypoint.py"]
+CMD ["python", "ops/manage.py", "--help"]

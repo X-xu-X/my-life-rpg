@@ -1,0 +1,363 @@
+{
+  "phase": "before",
+  "tested_at": "2026-10-10T14:06:57.479Z",
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Edg/154.0.4258.62",
+    "revision": "@49f7c5590dad654f33b924537ccc8be227c5a43a",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0",
+    "jsVersion": "15.4.11.9"
+  },
+  "sourceHashes": {
+    "frontend/src/App.vue": "cc3e8b1c7a972fff141036a044944aa799929912aa319110a6d16e92b3beac8f",
+    "frontend/src/styles.css": "3e786401a3e5fe434e4d6e261feef11bc369de4c64f16598f8df0215b5cced39",
+    "frontend/src/components/AnchorsView.vue": "8c3e536295ef6ecae6c830e5063740533aa05a772b93f9cec26b53189fa5e8bc",
+    "frontend/src/components/AttributePanel.vue": "5ced38eef22f2574ab683247b642846c215d0368e07f9d11c6a9d61c72523082",
+    "frontend/src/components/AuthView.vue": "b52b112d20b7038dabcc14ca8cbd2950a91edb5efebd963610f8f3cba47526e0",
+    "frontend/src/components/ChallengeView.vue": "c66c2cbd27500dc28a1238c10282dee0524d1adb57a1e2f2719379a89860a00a",
+    "frontend/src/components/EventForm.vue": "3915bd690ea831a436875e1b1652a623a96861e9a20c899b5c3942773bd5119a",
+    "frontend/src/components/GoalsView.vue": "7a889819eb4c033f9787ae64e7d1151f90ce7056384d53049d70bf1e414f968a",
+    "frontend/src/components/HomeView.vue": "7a74449237c5666e04d030e3c4891d85f4ccf8ed1dd0fecc57e7d62c249f56ee",
+    "frontend/src/components/ItemManager.vue": "a8e85464d997f3fbd6b4f151df649fa5721e0dd23444c1eebce445124937fe5e",
+    "frontend/src/components/JournalView.vue": "e2923e6764373345c481176189c1f5593a0f2a67c2be97c1d571d579173dadf0",
+    "frontend/src/components/JudgmentList.vue": "cdba929cf4edbcedd7468ee1b2c23435cbdddac76328a00655340f6766cc09f4",
+    "frontend/src/components/MyView.vue": "40f2d74373d5ed1e16f60f35474ce8402e12b46eaa444d134539d4b5e2b04e3c",
+    "frontend/src/components/Onboarding.vue": "bf932a7d16942aa2119648f45822765384c7a150d2d7b7a9b73bc19d60d9de5f",
+    "frontend/src/components/PendingView.vue": "6549acfd98180dc99ba762e946ec503e75e8ec477df45deaf9dfa9e2fc7c93b6",
+    "frontend/src/components/RecordComposer.vue": "8b90c3a86855d898b84b5276454eff97c8f9d1859b5e3dc55fb25b3c0d47a460",
+    "frontend/src/components/RecordDetail.vue": "e1e416af76efc160ba4d77162fab10ccd9e2a80d9a29b2869509c362b86a5dcc",
+    "frontend/src/components/RecordList.vue": "d25843dcb6706a35ac86cbe6c15b9834e7827fb787c76aba2e5c57cbc2686a05",
+    "frontend/src/components/ReportHistory.vue": "e2c7e459673fdd8f92b8c3d47f6c5d2265bf2a7b74449994e5c013776c6f070b",
+    "frontend/src/components/ReviewView.vue": "0b606ff56f52ac5f3dfb761126ae1de41f008f7398fc6acf323521a04ec85bbe",
+    "frontend/src/components/SettingsView.vue": "31d006717d666b1a6a05e3cc9f9cbac9ee314d278cc2c10ee8bd57431ff571a4",
+    "frontend/src/components/TimelineView.vue": "233f9ca47367ea46124773ea0d488ce8237c7feeed4e613f3a0b3ac2df4668f0",
+    "frontend/src/components/ToastHost.vue": "29384952ef18ca847108eb0661361554fa5ff6972bb0e45565e06ea12907b026",
+    "frontend/src/components/TodayCheckin.vue": "7d9fd5c7dcb868079a77ae68a71e3013851cfb6d88fca2c381d4594390802a38"
+  },
+  "checks": [
+    {
+      "name": "layout 390 /",
+      "status": "PASS",
+      "details": {
+        "width": 390,
+        "scrollWidth": 375,
+        "firstRecord": {
+          "x": 16,
+          "y": 886.484375,
+          "width": 343,
+          "height": 451.71875,
+          "bottom": 1338.203125
+        },
+        "save": {
+          "x": 278,
+          "y": 649.90625,
+          "width": 62,
+          "height": 44,
+          "bottom": 693.90625
+        },
+        "links": {
+          "x": 16,
+          "y": 736.90625,
+          "width": 343,
+          "height": 86.78125,
+          "bottom": 823.6875
+        },
+        "nav": {
+          "x": 0,
+          "y": 781,
+          "width": 375,
+          "height": 63,
+          "bottom": 844
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 390 /journal",
+      "status": "PASS",
+      "details": {
+        "width": 390,
+        "scrollWidth": 375,
+        "firstRecord": {
+          "x": 16,
+          "y": 333.765625,
+          "width": 343,
+          "height": 937.53125,
+          "bottom": 1271.296875
+        },
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 781,
+          "width": 375,
+          "height": 63,
+          "bottom": 844
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 390 /growth",
+      "status": "PASS",
+      "details": {
+        "width": 390,
+        "scrollWidth": 375,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 781,
+          "width": 375,
+          "height": 63,
+          "bottom": 844
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 390 /settings",
+      "status": "PASS",
+      "details": {
+        "width": 390,
+        "scrollWidth": 375,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 781,
+          "width": 375,
+          "height": 63,
+          "bottom": 844
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1440 /",
+      "status": "PASS",
+      "details": {
+        "width": 1440,
+        "scrollWidth": 1425,
+        "firstRecord": {
+          "x": 372.5,
+          "y": 806.6875,
+          "width": 928,
+          "height": 219.765625,
+          "bottom": 1026.453125
+        },
+        "save": {
+          "x": 1213.5,
+          "y": 559.71875,
+          "width": 62,
+          "height": 40.390625,
+          "bottom": 600.109375
+        },
+        "links": {
+          "x": 372.5,
+          "y": 649.109375,
+          "width": 928,
+          "height": 94.78125,
+          "bottom": 743.890625
+        },
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1440 /journal",
+      "status": "PASS",
+      "details": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "firstRecord": {
+          "x": 380,
+          "y": 267.375,
+          "width": 928,
+          "height": 368.109375,
+          "bottom": 635.484375
+        },
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1440 /growth",
+      "status": "PASS",
+      "details": {
+        "width": 1440,
+        "scrollWidth": 1425,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    },
+    {
+      "name": "layout 1440 /settings",
+      "status": "PASS",
+      "details": {
+        "width": 1440,
+        "scrollWidth": 1425,
+        "firstRecord": null,
+        "save": null,
+        "links": null,
+        "nav": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "bottom": 0
+        },
+        "radar": null,
+        "growth": null,
+        "heatmap": null
+      }
+    }
+  ],
+  "requests": [
+    {
+      "path": "/api/auth/me",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?date=2026-10-10",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes/history",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/heatmap",
+      "method": "GET"
+    },
+    {
+      "path": "/api/subdimensions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items",
+      "method": "GET"
+    },
+    {
+      "path": "/api/settings",
+      "method": "GET"
+    },
+    {
+      "path": "/api/llm-config",
+      "method": "GET"
+    },
+    {
+      "path": "/api/goals",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events?date=2026-10-10",
+      "method": "GET"
+    },
+    {
+      "path": "/api/pending",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes/history",
+      "method": "GET"
+    },
+    {
+      "path": "/api/events/heatmap",
+      "method": "GET"
+    },
+    {
+      "path": "/api/subdimensions",
+      "method": "GET"
+    },
+    {
+      "path": "/api/items",
+      "method": "GET"
+    },
+    {
+      "path": "/api/settings",
+      "method": "GET"
+    },
+    {
+      "path": "/api/llm-config",
+      "method": "GET"
+    },
+    {
+      "path": "/api/goals",
+      "method": "GET"
+    },
+    {
+      "path": "/api/attributes",
+      "method": "GET"
+    }
+  ],
+  "unknown": [],
+  "runtime": [],
+  "limitations": [
+    "Desktop Edge simulated viewports; no physical phone or screen reader",
+    "All APIs mocked; no database, model, financial or deployment proof"
+  ]
+}

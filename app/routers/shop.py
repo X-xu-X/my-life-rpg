@@ -8,6 +8,11 @@ from app.schemas import FulfillIn, RedeemIn, ShopItemIn, ShopItemUpdateIn
 from app.services import coin_service, shop_service
 from app.services.llm_service import LLMError
 from app.services.user_service import get_or_create_default_user
+from app.services import receipts
+from app.services.transactions import lock_profile
+from fastapi.encoders import jsonable_encoder
+from uuid import UUID
+from app.models.access import RequestReceipt
 
 router = APIRouter()
 
@@ -24,6 +29,7 @@ def _item_out(it: ShopItem) -> dict:
         "enabled": it.enabled,
         "sort_order": it.sort_order,
         "created_at": it.created_at,
+        "updated_at": it.updated_at,
     }
 
 
@@ -38,7 +44,9 @@ def _get_item(db: Session, user, item_id: int) -> ShopItem:
 def list_items(db: Session = Depends(get_db)):
     """物品列表（首次访问时幂等预置常驻物资）。"""
     user = get_or_create_default_user(db)
-    shop_service.seed_preset_items(db, user)
+    from app.config import settings
+    if not settings.cloud:
+        shop_service.seed_preset_items(db, user)
     rows = (
         db.query(ShopItem)
         .filter(ShopItem.user_id == user.id)
@@ -67,6 +75,8 @@ def update_item(item_id: int, body: ShopItemUpdateIn, db: Session = Depends(get_
     """局部修改物品（用户手动改价 / 停用）。改价会在定价理由后追加说明。"""
     user = get_or_create_default_user(db)
     it = _get_item(db, user, item_id)
+    lock_profile(db, user.id)
+    db.refresh(it)
     fields = body.model_dump(exclude_unset=True)
 
     if "name" in fields and fields["name"] is not None:
@@ -100,6 +110,9 @@ def reprice_item(item_id: int, db: Session = Depends(get_db)):
     it = _get_item(db, user, item_id)
     try:
         it = shop_service.repricing(db, user, it)
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(409, str(exc)) from exc
     except LLMError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     return _item_out(it)
@@ -110,6 +123,8 @@ def disable_item(item_id: int, db: Session = Depends(get_db)):
     """停用物品（**不做物理删除**，保留历史兑换记录的名称引用）。"""
     user = get_or_create_default_user(db)
     it = _get_item(db, user, item_id)
+    lock_profile(db, user.id)
+    db.refresh(it)
     it.enabled = False
     db.commit()
     return {"status": "disabled", "item_id": item_id}
@@ -120,12 +135,22 @@ def redeem_item(item_id: int, body: RedeemIn | None = None, db: Session = Depend
     """兑换 → 生成一张待兑现的「奖励券」。余额不足返回 400。"""
     user = get_or_create_default_user(db)
     it = _get_item(db, user, item_id)
+    body = body or RedeemIn()
+    lock_profile(db, user.id)
+    db.refresh(it)
+    operation = f'redeem:{item_id}'
+    fingerprint, prior = receipts.replay(db, user.id, operation, body)
+    if prior is not None:
+        return prior
+    if body.expected_version is not None and body.expected_version != it.updated_at:
+        db.rollback()
+        raise HTTPException(409, '物品价格已更新，请重新读取。')
     note = (body.note if body else "") or ""
     try:
-        redemption = shop_service.redeem(db, user, it, note)
+        redemption = shop_service.redeem(db, user, it, note, commit=False)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    return {
+    result = {
         "redemption": {
             "id": redemption.id,
             "shop_item_id": redemption.shop_item_id,
@@ -138,6 +163,20 @@ def redeem_item(item_id: int, body: RedeemIn | None = None, db: Session = Depend
         },
         "balance": coin_service.balance(db, user),
     }
+    receipts.record(db, user.id, operation, body, fingerprint, redemption.id, jsonable_encoder(result))
+    db.commit()
+    return result
+
+
+@router.get("/shop/items/{item_id}/redemption-submissions/{request_key}")
+def redemption_submission(item_id: int, request_key: UUID, db: Session = Depends(get_db)):
+    user = get_or_create_default_user(db)
+    _get_item(db, user, item_id)
+    row = db.query(RequestReceipt).filter_by(user_id=user.id, operation=f'redeem:{item_id}',
+        request_key=str(request_key)).first()
+    if row is None:
+        raise HTTPException(404, "兑换回执尚不存在；可使用原操作标识恢复。")
+    return row.response_snapshot
 
 
 @router.get("/redemptions")

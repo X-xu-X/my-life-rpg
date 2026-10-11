@@ -32,3 +32,13 @@ def get_coins(limit: int = 50, db: Session = Depends(get_db)):
             for r in rows
         ],
     }
+
+
+@router.post('/coins/check-streak')
+def check_streak(db: Session = Depends(get_db)):
+    user = get_or_create_default_user(db)
+    from app.services.transactions import lock_profile
+    lock_profile(db, user.id)
+    granted = coin_service.check_journal_streak(db, user)
+    db.commit()
+    return {'granted':granted,'balance':coin_service.balance(db, user)}

@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-09",
+  "scope": "本机隔离合成数据；没有启动真实 SQLite，没有部署公网，没有真实模型调用",
+  "sqlite_suite": {
+    "command": ".venv/Scripts/python.exe -m unittest discover -s tests -p 'test_*.py' -q",
+    "run": 59,
+    "passed": 57,
+    "skipped_pg_only": 2,
+    "failed": 0,
+    "elapsed_seconds": 17.445
+  },
+  "postgres_suite": {
+    "command": "TEST_PG_URL=<本机专用测试库> .venv/Scripts/python.exe -m unittest discover -s tests -p test_next_iteration.py -v",
+    "version": "18.6",
+    "isolation": "每例随机 schema，结束后仅删除该测试 schema",
+    "run": 20,
+    "passed": 20,
+    "failed": 0,
+    "elapsed_seconds": 27.880
+  },
+  "migrations": {
+    "database": "本机专用空 PostgreSQL gol_next_test",
+    "upgrade_head_repeat": "PASS",
+    "alembic_check": "No new upgrade operations detected.",
+    "head": "b004_reports"
+  },
+  "frontend": {
+    "node_scripts": ["tests/frontend_v1_11.mjs", "tests/frontend_next.mjs"],
+    "node_result": "PASS",
+    "build_command": "npm run build --prefix frontend",
+    "build_result": "PASS",
+    "vite_version": "5.4.21",
+    "initial_kb": 119.88,
+    "initial_gzip_kb": 46.20,
+    "remaining_warning": "AttributePanel 图表分包 541.55 kB，超过 500 kB 提示阈值"
+  },
+  "deployment_static": {
+    "compose_yaml": "PASS",
+    "service_names": ["db", "migrate", "api", "worker", "ops", "caddy"],
+    "database_public_ports": false,
+    "postgres_volume": "game_of_life_pg18",
+    "docker_runtime": "NOT_RUN: 当前环境未安装 Docker",
+    "remote_backup_restore": "NOT_RUN",
+    "mobile_real_device": "NOT_RUN"
+  },
+  "references": ["NEXT_BROWSER_EVIDENCE.json", "NEXT_RESTORE_EVIDENCE.json", "../NEXT_ITERATION_DELIVERY.md"]
+}

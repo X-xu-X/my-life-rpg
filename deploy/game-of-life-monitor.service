@@ -1,0 +1,10 @@
+[Unit]
+Description=Game of Life local service and backup monitoring
+After=docker.service
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/game-of-life
+EnvironmentFile=/etc/game-of-life/monitor.env
+ExecStart=/usr/bin/python3 /opt/game-of-life/ops/monitor.py --backup-root /var/lib/game-of-life
+NoNewPrivileges=true
+UMask=0077

@@ -14,6 +14,7 @@ v1.10（N1）推翻该铁律 —— 金额**完全交给 AI 判断**（用户原
 
 `snapshot()` 是**只读**函数：不写库、不改余额、不发币。
 """
+from app.services.time_service import clock_now
 from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
@@ -27,7 +28,7 @@ LOOKBACK_DAYS = 7
 
 def recent_flow(db: Session, user: User, days: int = LOOKBACK_DAYS) -> tuple[int, int]:
     """近 N 天的（收入合计, 支出合计）。只统计非零变动（0 值留痕不计入收支）。"""
-    since = datetime.now() - timedelta(days=days)
+    since = clock_now() - timedelta(days=days)
     rows = (
         db.query(CoinLedger.delta)
         .filter(CoinLedger.user_id == user.id, CoinLedger.created_at >= since)

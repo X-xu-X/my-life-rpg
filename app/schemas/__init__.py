@@ -1,8 +1,10 @@
 """Pydantic 请求/响应模型（API 层数据结构）。"""
 from datetime import datetime
 from typing import Any, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, Field
+from app.services.receipts import MutationIn
 
 
 # ============ 事件 ============
@@ -23,6 +25,9 @@ class EventCreate(BaseModel):
     item_id: int | None = Field(None, description="所属打卡项目（v1.7，可空=纯自由记一笔）")
     is_pure: bool = Field(False, description="纯享记录：只记录不加点、不走 AI 判定")
     occurred_at: datetime | None = None
+    client_request_id: UUID | None = None
+    intent: Literal["now", "later", "never"] = "later"
+    timezone: str = "Asia/Shanghai"
 
 
 class EventUpdate(BaseModel):
@@ -35,6 +40,7 @@ class EventUpdate(BaseModel):
     content: str | None = None
     item_id: int | None = None
     occurred_at: datetime | None = None
+    expected_version: int | None = Field(None, ge=1)
 
 
 class EventOut(BaseModel):
@@ -52,6 +58,10 @@ class EventOut(BaseModel):
     origin: str | None = None
     occurred_at: datetime | None
     created_at: datetime
+    content_version: int = 1
+    client_request_id: str | None = None
+    analysis_intent: str = "legacy"
+    timezone_at_capture: str = "Asia/Shanghai"
 
     model_config = {"from_attributes": True}
 
@@ -162,7 +172,7 @@ class DisputeIn(BaseModel):
     detail: str = Field(..., description="反驳理由")
 
 
-class AchievementActionIn(BaseModel):
+class AchievementActionIn(MutationIn):
     """v1.10 M1：AI 里程碑建议的处理动作。
 
     - `grant`：追授（发一次金币 + 落库）
@@ -174,7 +184,7 @@ class AchievementActionIn(BaseModel):
 
 # ============ 豁免券（v1.10 M2） ============
 
-class ExemptionIn(BaseModel):
+class ExemptionIn(MutationIn):
     """购买豁免券：**必须指定日期 + 时段**（缺一即拒，不做万能券）。
 
     - `period` ∈ morning/afternoon/evening/allday/custom
@@ -225,7 +235,7 @@ class GoalCreate(BaseModel):
     penalty: float = Field(-1.0, ge=-5, le=0, allow_inf_nan=False)
 
 
-class GoalUpdate(BaseModel):
+class GoalUpdate(MutationIn):
     description: str | None = None
     metric: str | None = None
     deadline: datetime | None = None
@@ -272,6 +282,7 @@ class LLMConfigIn(BaseModel):
     """
 
     group: Literal["primary", "aux"]
+    provider_id: str | None = None
     api_key: str | None = None
     base_url: str | None = None
     model: str | None = None
@@ -382,6 +393,8 @@ class RedeemIn(BaseModel):
     """兑换（可附备注）。"""
 
     note: str = ""
+    request_key: UUID | None = None
+    expected_version: datetime | None = None
 
 
 class FulfillIn(BaseModel):
@@ -392,7 +405,7 @@ class FulfillIn(BaseModel):
 
 # ============ 停滞觉察（v1.8） ============
 
-class StagnationAnswerIn(BaseModel):
+class StagnationAnswerIn(MutationIn):
     """回答停滞问询。
 
     - stopped=True  确实停了 → 小幅扣分（−0.3）+ 生成补课挑战

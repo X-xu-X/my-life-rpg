@@ -1,0 +1,11 @@
+[gol_backup]
+host=db
+port=5432
+dbname=game_of_life
+user=gol_app
+
+[gol_restore]
+host=db
+port=5432
+dbname=postgres
+user=gol_admin

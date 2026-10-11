@@ -66,7 +66,7 @@ onMounted(load)
     <h2>纯享手账</h2>
     <p class="muted">这里是没有 AI 分析、没有加点的纯粹记录空间，随手记下生活的美好瞬间。</p>
 
-    <p v-if="error" class="muted" style="color: #d33">{{ error }}</p>
+    <p v-if="error" class="muted" style="color: var(--danger)">{{ error }}</p>
     <p v-if="records.length === 0 && !error" class="muted">还没有纯享记录。去「记录事件」勾选「纯享记录」记一条吧。</p>
 
     <div class="field" v-if="records.length > 0">
@@ -74,15 +74,15 @@ onMounted(load)
     </div>
 
     <div v-for="r in filteredRecords" :key="r.id" class="judgment-item">
-      <div class="row" style="align-items: center; margin-bottom: 6px">
+      <div class="action-group" style="align-items: center; margin-bottom: 6px">
         <b>{{ r.title || '纯享记录' }}</b>
-        <span class="muted" style="font-size: 12px">{{ new Date(r.created_at).toLocaleString('zh-CN') }}</span>
+        <span class="muted" style="font-size: 13px">{{ new Date(r.created_at).toLocaleString('zh-CN') }}</span>
       </div>
 
       <!-- 编辑态 -->
       <div v-if="editTarget === r.id" class="field">
         <textarea v-model="editText" rows="3" placeholder="记录内容…"></textarea>
-        <div class="row" style="margin-top: 8px">
+        <div class="action-group" style="margin-top: 8px">
           <button class="btn small primary" @click="saveEdit">保存</button>
           <button class="btn small" @click="editTarget = null">取消</button>
         </div>

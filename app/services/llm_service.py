@@ -10,11 +10,59 @@ import json
 import math
 import re
 import time
+import hashlib
+import threading
+from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
 
 from openai import OpenAI
 
 from app.config import settings
+CALL_GUARD = ContextVar("model_call_guard", default=None)
+USAGE_FACTORY = ContextVar("model_usage_factory", default=None)
+_model_slot = threading.BoundedSemaphore(1)
+
+
+def _release_model_slot(connection):
+    try:
+        if connection is not None:
+            from sqlalchemy import text
+            try:
+                connection.execute(text('SELECT pg_advisory_unlock(61111201)'))
+                connection.commit()
+            except Exception:
+                connection.invalidate()
+            finally:
+                connection.close()
+    finally:
+        _model_slot.release()
+
+
+def reserve_usage(config):
+    if not settings.cloud:
+        return
+    from app.database import SessionLocal
+    from app.models.analysis import ModelUsage
+    from app.services.time_service import clock_now
+    from sqlalchemy.exc import IntegrityError
+    factory = USAGE_FACTORY.get() or SessionLocal
+    day = clock_now().date()
+    with factory() as db:
+        row = db.query(ModelUsage).filter_by(user_id=config.user_id, local_date=day).first()
+        if row is None:
+            try:
+                with db.begin_nested():
+                    db.add(ModelUsage(user_id=config.user_id, local_date=day, calls=0))
+                    db.flush()
+            except IntegrityError:
+                pass
+        changed = db.query(ModelUsage).filter(ModelUsage.user_id == config.user_id,
+            ModelUsage.local_date == day, ModelUsage.calls < settings.ai_daily_limit).update(
+                {ModelUsage.calls: ModelUsage.calls + 1}, synchronize_session=False)
+        if changed != 1:
+            db.rollback()
+            raise LLMError("MODEL_DAILY_LIMIT：今日分析预算已用完，仍可继续保存文字。")
+        db.commit()
 
 if TYPE_CHECKING:  # 仅供类型标注；运行时不导入（llm_config 会导入本模块的 LLMError）
     from app.services.llm_config import LLMConfig
@@ -56,11 +104,18 @@ class LLMService:
 
     def _get_client(self, config: "LLMConfig | None" = None) -> OpenAI:
         """获取（或懒创建）OpenAI 兼容客户端。"""
+        if settings.cloud:
+            if config is None:
+                raise LLMError("MODEL_NOT_CONFIGURED：分析前请绑定自己的模型。")
+            from app.services.model_boundary import IsolatedClient
+            return IsolatedClient(config)
         if config is not None:
-            key = (config.api_key, config.base_url)
+            key = (hashlib.sha256(config.api_key.encode()).hexdigest(), config.base_url)
             client = self._clients.get(key)
             if client is None:
-                client = OpenAI(api_key=config.api_key, base_url=config.base_url)
+                if len(self._clients) >= 16:
+                    self._clients.pop(next(iter(self._clients))).close()
+                client = OpenAI(api_key=config.api_key, base_url=config.base_url, max_retries=0, timeout=settings.ai_timeout)
                 self._clients[key] = client
             return client
         # .env 默认路径（未传 config 时，行为与 v1.3 完全一致）
@@ -69,10 +124,12 @@ class LLMService:
                 "尚未配置 DEEPSEEK_API_KEY。请到「设置 → AI 模型」绑定密钥，"
                 "或复制 .env.example 为 .env 并填入真实密钥。"
             )
-        key = (settings.deepseek_api_key, settings.deepseek_base_url)
+        key = (hashlib.sha256(settings.deepseek_api_key.encode()).hexdigest(), settings.deepseek_base_url)
         client = self._clients.get(key)
         if client is None:
-            client = OpenAI(api_key=settings.deepseek_api_key, base_url=settings.deepseek_base_url)
+            if len(self._clients) >= 16:
+                self._clients.pop(next(iter(self._clients))).close()
+            client = OpenAI(api_key=settings.deepseek_api_key, base_url=settings.deepseek_base_url, max_retries=0, timeout=settings.ai_timeout)
             self._clients[key] = client
         return client
 
@@ -91,7 +148,33 @@ class LLMService:
         :param json_mode: 是否要求模型输出 JSON（DeepSeek 需 prompt 含 json 关键字）
         :param config: v1.4 可选覆盖配置（BYOK）；不传走 .env 默认
         """
-        client = self._get_client(config)
+        if settings.cloud and not _model_slot.acquire(blocking=False):
+            raise LLMError("MODEL_BUSY：分析正在进行，请稍后重试。")
+        client = None
+        global_lock = None
+        try:
+            if settings.cloud:
+                from app.database import SessionLocal
+                from sqlalchemy import text
+                factory = USAGE_FACTORY.get() or SessionLocal
+                with factory() as usage_db:
+                    bind = usage_db.get_bind()
+                if bind.dialect.name == 'postgresql':
+                    global_lock = bind.connect()
+                    if not global_lock.execute(text('SELECT pg_try_advisory_lock(61111201)')).scalar():
+                        global_lock.close()
+                        global_lock = None
+                        raise LLMError("MODEL_BUSY：分析正在进行，请稍后重试。")
+                    global_lock.commit()
+            guard = CALL_GUARD.get()
+            if guard:
+                guard()
+            reserve_usage(config)
+            client = self._get_client(config)
+        except Exception:
+            if settings.cloud:
+                _release_model_slot(global_lock)
+            raise
         temp = settings.llm_temperature if temperature is None else temperature
 
         kwargs: dict[str, Any] = {
@@ -105,8 +188,16 @@ class LLMService:
 
         try:
             resp = client.chat.completions.create(**kwargs)
-        except Exception as exc:  # 网络异常 / 鉴权失败 / 余额不足等
-            raise LLMError(f"LLM 调用失败：{exc}") from exc
+        except Exception as exc:
+            status = getattr(exc, "status_code", 0)
+            code = getattr(exc, 'safe_code', None) or {401: "MODEL_AUTH_FAILED", 402: "MODEL_BALANCE_INSUFFICIENT", 429: "MODEL_RATE_LIMITED"}.get(status, "MODEL_UNAVAILABLE")
+            raise LLMError(code + "：分析失败，原文已保存，请检查模型配置后重试。") from None
+        finally:
+            if settings.cloud:
+                try:
+                    client.close()
+                finally:
+                    _release_model_slot(global_lock)
 
         content = resp.choices[0].message.content or ""
         return content
@@ -141,6 +232,8 @@ class LLMService:
                 last_error = LLMError("模型返回 JSON 无有效字段")
                 continue
             return result
+        if settings.cloud:
+            raise LLMError('MODEL_INVALID_RESPONSE：模型返回无效内容，原文已保存，请稍后重试。')
         raise LLMError(
             "AI 服务偶发抖动，已自动重试仍失败，请稍后重试。" f"（{last_error}）"
         )

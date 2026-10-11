@@ -8,6 +8,9 @@ from app.schemas import ChallengeGenerateIn, ChallengeResolveIn, ChallengeVarian
 from app.services import challenge_service, coin_service
 from app.services.llm_service import LLMError
 from app.services.user_service import get_or_create_default_user
+from app.services import receipts
+from app.services.transactions import lock_profile
+from fastapi.encoders import jsonable_encoder
 
 router = APIRouter()
 
@@ -24,6 +27,7 @@ def _out(ch: Challenge, jmap: dict[int, AIJudgment] | None = None) -> dict:
     j = (jmap or {}).get(ch.judgment_id) if ch.judgment_id else None
     return {
         "id": ch.id,
+        "updated_at": ch.updated_at,
         "scope": ch.scope,
         "period_key": ch.period_key,
         "title": ch.title,
@@ -94,21 +98,44 @@ def generate_challenges(body: ChallengeGenerateIn, db: Session = Depends(get_db)
     user = get_or_create_default_user(db)
     try:
         rows = challenge_service.generate(db, user, scope=body.scope, force=body.force)
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(409, str(exc)) from exc
     except LLMError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     return {"challenges": _out_many(db, rows)}
 
 
+@router.post('/challenges/sync-expiry')
+def sync_expiry(db: Session = Depends(get_db)):
+    user = get_or_create_default_user(db)
+    try:
+        return {'processed':challenge_service.expire_stale(db, user)}
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(409, str(exc)) from exc
+
+
 @router.post("/challenges/{challenge_id}/accept")
-def accept_challenge(challenge_id: int, db: Session = Depends(get_db)):
+def accept_challenge(challenge_id: int, db: Session = Depends(get_db), body: receipts.MutationIn = receipts.MutationIn()):
     """接受挑战（扣除押金）。余额不足返回 400。"""
     user = get_or_create_default_user(db)
     ch = _get(db, user, challenge_id)
+    lock_profile(db, user.id)
+    db.refresh(ch)
+    operation = f'accept:{challenge_id}'
+    fingerprint, prior = receipts.replay(db, user.id, operation, body)
+    if prior is not None: return prior
+    if body.expected_version is not None and body.expected_version != ch.updated_at:
+        raise HTTPException(409, '挑战已更新，请重新读取。')
     try:
-        ch = challenge_service.accept(db, user, ch)
+        ch = challenge_service.accept(db, user, ch, commit=False)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    return {"challenge": _out(ch), "balance": coin_service.balance(db, user)}
+    result = {"challenge": _out(ch), "balance": coin_service.balance(db, user)}
+    receipts.record(db, user.id, operation, body, fingerprint, ch.id, jsonable_encoder(result))
+    db.commit()
+    return result
 
 
 @router.put("/challenges/{challenge_id}/variant")
@@ -144,14 +171,23 @@ def complete_challenge(challenge_id: int, body: ChallengeResolveIn, db: Session 
 
 
 @router.post("/challenges/{challenge_id}/settle")
-def settle_challenge(challenge_id: int, db: Session = Depends(get_db)):
+def settle_challenge(challenge_id: int, db: Session = Depends(get_db), body: receipts.MutationIn = receipts.MutationIn()):
     """确认结算：加点入账 + 押金/奖励发放。"""
     user = get_or_create_default_user(db)
     ch = _get(db, user, challenge_id)
+    lock_profile(db, user.id)
+    db.refresh(ch)
+    operation = f'settle:{challenge_id}'
+    fingerprint, prior = receipts.replay(db, user.id, operation, body)
+    if prior is not None: return prior
+    if body.expected_version is not None and body.expected_version != ch.updated_at:
+        raise HTTPException(409, '挑战已更新，请重新读取后结算。')
     try:
-        result = challenge_service.settle(db, user, ch)
+        result = challenge_service.settle(db, user, ch, commit=False)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+    receipts.record(db, user.id, operation, body, fingerprint, ch.id, jsonable_encoder(result))
+    db.commit()
     return result
 
 

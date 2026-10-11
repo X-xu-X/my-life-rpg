@@ -1,0 +1,73 @@
+2026-10-10 OPS REVIEW: synthetic local resources only
+Tools: official restic0.14.0 windows/amd64 (SHA256), Caddy2.11.7 windows/amd64 (SHA512).
+Command: TEST_RESTIC_BIN=<verified path> TEST_CADDY_BIN=<verified path> python -m unittest discover -s tests -p "test_*ops*.py" -v
+
+test_frozen_migrations_empty_sqlite_and_repeat (test_ops_next.OpsTests.test_frozen_migrations_empty_sqlite_and_repeat) ... ok
+test_preflight_preserves_dangling_judgment_35_event_34 (test_ops_next.OpsTests.test_preflight_preserves_dangling_judgment_35_event_34) ... ok
+test_real_caddy_homepage_stays_ok_api_stop_and_db_failure_alert (test_ops_review_integration.OpsReviewIntegrationTests.test_real_caddy_homepage_stays_ok_api_stop_and_db_failure_alert) ... C:\Users\19687\Desktop\游戏人生\work_place\my-life-rpg\app\main.py:76: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("startup")
+C:\Users\19687\Desktop\游戏人生\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\applications.py:4681: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  return self.router.on_event(event_type)  # ty: ignore[deprecated]
+ok
+test_real_restic_retention_stable_host_and_other_deployment_preserved (test_ops_review_integration.OpsReviewIntegrationTests.test_real_restic_retention_stable_host_and_other_deployment_preserved) ... ok
+test_backup_remote_password_disk_alert_failures_do_not_update_success (test_release_ops.ReleaseOpsTests.test_backup_remote_password_disk_alert_failures_do_not_update_success) ... ok
+test_cleanup_classification_keep_failed_latest_verified_and_path_guard (test_release_ops.ReleaseOpsTests.test_cleanup_classification_keep_failed_latest_verified_and_path_guard) ... ok
+test_compose_internal_ports_allowed_host_bindings_rejected (test_release_ops.ReleaseOpsTests.test_compose_internal_ports_allowed_host_bindings_rejected) ... ok
+test_monitor_detects_stale_backup_worker_api_disk_and_no_secret_payload (test_release_ops.ReleaseOpsTests.test_monitor_detects_stale_backup_worker_api_disk_and_no_secret_payload) ... ok
+test_public_probe_requires_api_database_readiness_even_when_homepage_ok (test_release_ops.ReleaseOpsTests.test_public_probe_requires_api_database_readiness_even_when_homepage_ok) ... ok
+test_release_gate_fail_closed_and_private_env_placeholders (test_release_ops.ReleaseOpsTests.test_release_gate_fail_closed_and_private_env_placeholders) ... ok
+test_stable_backup_identity_survives_container_hostname_changes_and_scopes_forget (test_release_ops.ReleaseOpsTests.test_stable_backup_identity_survives_container_hostname_changes_and_scopes_forget) ... ok
+test_symlink_and_checksum_never_classified_or_deleted (test_release_ops.ReleaseOpsTests.test_symlink_and_checksum_never_classified_or_deleted) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 42.715s
+
+OK
+REAL_CADDY_HTTPS: healthy PASS; DB unreachable and API stopped each keep homepage200 but monitor exits2 and synthetic HTTPS alert arrives
+REAL_RESTIC: 35 same-deployment snapshots -> 9; 2 unrelated snapshots unchanged; check PASS
+
+Static: compileall app/ops/tests + Compose topology/identity + LF PASS; all ops sh -n PASS; Caddy adapt production and maintenance PASS.
+
+Prior failed Caddy adaptation, preserved actual output:
+{"level":"error","ts":1791634104.9578595,"msg":"Unexpected next token after '{' on same line, at deploy/Caddyfile:14"}
+
+Prior failed internal-path assertion (then fixed with explicit route), preserved actual output:
+test_real_caddy_homepage_stays_ok_api_stop_and_db_failure_alert (test_ops_review_integration.OpsReviewIntegrationTests.test_real_caddy_homepage_stays_ok_api_stop_and_db_failure_alert) ... C:\Users\19687\Desktop\游戏人生\work_place\my-life-rpg\app\main.py:76: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("startup")
+C:\Users\19687\Desktop\游戏人生\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\applications.py:4681: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  return self.router.on_event(event_type)  # ty: ignore[deprecated]
+FAIL
+
+======================================================================
+FAIL: test_real_caddy_homepage_stays_ok_api_stop_and_db_failure_alert (test_ops_review_integration.OpsReviewIntegrationTests.test_real_caddy_homepage_stays_ok_api_stop_and_db_failure_alert)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\19687\Desktop\游戏人生\work_place\my-life-rpg\tests\test_ops_review_integration.py", line 156, in test_real_caddy_homepage_stays_ok_api_stop_and_db_failure_alert
+    with self.assertRaises(HTTPError) as blocked:
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+AssertionError: HTTPError not raised
+
+----------------------------------------------------------------------
+Ran 1 test in 4.568s
+
+FAILED (failures=1)

@@ -1,0 +1,31 @@
+:root {
+  --bg: #F6F7FB;
+  --card: #FFFFFF;
+  --surface-subtle: #FAFBFE;
+  --text: #2B2F3A;
+  --text-sub: #62697A;
+  --primary: #4058D6;
+  --primary-hover: #3449BC;
+  --primary-soft: #EEF1FE;
+  --border: #E6E8EF;
+  --control-border: #7E8798;
+  --success: #267247;
+  --success-soft: #EEF8F1;
+  --warn: #8C5308;
+  --warn-soft: #FFF5E5;
+  --danger: #B9382B;
+  --danger-soft: #FFF0EE;
+  --positive: #B9382B;
+  --negative: #187247;
+  --focus-ring: #4058D6;
+  --radius: 12px;
+  --shadow: none;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+}

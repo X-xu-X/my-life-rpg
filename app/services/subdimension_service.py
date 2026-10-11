@@ -10,6 +10,7 @@
 3. 属性值写入仍统一走 `judge_service._clamp_attribute_value()`（v1.5 B-03 教训）。
 """
 
+from app.services.time_service import clock_now
 from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
@@ -25,6 +26,7 @@ from app.models import Attribute, Event, User, UserProfile
 from app.prompts.subdimension import build_subdimension_messages
 from app.services import llm_config
 from app.services.llm_service import llm_service
+from app.services.transactions import lock_profile, rollback_on_error
 
 # 提议状态的合法取值
 STATE_PENDING = "pending"
@@ -147,7 +149,7 @@ def _related_events(db: Session, user: User, parent_name: str, days: int = 120, 
     """与该维度相关的历史记录摘要（按「属性流水 + 事件标题」捞，尽量贴题）。"""
     from app.models import AttributeHistory  # 局部导入，避免模块级循环
 
-    cutoff = datetime.now() - timedelta(days=days)
+    cutoff = clock_now() - timedelta(days=days)
     rows = (
         db.query(Event.title, Event.category, Event.content, AttributeHistory.reason)
         .filter(Event.is_deleted.is_(False))
@@ -197,6 +199,7 @@ def _clean_items(raw) -> list[dict]:
     return out[:SUBDIMENSION_MAX]
 
 
+@rollback_on_error
 def propose(db: Session, user: User, attr: Attribute) -> dict:
     """让 AI 提议细分方向并落库为 `pending`（**不创建任何子维度行**）。
 
@@ -226,7 +229,14 @@ def propose(db: Session, user: User, attr: Attribute) -> dict:
         memory_context=_long_term_memory(db, user.id),
     )
     config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_AUX)
+    version = attr.updated_at
+    db.commit()
     result = llm_service.chat_json(messages, config=config)
+    lock_profile(db, user.id)
+    llm_config.assert_current(db, config)
+    db.refresh(attr)
+    if attr.updated_at != version or children_of(db, user, attr.id):
+        raise ValueError('属性或提议已变化，请重新读取。')
 
     items = _clean_items(result.get("items"))
     if len(items) < SUBDIMENSION_MIN:
@@ -238,7 +248,7 @@ def propose(db: Session, user: User, attr: Attribute) -> dict:
         "state": STATE_PENDING,
         "items": items,
         "reason": str(result.get("reason", "")).strip()[:300],
-        "at": datetime.now().isoformat(timespec="seconds"),
+        "at": clock_now().isoformat(timespec="seconds"),
     }
     attr.sub_proposal = proposal
     db.commit()
@@ -246,11 +256,16 @@ def propose(db: Session, user: User, attr: Attribute) -> dict:
     return proposal
 
 
+@rollback_on_error
 def accept(db: Session, user: User, attr: Attribute, names: list[str]) -> list[Attribute]:
     """按用户**勾选的名字**创建子维度（未勾选的不创建 → M3-1 的「确认后才解锁」）。"""
+    lock_profile(db, user.id)
+    db.refresh(attr)
     if attr.parent_id is not None:
         raise ValueError("子维度不能再拆分。")
     prop = attr.sub_proposal if isinstance(attr.sub_proposal, dict) else {}
+    if prop.get('state') != STATE_PENDING:
+        raise ValueError('提议已处理，请重新读取。')
     items = prop.get("items") or []
     if not items:
         raise ValueError("还没有可确认的细分方向，请先让 AI 提议。")
@@ -288,18 +303,23 @@ def accept(db: Session, user: User, attr: Attribute, names: list[str]) -> list[A
     db.flush()
 
     attr.sub_proposal = {**prop, "state": STATE_ACCEPTED,
-                         "accepted": picked, "accepted_at": datetime.now().isoformat(timespec="seconds")}
+                         "accepted": picked, "accepted_at": clock_now().isoformat(timespec="seconds")}
     db.commit()
     for row in created:
         db.refresh(row)
     return created
 
 
+@rollback_on_error
 def dismiss(db: Session, user: User, attr: Attribute) -> None:
     """忽略本次提议（**不创建任何子维度**）。保留 items 以便审计。"""
+    lock_profile(db, user.id)
+    db.refresh(attr)
     prop = attr.sub_proposal if isinstance(attr.sub_proposal, dict) else {}
+    if prop.get('state') == STATE_ACCEPTED:
+        raise ValueError('提议已确认，不能再忽略。')
     attr.sub_proposal = {**prop, "state": STATE_DISMISSED,
-                         "dismissed_at": datetime.now().isoformat(timespec="seconds")}
+                         "dismissed_at": clock_now().isoformat(timespec="seconds")}
     db.commit()
 
 

@@ -8,6 +8,8 @@ from app.schemas import AchievementActionIn, DisputeIn, SupplementIn
 from app.services import achievement_service, coin_service, judge_service
 from app.services.llm_service import LLMError
 from app.services.user_service import get_or_create_default_user
+from app.services import receipts
+from app.services.transactions import lock_profile
 
 router = APIRouter()
 
@@ -90,6 +92,7 @@ def list_judgments(db: Session = Depends(get_db)):
             "last_user_input": last_input.get(j.id),  # v1.5 A2：最近一次补充/反驳
             "rejudge_count": rejudge_counts.get(j.id, 0),  # v1.5 A3：重判次数
             "created_at": j.created_at,
+            "updated_at": j.updated_at,
         }
         for j, e in rows
     ]
@@ -140,12 +143,22 @@ def get_logs(judgment_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/judgments/{judgment_id}/confirm")
-def confirm(judgment_id: int, db: Session = Depends(get_db)):
+def confirm(judgment_id: int, db: Session = Depends(get_db), body: receipts.MutationIn = receipts.MutationIn()):
     """确认入账：写属性流水 + 更新属性值。低置信度会被拦截。
 
     v1.8：入账成功后按净 delta 发放日常金币（净 delta ≤ 0 不给币也不扣币）。
     """
+    user = get_or_create_default_user(db)
+    lock_profile(db, user.id)
+    operation = f"confirm:{judgment_id}"
     judgment = _get_judgment(db, judgment_id)
+    fingerprint, prior = receipts.replay(db, user.id, operation, body)
+    if prior is not None:
+        return prior
+    db.refresh(judgment)
+    if body.expected_version is not None and body.expected_version != judgment.updated_at:
+        db.rollback()
+        raise HTTPException(409, "判定已更新，请重新读取后确认。")
     if judgment.status == "confirmed":
         raise HTTPException(status_code=409, detail="该判定已确认入账，请勿重复操作。")
     user = get_or_create_default_user(db)
@@ -157,6 +170,11 @@ def confirm(judgment_id: int, db: Session = Depends(get_db)):
     try:
         judgment = judge_service.confirm(db, judgment, commit=False)
         coins_gained = coin_service.reward_event_confirm(db, user, judgment, event_title=event.title or "")
+        result = {"status": judgment.status, "final_changes": judgment.final_changes,
+            "coins_gained": coin_service.EVENT_CONFIRM_REWARD if coins_gained is not None else 0,
+            "balance": coin_service.balance(db, user), "unlocked_achievements": [],
+            "achievement_suggestion": judgment.achievement_suggestion or {}}
+        receipts.record(db, user.id, operation, body, fingerprint, judgment_id, result)
         db.commit()
     except ValueError as exc:
         db.rollback()
@@ -164,6 +182,10 @@ def confirm(judgment_id: int, db: Session = Depends(get_db)):
     except Exception:
         db.rollback()
         raise
+
+    from app.config import settings
+    if settings.cloud:
+        return result
 
     # v1.10 M1：累计型成就顺带检查（幂等；内部自行 commit，失败不影响入账主流程）
     unlocked: list[dict] = []
@@ -202,6 +224,12 @@ def handle_achievement(
     user = get_or_create_default_user(db)
     from app.services.transactions import lock_profile
     lock_profile(db, user.id)
+    operation=f'achievement:{judgment_id}'
+    fingerprint,prior=receipts.replay(db,user.id,operation,body)
+    if prior is not None:return prior
+    db.refresh(judgment)
+    if body.expected_version is not None and body.expected_version != judgment.updated_at:
+        raise HTTPException(409,'判定已更新，请重新读取。')
     try:
         event = judge_service._lock_event(db, judgment.event_id, user.id)
     except ValueError as exc:
@@ -245,19 +273,23 @@ def handle_achievement(
     judgment.achievement_suggestion = marked
     # SQLAlchemy JSON 列原地改不可靠，显式赋值 + 强制脏标记
     db.add(judgment)
-    db.commit()
-
-    return {
+    result = {
         "action": new_state,
         "achievement": achievement,
         "balance": coin_service.balance(db, user),
     }
+    receipts.record(db,user.id,operation,body,fingerprint,judgment_id,result)
+    db.commit()
+    return result
 
 
 @router.post("/judgments/{judgment_id}/supplement")
 def supplement(judgment_id: int, body: SupplementIn, db: Session = Depends(get_db)):
     """补充信息，AI 重新判定。"""
     judgment = _get_judgment(db, judgment_id)
+    from app.config import settings
+    if settings.cloud:
+        raise HTTPException(409, "请通过分析任务补充，旧同步入口已关闭。")
     try:
         judgment = judge_service.supplement(db, judgment, body.detail)
     except ValueError as exc:
@@ -281,6 +313,9 @@ def supplement(judgment_id: int, body: SupplementIn, db: Session = Depends(get_d
 def dispute(judgment_id: int, body: DisputeIn, db: Session = Depends(get_db)):
     """反驳复核：仅依据事实与科学标准，无据反驳坚持原判。"""
     judgment = _get_judgment(db, judgment_id)
+    from app.config import settings
+    if settings.cloud:
+        raise HTTPException(409, "请通过分析任务复核，旧同步入口已关闭。")
     try:
         result = judge_service.dispute(db, judgment, body.detail)
     except ValueError as exc:

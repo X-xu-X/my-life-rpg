@@ -1,0 +1,13 @@
+{
+  "tables_verified": 30,
+  "credentials_decrypted": 1,
+  "migration_heads": [
+    "b004_reports"
+  ],
+  "scope": "本机 PostgreSQL18.6 合成数据库；未覆盖源库；未验证远端存储或异机",
+  "restored_login": true,
+  "owner_isolated_from_friend_records": true,
+  "elapsed_seconds": 4.522,
+  "source_database": "gol_browser_test",
+  "target_database": "gol_rehearsal_local_1791558113"
+}

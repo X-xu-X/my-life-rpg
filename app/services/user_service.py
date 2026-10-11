@@ -12,6 +12,17 @@ DEFAULT_USERNAME = "default"
 
 def get_or_create_default_user(db: Session) -> User:
     """获取默认用户；不存在则创建（含画像空记录）。幂等。"""
+    current_id = db.info.get("user_id")
+    if current_id is not None:
+        user = db.get(User, current_id)
+        if user is None:
+            from fastapi import HTTPException
+            raise HTTPException(401, "请登录。")
+        return user
+    from app.config import settings
+    if settings.cloud:
+        from fastapi import HTTPException
+        raise HTTPException(401, "请登录。")
     user = db.query(User).filter(User.username == DEFAULT_USERNAME).first()
     if user is None:
         user = User(username=DEFAULT_USERNAME)

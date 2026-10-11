@@ -1,0 +1,16 @@
+COMMAND: node _tmp_ui_compile.mjs
+EXIT: 0
+PASS: 26 Vue script/template/style files and all CSS parsed/compiled with installed Vue compiler; this is not a Vite build or browser test
+
+COMMAND: node tests/frontend_next.mjs
+EXIT: 0
+PASS: account switch abort/late-response guard, namespaced draft removal, save double-click, lost response receipt recovery
+PASS: cloud supplement uses task queue and preserves caller judgment version for stale-input conflict
+
+COMMAND: node tests/frontend_v1_11.mjs
+EXIT: 0
+PASS: cache corruption/storage failure; TodayCheckin retry/double-click/edit; form/journal retry; challenge confidence gates
+PASS: onboarding visibility now uses authenticated account.onboarding_completed; covered in HTTP tests
+
+COMMAND: git -c core.safecrlf=false diff --check
+EXIT: 0

@@ -165,73 +165,73 @@ onMounted(load)
       你自定义的打卡项目。记录事件时从这里选一个、写正文即可（无需再填固定的时长/距离/强度）。
       <b>停用不会删除</b>——历史记录仍会显示项目名称。
     </p>
-    <p class="muted" style="font-size: 12px">
+    <p class="muted" style="font-size: 13px">
       项目完全由你自建，系统不预置任何项目；「负面」项目请按自己真实想改善的习惯来建。
     </p>
 
     <!-- 新建 / 编辑表单 -->
     <div class="judgment-item" style="margin-top: 10px; background: #fafbfd">
       <b>{{ editingId ? '编辑项目' : '新建项目' }}</b>
-      <div class="row" style="margin-top: 8px">
+      <div class="form-grid" style="margin-top: 8px">
         <div class="field">
-          <label>项目名 *</label>
-          <input v-model="form.name" placeholder="如 晨跑 / 背单词 / 久坐" />
+          <label for="itemmanager-field-1">项目名 *</label>
+          <input id="itemmanager-field-1" v-model="form.name" placeholder="如 晨跑 / 背单词 / 久坐" />
         </div>
         <div class="field">
-          <label>性质</label>
-          <select v-model="form.nature">
+          <label for="itemmanager-field-2">性质</label>
+          <select id="itemmanager-field-2" v-model="form.nature">
             <option v-for="n in NATURE_ORDER" :key="n" :value="n">{{ NATURE_META[n].label }}</option>
           </select>
         </div>
       </div>
-      <p class="muted" style="font-size: 12px; margin-top: -6px">{{ NATURE_META[form.nature].desc }}</p>
+      <p class="muted" style="font-size: 13px; margin-top: -6px">{{ NATURE_META[form.nature].desc }}</p>
 
-      <div class="row">
+      <div class="form-grid">
         <div class="field">
-          <label>期望频率</label>
-          <select v-model="form.frequency_type">
+          <label for="itemmanager-field-3">期望频率</label>
+          <select id="itemmanager-field-3" v-model="form.frequency_type">
             <option value="none">不限</option>
             <option value="daily">每天</option>
             <option value="weekly">每周 N 次</option>
           </select>
         </div>
         <div class="field" v-if="form.frequency_type === 'weekly'">
-          <label>每周目标次数</label>
-          <input type="number" min="1" v-model.number="form.frequency_target" placeholder="如 3" />
+          <label for="itemmanager-field-4">每周目标次数</label>
+          <input id="itemmanager-field-4" type="number" min="1" v-model.number="form.frequency_target" placeholder="如 3" />
         </div>
       </div>
-      <p class="muted" style="font-size: 12px; margin-top: -6px">
+      <p class="muted" style="font-size: 13px; margin-top: -6px">
         频率只做**如实提示**（如"本周运动 1/3"），不达标本系统不会自动扣分——扣分由 AI 判定。
       </p>
 
-      <div class="row">
+      <div class="form-grid">
         <div class="field">
-          <label>生活面</label>
-          <select v-model="form.category">
+          <label for="itemmanager-field-5">生活面</label>
+          <select id="itemmanager-field-5" v-model="form.category">
             <option value="">—</option>
             <option v-for="c in CATEGORIES" :key="c" :value="c">{{ c }}</option>
           </select>
         </div>
         <div class="field">
-          <label>主要影响维度</label>
-          <select v-model="form.related_attribute">
+          <label for="itemmanager-field-6">主要影响维度</label>
+          <select id="itemmanager-field-6" v-model="form.related_attribute">
             <option v-for="a in ATTRIBUTES" :key="a" :value="a">{{ a || '—' }}</option>
           </select>
         </div>
       </div>
 
       <div class="field">
-        <label>关联目标（可选）</label>
-        <select v-model="form.goal_id">
+        <label for="itemmanager-field-7">关联目标（可选）</label>
+        <select id="itemmanager-field-7" v-model="form.goal_id">
           <option :value="null">不挂目标</option>
           <option v-for="g in goals" :key="g.id" :value="g.id">{{ g.description || g.metric }}</option>
         </select>
-        <p class="muted" style="font-size: 12px; margin-top: 4px">
+        <p class="muted" style="font-size: 13px; margin-top: 4px">
           挂了目标后，目标的进度条会自动按本项目的打卡完成率计算（无需手动更新）。
         </p>
       </div>
 
-      <div class="row" style="margin-top: 6px">
+      <div class="action-group" style="margin-top: 6px">
         <button class="btn primary" :disabled="busy" @click="save">
           <template v-if="busy">保存中…</template>
           <template v-else>{{ editingId ? '保存修改' : '新建项目' }}</template>
@@ -241,28 +241,28 @@ onMounted(load)
       </div>
     </div>
 
-    <p v-if="error" class="muted" style="color: #d33">{{ error }}</p>
-    <p v-if="hint" class="muted" style="color: #2a7f3e; font-size: 12px">✓ {{ hint }}</p>
+    <p v-if="error" class="muted" style="color: var(--danger)">{{ error }}</p>
+    <p v-if="hint" class="muted" style="color: var(--success); font-size: 13px">✓ {{ hint }}</p>
 
     <!-- 列表（按性质分组） -->
     <p v-if="items.length === 0" class="muted" style="margin-top: 12px">还没有项目，用上面的表单建第一个吧。</p>
 
     <div v-for="g in grouped" :key="g.nature" style="margin-top: 14px">
-      <div class="muted" style="font-size: 12px; border-bottom: 1px solid #eee; padding-bottom: 4px; margin-bottom: 6px">
+      <div class="muted" style="font-size: 13px; border-bottom: 1px solid #eee; padding-bottom: 4px; margin-bottom: 6px">
         <b>{{ g.label }}</b> · {{ g.children.length }} 个
       </div>
       <div v-for="it in g.children" :key="it.id" class="judgment-item">
-        <div class="row" style="align-items: center">
+        <div class="action-group" style="align-items: center">
           <b>{{ it.name }}</b>
           <span class="tag">{{ freqText(it) }}</span>
           <span v-if="it.category" class="tag">{{ it.category }}</span>
           <span v-if="it.related_attribute" class="tag">{{ it.related_attribute }}</span>
-          <span v-if="!it.enabled" class="tag" style="background: #f0f0f0; color: #888">已停用</span>
-          <span class="muted" style="margin-left: auto; font-size: 12px">
+          <span v-if="!it.enabled" class="tag" style="background: #f0f0f0; color: var(--text-sub)">已停用</span>
+          <span class="muted" style="margin-left: auto; font-size: 13px">
             <template v-if="it.goal_id">已挂目标 · </template>#{{ it.id }}
           </span>
         </div>
-        <div class="row" style="margin-top: 8px">
+        <div class="action-group" style="margin-top: 8px">
           <button class="btn small" :disabled="busy" @click="startEdit(it)">编辑</button>
           <button class="btn small" :class="{ danger: it.enabled }" :disabled="busy" @click="toggleEnabled(it)">
             {{ it.enabled ? '停用' : '启用' }}

@@ -13,6 +13,7 @@
 
 金币入账一律走 `coin_service.grant(source='achievement')`（该 source 早已预留）。
 """
+from app.services.time_service import clock_now
 from datetime import datetime
 from re import sub as re_sub
 
@@ -194,7 +195,7 @@ def check_and_grant(db: Session, user: User) -> list[Achievement]:
             icon=c["icon"],
             kind="cumulative",
             coin_reward=c["coin_reward"],
-            unlocked_at=datetime.now(),
+            unlocked_at=clock_now(),
         )
         db.add(row)
         db.flush()
@@ -248,7 +249,7 @@ def grant_discovered(db: Session, user: User, name: str, reason: str = "", *, co
         icon="🎖",
         kind="discovered",
         coin_reward=reward,
-        unlocked_at=datetime.now(),
+        unlocked_at=clock_now(),
     )
     db.add(row)
     db.flush()

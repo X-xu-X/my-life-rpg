@@ -19,7 +19,7 @@ from datetime import datetime
 from sqlalchemy import (
     JSON,
     Boolean,
-    DateTime,
+    BigInteger,
     Float,
     ForeignKey,
     Integer,
@@ -30,11 +30,13 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+from app.time_types import DateTime
+from app.services.time_service import clock_now
 
 
 def _now() -> datetime:
     """统一的时间戳生成（本地时区，个人自用场景更直观）。"""
-    return datetime.now()
+    return clock_now()
 
 
 class User(Base):
@@ -44,6 +46,11 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="active")
+    role: Mapped[str] = mapped_column(String(10), default="user")
+    timezone: Mapped[str] = mapped_column(String(60), default="Asia/Shanghai")
+    credentials_version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
     profile: Mapped["UserProfile"] = relationship(back_populates="user", uselist=False)
@@ -62,6 +69,7 @@ class UserProfile(Base):
     initial_attributes_snapshot: Mapped[dict] = mapped_column(JSON, default=dict)
     # 首次引导是否完成（一次性约束：完成后只能补充长期信息，不可重新走引导）
     onboarding_completed: Mapped[bool] = mapped_column(Boolean, default=False)
+    baseline_kind: Mapped[str] = mapped_column(String(30), default="legacy")
     # 进行中的首次引导会话态（对话历史/当前问题/把握度），持久化，离开或重启不丢
     onboarding_state: Mapped[dict] = mapped_column(JSON, default=dict)
     # 补充长期信息后、待用户确认的属性调整建议
@@ -71,7 +79,7 @@ class UserProfile(Base):
     exp: Mapped[float] = mapped_column(Float, default=0.0)
     # 金币余额（v1.8）。唯一写入口是 coin_service.grant()，任何地方不得直接改此列。
     # 与属性点完全隔离（金币不能换点数）；负面事件不扣金币，避免双重惩罚。
-    coins: Mapped[int] = mapped_column(Integer, default=0)
+    coins: Mapped[int] = mapped_column(BigInteger, default=0)
     # 长期记忆（智能体式）：LLM 压缩历史事件成的五类摘要（长期目标/关键经历/性格/偏好/当前状态），JSON 字符串
     long_term_memory: Mapped[str | None] = mapped_column(Text, nullable=True)
     memory_updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -165,6 +173,11 @@ class Event(Base):
     """
 
     __tablename__ = "events"
+    __table_args__ = (UniqueConstraint("user_id", "client_request_id", name="uq_event_submission"),)
+    content_version: Mapped[int] = mapped_column(Integer, default=1)
+    client_request_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    analysis_intent: Mapped[str] = mapped_column(String(10), default="legacy")
+    timezone_at_capture: Mapped[str] = mapped_column(String(60), default="Asia/Shanghai")
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
@@ -323,8 +336,8 @@ class CoinLedger(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    delta: Mapped[int] = mapped_column(Integer, nullable=False)  # 本次变动，正=获得，负=消耗
-    balance_after: Mapped[int] = mapped_column(Integer, nullable=False)  # 变动后余额（对账用）
+    delta: Mapped[int] = mapped_column(BigInteger, nullable=False)  # 本次变动，正=获得，负=消耗
+    balance_after: Mapped[int] = mapped_column(BigInteger, nullable=False)  # 变动后余额（对账用）
     source: Mapped[str] = mapped_column(String(40), nullable=False)  # 见类 docstring
     reason: Mapped[str] = mapped_column(Text, default="")  # 人类可读说明（前端直接展示）
     ref_type: Mapped[str | None] = mapped_column(String(30), nullable=True)  # challenge/event/shop_item/redemption
@@ -359,8 +372,8 @@ class Challenge(Base):
     title: Mapped[str] = mapped_column(String(120), default="")
     description: Mapped[str] = mapped_column(Text, default="")
     difficulty: Mapped[int] = mapped_column(Integer, default=1)  # 1~5，AI 按事件自定
-    coin_reward: Mapped[int] = mapped_column(Integer, default=0)  # 完成可得（接受前展示）
-    deposit: Mapped[int] = mapped_column(Integer, default=0)  # 押金
+    coin_reward: Mapped[int] = mapped_column(BigInteger, default=0)  # 完成可得（接受前展示）
+    deposit: Mapped[int] = mapped_column(BigInteger, default=0)  # 押金
     related_attributes: Mapped[list] = mapped_column(JSON, default=list)  # AI 预期影响的维度（不预览）
     ai_reason: Mapped[str] = mapped_column(Text, default="")  # 为什么给你这个挑战（展示）
     # v1.9：同主题的多难度档位 [{label, description, difficulty}]。
@@ -395,7 +408,7 @@ class ShopItem(Base):
     name: Mapped[str] = mapped_column(String(120), default="")
     kind: Mapped[str] = mapped_column(String(10), default="custom")  # preset/custom
     price_yuan: Mapped[float | None] = mapped_column(Float, nullable=True)  # 现实价格（元）
-    coin_price: Mapped[int] = mapped_column(Integer, default=0)  # AI 定出的金币价（用户可改）
+    coin_price: Mapped[int] = mapped_column(BigInteger, default=0)  # AI 定出的金币价（用户可改）
     pricing_reason: Mapped[str] = mapped_column(Text, default="")  # AI 定价理由（必须展示）
     worth_note: Mapped[str] = mapped_column(Text, default="")  # "值不值得买"判断（必须展示）
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)  # 停用不删除
@@ -416,7 +429,7 @@ class Redemption(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     shop_item_id: Mapped[int | None] = mapped_column(ForeignKey("shop_items.id"), nullable=True)
-    coin_spent: Mapped[int] = mapped_column(Integer, default=0)  # 兑换消耗（快照）
+    coin_spent: Mapped[int] = mapped_column(BigInteger, default=0)  # 兑换消耗（快照）
     status: Mapped[str] = mapped_column(String(10), default="pending")  # pending/fulfilled
     redeemed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     fulfilled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -448,7 +461,7 @@ class Achievement(Base):
     description: Mapped[str] = mapped_column(Text, default="")  # 解锁说明
     icon: Mapped[str] = mapped_column(String(20), default="🏅")  # emoji
     kind: Mapped[str] = mapped_column(String(20), default="cumulative")  # cumulative/discovered
-    coin_reward: Mapped[int] = mapped_column(Integer, default=0)
+    coin_reward: Mapped[int] = mapped_column(BigInteger, default=0)
     unlocked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # NULL = 未解锁
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
@@ -472,6 +485,7 @@ class Exemption(Base):
     """
 
     __tablename__ = "exemptions"
+    timezone_at_capture: Mapped[str] = mapped_column(String(60), default="Asia/Shanghai")
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
@@ -481,7 +495,7 @@ class Exemption(Base):
     start_time: Mapped[str] = mapped_column(String(5), default="00:00")
     end_time: Mapped[str] = mapped_column(String(5), default="23:59")
     reason: Mapped[str] = mapped_column(Text, default="")  # 用户写的理由
-    coin_cost: Mapped[int] = mapped_column(Integer, default=0)  # AI 判动机后的实际价格
+    coin_cost: Mapped[int] = mapped_column(BigInteger, default=0)  # AI 判动机后的实际价格
     motive: Mapped[str] = mapped_column(String(20), default="legitimate")  # legitimate/evasive
     motive_note: Mapped[str] = mapped_column(Text, default="")  # AI 的动机判断说明（展示）
     extra_penalty: Mapped[float] = mapped_column(Float, default=0.0)  # 判为逃避时的额外扣点

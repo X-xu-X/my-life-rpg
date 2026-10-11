@@ -1,0 +1,194 @@
+[
+  {
+    "path": "/",
+    "width": 390,
+    "scrollWidth": 375,
+    "firstRecord": {
+      "x": 16,
+      "y": 886.484375,
+      "width": 343,
+      "height": 451.71875,
+      "bottom": 1338.203125
+    },
+    "save": {
+      "x": 278,
+      "y": 649.90625,
+      "width": 62,
+      "height": 44,
+      "bottom": 693.90625
+    },
+    "links": {
+      "x": 16,
+      "y": 736.90625,
+      "width": 343,
+      "height": 86.78125,
+      "bottom": 823.6875
+    },
+    "nav": {
+      "x": 0,
+      "y": 781,
+      "width": 375,
+      "height": 63,
+      "bottom": 844
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/journal",
+    "width": 390,
+    "scrollWidth": 375,
+    "firstRecord": {
+      "x": 16,
+      "y": 333.765625,
+      "width": 343,
+      "height": 937.53125,
+      "bottom": 1271.296875
+    },
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 781,
+      "width": 375,
+      "height": 63,
+      "bottom": 844
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/growth",
+    "width": 390,
+    "scrollWidth": 375,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 781,
+      "width": 375,
+      "height": 63,
+      "bottom": 844
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/settings",
+    "width": 390,
+    "scrollWidth": 375,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 781,
+      "width": 375,
+      "height": 63,
+      "bottom": 844
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/",
+    "width": 1440,
+    "scrollWidth": 1425,
+    "firstRecord": {
+      "x": 372.5,
+      "y": 806.6875,
+      "width": 928,
+      "height": 219.765625,
+      "bottom": 1026.453125
+    },
+    "save": {
+      "x": 1213.5,
+      "y": 559.71875,
+      "width": 62,
+      "height": 40.390625,
+      "bottom": 600.109375
+    },
+    "links": {
+      "x": 372.5,
+      "y": 649.109375,
+      "width": 928,
+      "height": 94.78125,
+      "bottom": 743.890625
+    },
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/journal",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "firstRecord": {
+      "x": 380,
+      "y": 267.375,
+      "width": 928,
+      "height": 368.109375,
+      "bottom": 635.484375
+    },
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/growth",
+    "width": 1440,
+    "scrollWidth": 1425,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/settings",
+    "width": 1440,
+    "scrollWidth": 1425,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  }
+]

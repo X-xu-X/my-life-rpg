@@ -61,11 +61,13 @@ async function create() {
 }
 
 async function setStatus(id, action) {
+  if(busy.value)return
+  const version=goals.value.find(row=>row.id===id)?.updated_at
   busy.value = true
   error.value = ''
   try {
     if (action === 'achieve') {
-      const res = await api.achieveGoal(id)
+      const res = await api.achieveGoal(id,version)
       const applied = res.applied || []
       if (applied.length) {
         const msg = applied.map((a) => `${a.name} ${a.delta >= 0 ? '+' : ''}${a.delta}`).join('、')
@@ -74,7 +76,7 @@ async function setStatus(id, action) {
         toast.success('目标已标记达成')
       }
     } else if (action === 'fail') {
-      const res = await api.failGoal(id)
+      const res = await api.failGoal(id,version)
       const applied = res.applied || []
       if (applied.length) {
         const msg = applied.map((a) => `${a.name} ${a.delta >= 0 ? '+' : ''}${a.delta}`).join('、')
@@ -83,7 +85,7 @@ async function setStatus(id, action) {
         toast.info('目标已标记未达成')
       }
     } else if (action === 'cancel') {
-      await api.cancelGoal(id)
+      await api.cancelGoal(id,version)
       toast.info('目标已取消')
     }
     await load()
@@ -102,24 +104,24 @@ onMounted(load)
   <div>
     <div class="card">
       <h2>目标系统</h2>
-      <div class="row">
+      <div class="form-grid">
         <div class="field">
-          <label>目标描述</label>
-          <input v-model="form.description" placeholder="例如：养成跑步习惯" />
+          <label for="goalsview-field-1">目标描述</label>
+          <input id="goalsview-field-1" v-model="form.description" placeholder="例如：养成跑步习惯" />
         </div>
         <div class="field">
-          <label>量化指标 *</label>
-          <input v-model="form.metric" placeholder="例如：本月跑步累计 50km" />
+          <label for="goalsview-field-2">量化指标 *</label>
+          <input id="goalsview-field-2" v-model="form.metric" placeholder="例如：本月跑步累计 50km" />
         </div>
       </div>
-      <div class="row">
+      <div class="form-grid">
         <div class="field">
-          <label>期限</label>
-          <input type="date" v-model="form.deadline" />
+          <label for="goalsview-field-3">期限</label>
+          <input id="goalsview-field-3" type="date" v-model="form.deadline" />
         </div>
         <div class="field">
-          <label>关联属性</label>
-          <input v-model="form.related_attribute" placeholder="例如：体能" />
+          <label for="goalsview-field-4">关联属性</label>
+          <input id="goalsview-field-4" v-model="form.related_attribute" placeholder="例如：体能" />
         </div>
       </div>
       <button class="btn primary" :disabled="busy" @click="create">
@@ -133,13 +135,13 @@ onMounted(load)
       <h3>目标列表</h3>
       <p v-if="goals.length === 0" class="muted">暂无目标。</p>
       <div v-for="g in goals" :key="g.id" class="judgment-item">
-        <div class="row" style="align-items: center; margin-bottom: 6px">
+        <div class="action-group" style="align-items: center; margin-bottom: 6px">
           <b>{{ g.description || g.metric }}</b>
           <span class="tag">{{ STATUS_LABEL[g.status] || g.status }}</span>
         </div>
         <div class="muted">指标：{{ g.metric }}</div>
         <div v-if="g.deadline" class="muted">期限：{{ new Date(g.deadline).toLocaleDateString('zh-CN') }}</div>
-        <div v-if="g.audit && g.audit.length" class="muted" style="font-size: 12px; margin-top: 4px">
+        <div v-if="g.audit && g.audit.length" class="muted" style="font-size: 13px; margin-top: 4px">
           最近操作：{{ g.audit[g.audit.length - 1].detail }}
         </div>
         <!-- C3（v1.7）：关联打卡项目的目标展示进度；无关联项目的老目标不显示此块 -->
@@ -154,7 +156,7 @@ onMounted(load)
             </div>
           </div>
         </div>
-        <div v-if="g.status === 'active'" class="row" style="margin-top: 8px">
+        <div v-if="g.status === 'active'" class="action-group" style="margin-top: 8px">
           <button class="btn small primary" :disabled="busy" @click="setStatus(g.id, 'achieve')">
             <template v-if="busy">处理中…</template>
             <template v-else>达成</template>

@@ -1,0 +1,10 @@
+{
+  "original_script_sha256": "c18ac5f5df84650eaae57e65494db55c8465d3948627c6f44a182831f0a2e381",
+  "adapted_script_sha256": "8ba5278e939b2b1284d649fa5413c61680f0328ed931b68650ed3c94bcb4c983",
+  "adaptations": [
+    "Production dist served on loopback:15174; new evidence directory and isolated Edge on 19225",
+    "Wait for pagination button enabled after asynchronous filter",
+    "Enter keyDown includes virtual key 13 and carriage return text; all assertions retained"
+  ],
+  "tested_at": "2026-10-11T04:22:14.481Z"
+}

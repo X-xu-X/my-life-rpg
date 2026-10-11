@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { api } from '../api'
+import { storageKey } from '../session'
 import { toast } from '../composables/useToast'
 
 const emit = defineEmits(['judged', 'go-judgments', 'go-items'])
@@ -74,7 +75,7 @@ async function ensureItemInList(itemId) {
 }
 
 // ============ 草稿缓存：切换页面不丢内容 ============
-const CACHE_KEY = 'game_of_life_event_draft'
+const CACHE_KEY = storageKey('game_of_life_event_draft')
 
 function defaultOccurredAt() {
   // datetime-local 需要 YYYY-MM-DDTHH:mm（本地时区）
@@ -93,6 +94,8 @@ onMounted(async () => {
       if (saved.journalContent) journalContent.value = saved.journalContent
       if (saved.isPure !== undefined) isPure.value = saved.isPure
     }
+    const submission = JSON.parse(localStorage.getItem(CACHE_KEY + ':submission') || 'null')
+    if (submission?.requestId && submission.signature) savedSubmission.value = submission
   } catch (e) { /* 忽略损坏的缓存 */ }
   await loadItems()
   if (form.value.item_id) await ensureItemInList(form.value.item_id)
@@ -114,7 +117,7 @@ watch([mode, form, kvRows, journalContent, isPure], () => {
 }, { deep: true })
 
 function clearDraft() {
-  try { localStorage.removeItem(CACHE_KEY) } catch (e) { /* 忽略 */ }
+  try { localStorage.removeItem(CACHE_KEY); localStorage.removeItem(CACHE_KEY + ':submission') } catch (e) { /* 忽略 */ }
 }
 
 // ============ 关键数字编辑器 ============
@@ -138,14 +141,14 @@ function buildParams() {
 }
 
 // ============ 判定结果/追问状态持久化（v1.3，v1.5 A3 升级）：切页返回不丢 ============
-const JUDGE_CACHE_KEY = 'gol_last_judgment'
+const JUDGE_CACHE_KEY = storageKey('gol_last_judgment')
 const previewStale = ref(false) // 恢复时发现缓存判定已失效
 
 function saveJudgeState() {
   try {
     if (result.value || clarifyEvent.value) {
       sessionStorage.setItem(JUDGE_CACHE_KEY, JSON.stringify({
-        result: result.value && result.value.status === 'pure' ? result.value : null,
+        result: result.value && ['pure','queued'].includes(result.value.status) ? result.value : null,
         judgmentId: result.value ? (result.value.judgment_id ?? result.value.id ?? null) : null,
         clarifyEvent: clarifyEvent.value,
         clarifyAnswer: clarifyAnswer.value,
@@ -191,15 +194,23 @@ watch([result, clarifyEvent, clarifyAnswer], saveJudgeState, { deep: true })
 function toOccurredIso() {
   const raw = form.value.occurred_at
   if (!raw) return null
-  const d = new Date(raw)
-  return isNaN(d.getTime()) ? null : d.toISOString()
+  return raw // 无偏移时间由服务端按账号时区解释
 }
 
 async function createOrReuse(body) {
   const signature = JSON.stringify(body)
-  if (savedSubmission.value?.signature === signature) return { id: savedSubmission.value.eventId }
-  const event = await api.createEvent(body)
-  savedSubmission.value = { eventId: event.id, signature }
+  const previous = savedSubmission.value?.signature === signature ? savedSubmission.value : null
+  if (previous?.eventId) return { id: previous.eventId }
+  savedSubmission.value = previous || { signature, requestId: crypto.randomUUID(), eventId: null }
+  try { localStorage.setItem(CACHE_KEY + ':submission', JSON.stringify(savedSubmission.value)) } catch {}
+  let event
+  if (previous) {
+    try { event = await api.submission(previous.requestId) }
+    catch(e) { if(e.status !== 404) throw e }
+  }
+  if (!event) event = await api.createEvent({...body,client_request_id:savedSubmission.value.requestId})
+  savedSubmission.value = { ...savedSubmission.value, eventId: event.id }
+  try { localStorage.setItem(CACHE_KEY + ':submission', JSON.stringify(savedSubmission.value)) } catch {}
   return event
 }
 
@@ -301,6 +312,7 @@ async function submit() {
     // v1.9 F2：提交后的统一反馈（纯享保存 / 判定完成 / AI 还想追问）
     if (clarifyEvent.value) toast.info('AI 想再确认几点，请回答下方的追问')
     else if (result.value?.status === 'pure') toast.success('已保存为纯享记录')
+    else if (result.value?.status === 'queued') toast.success('原文已保存，分析已排队')
     else if (result.value) toast.success('已提交并完成 AI 判定')
   } catch (e) {
     error.value = e.message
@@ -440,7 +452,7 @@ onMounted(loadList)
     <h2>{{ props.title }}</h2>
 
     <!-- 模式切换 -->
-    <div class="row" style="margin-bottom: 12px">
+    <div class="action-group" style="margin-bottom: 12px">
       <button class="btn small" :class="{ primary: mode === 'form' }" @click="mode = 'form'">打卡</button>
       <button class="btn small" :class="{ primary: mode === 'journal' }" @click="mode = 'journal'">自由日记</button>
     </div>
@@ -448,20 +460,20 @@ onMounted(loadList)
     <!-- v1.7 打卡：选项目 → 写正文 → 可选数字 -->
     <template v-if="mode === 'form'">
       <div class="field">
-        <label>打卡项目</label>
-        <select v-model="form.item_id">
+        <label for="eventform-field-1">打卡项目</label>
+        <select id="eventform-field-1" v-model="form.item_id">
           <option :value="null">（不选项目，纯记一笔）</option>
           <optgroup v-for="g in groupedItems" :key="g.nature" :label="g.label">
             <option v-for="it in g.children" :key="it.id" :value="it.id">{{ it.name }}</option>
           </optgroup>
         </select>
-        <p v-if="items.length === 0 && !itemsError" class="muted" style="font-size: 12px; margin-top: 4px">
+        <p v-if="items.length === 0 && !itemsError" class="muted" style="font-size: 13px; margin-top: 4px">
           还没有打卡项目。
           <a href="#" @click.prevent="emit('go-items')" style="color: var(--primary)">去「设置」新建项目 →</a>
           也可以不选项目，直接写正文记录。
         </p>
-        <p v-if="itemsError" class="muted" style="font-size: 12px; color: #d33; margin-top: 4px">加载项目失败：{{ itemsError }}</p>
-        <p v-if="selectedItem" class="muted" style="font-size: 12px; margin-top: 4px">
+        <p v-if="itemsError" class="muted" style="font-size: 13px; color: var(--danger); margin-top: 4px">加载项目失败：{{ itemsError }}</p>
+        <p v-if="selectedItem" class="muted" style="font-size: 13px; margin-top: 4px">
           {{ NATURE_META[selectedItem.nature]?.label }}
           <template v-if="selectedItem.frequency_type === 'weekly'"> · 每周 {{ selectedItem.frequency_target }} 次</template>
           <template v-else-if="selectedItem.frequency_type === 'daily'"> · 每天</template>
@@ -470,33 +482,33 @@ onMounted(loadList)
       </div>
 
       <div class="field">
-        <label>写点什么 *</label>
-        <textarea v-model="form.content" rows="4" placeholder="今天做了哪些运动？现在感觉怎么样？"></textarea>
+        <label for="eventform-field-2">写点什么 *</label>
+        <textarea id="eventform-field-2" v-model="form.content" rows="4" placeholder="今天做了哪些运动？现在感觉怎么样？"></textarea>
       </div>
 
       <div class="field">
         <label>关键数字（可选）</label>
-        <div v-for="(row, idx) in kvRows" :key="idx" class="row" style="margin-bottom: 6px; align-items: center">
+        <div v-for="(row, idx) in kvRows" :key="idx" class="action-group" style="margin-bottom: 6px; align-items: center">
           <input v-model="row.key" placeholder="名称，如 时长(分钟)" style="flex: 1" />
           <input v-model="row.value" placeholder="数值，如 30" style="flex: 1" />
           <button class="btn small danger" style="flex: 0 0 auto; min-width: 0" @click="removeKvRow(idx)">删除</button>
         </div>
         <button v-if="kvRows.length < 5" class="btn small" @click="addKvRow">+ 加一行</button>
-        <p v-if="kvRows.length === 0" class="muted" style="font-size: 12px; margin-top: 4px">例如「时长(分钟) = 30」；不需要就留空</p>
+        <p v-if="kvRows.length === 0" class="muted" style="font-size: 13px; margin-top: 4px">例如「时长(分钟) = 30」；不需要就留空</p>
       </div>
 
       <div class="field">
-        <label>实际发生时间（可选）</label>
-        <input type="datetime-local" v-model="form.occurred_at" />
-        <p class="muted" style="font-size: 12px; margin-top: 4px">默认现在；补记早先的事时改这里</p>
+        <label for="eventform-field-3">实际发生时间（可选）</label>
+        <input id="eventform-field-3" type="datetime-local" v-model="form.occurred_at" />
+        <p class="muted" style="font-size: 13px; margin-top: 4px">默认现在；补记早先的事时改这里</p>
       </div>
     </template>
 
     <!-- 自由日记 -->
     <template v-else>
       <div class="field">
-        <label>写一段今天的生活记录</label>
-        <textarea v-model="journalContent" rows="5" placeholder="例如：昨晚 9 点到 10 点在路边慢跑 5 公里，配速 6 分半，跑完挺轻松的。" ></textarea>
+        <label for="eventform-field-4">写一段今天的生活记录</label>
+        <textarea id="eventform-field-4" v-model="journalContent" rows="5" placeholder="例如：昨晚 9 点到 10 点在路边慢跑 5 公里，配速 6 分半，跑完挺轻松的。" ></textarea>
       </div>
       <p class="muted">AI 会自动解析要素（运动/学习/作息/情绪…）并逐面核对，信息不足时会追问。</p>
     </template>
@@ -506,15 +518,15 @@ onMounted(loadList)
       <span>纯享记录（只记录，不做 AI 分析、不加点）</span>
     </label>
 
-    <div class="row">
+    <div class="action-group">
       <button class="btn primary" :disabled="busy" @click="submit">{{ busy ? '处理中…' : (isPure ? '保存纯享记录' : '提交并判定') }}</button>
       <button class="btn" @click="reset">清空</button>
     </div>
 
-    <p v-if="error" class="muted" style="color: #d33">{{ error }}</p>
+    <p v-if="error" class="muted" style="color: var(--danger)">{{ error }}</p>
 
     <!-- v1.5 A3：缓存的预览判定已失效 -->
-    <p v-if="previewStale && !result" class="muted" style="color: #b7791f">
+    <p v-if="previewStale && !result" class="muted" style="color: var(--warn)">
       ℹ️ 上次的判定已更新或已失效，以「判定中心」的现行判定为准。
     </p>
 
@@ -530,17 +542,20 @@ onMounted(loadList)
 
     <!-- 结果预览：纯享 / 判定 两种 -->
     <div v-if="result" class="judgment-item" style="margin-top: 16px">
-      <template v-if="result.status === 'pure'">
+      <template v-if="result.status === 'queued'">
+        <h3>已保存 · 分析排队中</h3><p class="muted">{{ result.summary }}</p><RouterLink class="btn" :to="'/events/'+result.event_id">查看原记录</RouterLink>
+      </template>
+      <template v-else-if="result.status === 'pure'">
         <h3>已保存 <span class="tag">纯享记录</span></h3>
         <p class="muted">{{ result.summary }}</p>
       </template>
       <template v-else>
         <h3>AI 判定结果 <span class="tag">{{ STATUS_LABEL[result.status] || result.status }}</span></h3>
         <p class="muted">置信度 {{ (result.confidence * 100).toFixed(0) }}%</p>
-        <p v-if="result.confidence_reason" class="muted" style="font-size: 12px; color: #b7791f">💡 {{ result.confidence_reason }}</p>
+        <p v-if="result.confidence_reason" class="muted" style="font-size: 13px; color: var(--warn)">💡 {{ result.confidence_reason }}</p>
 
         <!-- v1.7：跨来源合并明细（已与 N 条记录合并） -->
-        <div v-if="result.merged_with && result.merged_with.length" class="muted" style="font-size: 12px; color: #7c5cbf; margin-bottom: 6px">
+        <div v-if="result.merged_with && result.merged_with.length" class="muted" style="font-size: 13px; color: #7c5cbf; margin-bottom: 6px">
           <span class="tag">已与 {{ result.merged_with.length }} 条记录合并</span>
           <div v-for="(m, i) in result.merged_with" :key="i" style="margin-top: 2px">
             · {{ m.ref }}<template v-if="m.note">：{{ m.note }}</template>
@@ -548,7 +563,7 @@ onMounted(loadList)
           <div style="margin-top: 2px">如认为不该合并，可在「判定中心」反驳撤销。</div>
         </div>
 
-        <div v-if="result.revision_notes && result.revision_notes.length" class="muted" style="font-size: 12px; color: #2b6cb0">
+        <div v-if="result.revision_notes && result.revision_notes.length" class="muted" style="font-size: 13px; color: #2b6cb0">
           <span class="tag">本次修订</span>
           <div v-for="(n, i) in result.revision_notes" :key="i" style="margin-top: 2px">{{ n }}</div>
         </div>
@@ -560,18 +575,18 @@ onMounted(loadList)
         <div v-for="a in result.suggested_changes" :key="a.name" class="judgment-item">
           <span class="attr-name">{{ a.name }}</span>
           <span :class="a.delta >= 0 ? 'positive' : 'negative'">{{ a.delta >= 0 ? '+' : '' }}{{ a.delta }}</span>
-          <span class="muted" style="font-size: 12px">
+          <span class="muted" style="font-size: 13px">
             → 预计入账 {{ (a.delta * (result.confidence || 1)).toFixed(1) }}
           </span>
           <div class="muted">{{ a.reason }}</div>
           <div class="evidence">依据：{{ a.evidence }}</div>
         </div>
         <p v-if="result.summary" class="muted">{{ result.summary }}</p>
-        <div class="row" style="margin-top: 8px; align-items: center">
+        <div class="action-group" style="margin-top: 8px; align-items: center">
           <button class="btn small primary" @click="emit('go-judgments')">去判定中心确认 →</button>
           <button class="btn small" @click="clearResult">清除这条结果</button>
         </div>
-        <p class="muted" style="font-size: 12px; margin-top: 6px">请在「判定中心」确认入账 / 补充信息 / 反驳复核；录错了可删除该事件。</p>
+        <p class="muted" style="font-size: 13px; margin-top: 6px">请在「判定中心」确认入账 / 补充信息 / 反驳复核；录错了可删除该事件。</p>
       </template>
     </div>
   </div>
@@ -580,31 +595,31 @@ onMounted(loadList)
   <div class="card">
     <h2>最近记录</h2>
     <p class="muted">近三天按日期展示；每天分「日记」与「事件」两栏，点开才看详情。</p>
-    <p v-if="listError" class="muted" style="color: #d33">{{ listError }}</p>
+    <p v-if="listError" class="muted" style="color: var(--danger)">{{ listError }}</p>
     <p v-if="listEvents.length === 0 && !listError" class="muted">还没有记录。</p>
 
     <template v-for="g in recentGroups" :key="g.key">
       <div style="margin-bottom: 12px">
         <div
-          class="row"
+          class="action-group"
           style="align-items: center; cursor: pointer; padding: 6px 4px; border-bottom: 1px solid #eee; user-select: none"
           @click="toggleDay(g.key)"
-        >
+         role="button" tabindex="0" @keydown.enter.self.prevent="toggleDay(g.key)" @keydown.space.self.prevent="toggleDay(g.key)">
           <b>{{ g.label }}</b>
-          <span class="muted" style="font-size: 12px">{{ g.key }}</span>
-          <span class="muted" style="font-size: 12px">日记 {{ g.journal.length }} · 事件 {{ g.events.length }}</span>
+          <span class="muted" style="font-size: 13px">{{ g.key }}</span>
+          <span class="muted" style="font-size: 13px">日记 {{ g.journal.length }} · 事件 {{ g.events.length }}</span>
           <span class="muted" style="margin-left: auto">{{ isDayOpen(g.key) ? '▾' : '▸' }}</span>
         </div>
 
         <template v-if="isDayOpen(g.key)">
           <!-- 日记栏：一条一行 -->
           <div v-if="g.journal.length" style="margin-top: 8px">
-            <div class="muted" style="font-size: 12px; margin-bottom: 4px">日记 {{ g.journal.length }} 条</div>
+            <div class="muted" style="font-size: 13px; margin-bottom: 4px">日记 {{ g.journal.length }} 条</div>
             <div v-for="e in g.journal" :key="'j' + e.id" class="judgment-item">
-              <div class="row" style="align-items: center; cursor: pointer" @click="toggleDetail(e.id)">
-                <span class="muted" style="font-size: 12px">{{ fmtTime(e.created_at) }}</span>
+              <div class="action-group" style="align-items: center; cursor: pointer" @click="toggleDetail(e.id)" role="button" tabindex="0" @keydown.enter.self.prevent="toggleDetail(e.id)" @keydown.space.self.prevent="toggleDetail(e.id)">
+                <span class="muted" style="font-size: 13px">{{ fmtTime(e.created_at) }}</span>
                 <b>{{ e.title || '自由日记' }}</b>
-                <span class="muted" style="font-size: 12px">{{ changeSummary(e.id) }}</span>
+                <span class="muted" style="font-size: 13px">{{ changeSummary(e.id) }}</span>
                 <span class="muted" style="margin-left: auto">{{ isDetailOpen(e.id) ? '▾' : '▸' }}</span>
               </div>
               <div v-if="isDetailOpen(e.id)" style="white-space: pre-wrap; margin-top: 6px">{{ e.content }}</div>
@@ -617,18 +632,18 @@ onMounted(loadList)
               class="judgment-item"
               style="cursor: pointer; display: flex; align-items: center"
               @click="toggleEvents(g.key)"
-            >
+             role="button" tabindex="0" @keydown.enter.self.prevent="toggleEvents(g.key)" @keydown.space.self.prevent="toggleEvents(g.key)">
               <b>事件 {{ g.events.length }} 条</b>
               <span class="muted" style="margin-left: auto">{{ isEventsOpen(g.key) ? '▾' : '▸' }}</span>
             </div>
             <template v-if="isEventsOpen(g.key)">
               <div v-for="e in g.events" :key="'e' + e.id" class="judgment-item" style="margin-left: 12px">
-                <div class="row" style="align-items: center; cursor: pointer" @click="toggleDetail(e.id)">
-                  <span class="muted" style="font-size: 12px">{{ fmtTime(e.created_at) }}</span>
+                <div class="action-group" style="align-items: center; cursor: pointer" @click="toggleDetail(e.id)" role="button" tabindex="0" @keydown.enter.self.prevent="toggleDetail(e.id)" @keydown.space.self.prevent="toggleDetail(e.id)">
+                  <span class="muted" style="font-size: 13px">{{ fmtTime(e.created_at) }}</span>
                   <b>{{ e.title || '未命名事件' }}</b>
                   <span v-if="e.origin === 'challenge'" class="tag" title="由挑战结算生成">挑战</span>
-                  <span class="muted" style="font-size: 12px">{{ eventSummary(e) }}</span>
-                  <span class="muted" style="font-size: 12px">{{ changeSummary(e.id) }}</span>
+                  <span class="muted" style="font-size: 13px">{{ eventSummary(e) }}</span>
+                  <span class="muted" style="font-size: 13px">{{ changeSummary(e.id) }}</span>
                   <span class="muted" style="margin-left: auto">{{ isDetailOpen(e.id) ? '▾' : '▸' }}</span>
                 </div>
                 <!-- 单条详情 -->
@@ -639,14 +654,14 @@ onMounted(loadList)
                   </div>
                   <div v-if="judgmentFor(e.id)" class="judgment-item" style="margin-top: 6px">
                     <span class="tag">{{ STATUS_LABEL[judgmentFor(e.id).status] || judgmentFor(e.id).status }}</span>
-                    <span class="muted" style="font-size: 12px">置信度 {{ ((judgmentFor(e.id).confidence || 1) * 100).toFixed(0) }}%</span>
+                    <span class="muted" style="font-size: 13px">置信度 {{ ((judgmentFor(e.id).confidence || 1) * 100).toFixed(0) }}%</span>
                     <div v-for="a in judgmentFor(e.id).suggested_changes" :key="a.name" style="margin-top: 4px">
                       <span class="attr-name">{{ a.name }}</span>
                       <span :class="a.delta >= 0 ? 'positive' : 'negative'">{{ a.delta >= 0 ? '+' : '' }}{{ a.delta }}</span>
-                      <span class="muted" style="font-size: 12px">{{ a.reason }}</span>
+                      <span class="muted" style="font-size: 13px">{{ a.reason }}</span>
                     </div>
                   </div>
-                  <div v-else class="muted" style="font-size: 12px">尚未判定</div>
+                  <div v-else class="muted" style="font-size: 13px">尚未判定</div>
                 </template>
               </div>
             </template>
@@ -663,40 +678,40 @@ onMounted(loadList)
       <template v-if="showAll">
         <div v-for="g in olderGroups" :key="'o' + g.key" style="margin-top: 12px">
           <div
-            class="row"
+            class="action-group"
             style="align-items: center; cursor: pointer; padding: 6px 4px; border-bottom: 1px solid #eee; user-select: none"
             @click="toggleDay(g.key)"
-          >
+           role="button" tabindex="0" @keydown.enter.self.prevent="toggleDay(g.key)" @keydown.space.self.prevent="toggleDay(g.key)">
             <b>{{ g.label }}</b>
-            <span class="muted" style="font-size: 12px">{{ g.key }}</span>
-            <span class="muted" style="font-size: 12px">日记 {{ g.journal.length }} · 事件 {{ g.events.length }}</span>
+            <span class="muted" style="font-size: 13px">{{ g.key }}</span>
+            <span class="muted" style="font-size: 13px">日记 {{ g.journal.length }} · 事件 {{ g.events.length }}</span>
             <span class="muted" style="margin-left: auto">{{ isDayOpen(g.key) ? '▾' : '▸' }}</span>
           </div>
           <template v-if="isDayOpen(g.key)">
             <div v-if="g.journal.length" style="margin-top: 8px">
-              <div class="muted" style="font-size: 12px; margin-bottom: 4px">日记 {{ g.journal.length }} 条</div>
+              <div class="muted" style="font-size: 13px; margin-bottom: 4px">日记 {{ g.journal.length }} 条</div>
               <div v-for="e in g.journal" :key="'oj' + e.id" class="judgment-item">
-                <div class="row" style="align-items: center; cursor: pointer" @click="toggleDetail(e.id)">
-                  <span class="muted" style="font-size: 12px">{{ fmtTime(e.created_at) }}</span>
+                <div class="action-group" style="align-items: center; cursor: pointer" @click="toggleDetail(e.id)" role="button" tabindex="0" @keydown.enter.self.prevent="toggleDetail(e.id)" @keydown.space.self.prevent="toggleDetail(e.id)">
+                  <span class="muted" style="font-size: 13px">{{ fmtTime(e.created_at) }}</span>
                   <b>{{ e.title || '自由日记' }}</b>
-                  <span class="muted" style="font-size: 12px">{{ changeSummary(e.id) }}</span>
+                  <span class="muted" style="font-size: 13px">{{ changeSummary(e.id) }}</span>
                   <span class="muted" style="margin-left: auto">{{ isDetailOpen(e.id) ? '▾' : '▸' }}</span>
                 </div>
                 <div v-if="isDetailOpen(e.id)" style="white-space: pre-wrap; margin-top: 6px">{{ e.content }}</div>
               </div>
             </div>
             <div v-if="g.events.length" style="margin-top: 8px">
-              <div class="judgment-item" style="cursor: pointer; display: flex; align-items: center" @click="toggleEvents(g.key)">
+              <div class="judgment-item" style="cursor: pointer; display: flex; align-items: center" @click="toggleEvents(g.key)" role="button" tabindex="0" @keydown.enter.self.prevent="toggleEvents(g.key)" @keydown.space.self.prevent="toggleEvents(g.key)">
                 <b>事件 {{ g.events.length }} 条</b>
                 <span class="muted" style="margin-left: auto">{{ isEventsOpen(g.key) ? '▾' : '▸' }}</span>
               </div>
               <template v-if="isEventsOpen(g.key)">
                 <div v-for="e in g.events" :key="'oe' + e.id" class="judgment-item" style="margin-left: 12px">
-                  <div class="row" style="align-items: center; cursor: pointer" @click="toggleDetail(e.id)">
-                    <span class="muted" style="font-size: 12px">{{ fmtTime(e.created_at) }}</span>
+                  <div class="action-group" style="align-items: center; cursor: pointer" @click="toggleDetail(e.id)" role="button" tabindex="0" @keydown.enter.self.prevent="toggleDetail(e.id)" @keydown.space.self.prevent="toggleDetail(e.id)">
+                    <span class="muted" style="font-size: 13px">{{ fmtTime(e.created_at) }}</span>
                     <b>{{ e.title || '未命名事件' }}</b>
-                    <span class="muted" style="font-size: 12px">{{ eventSummary(e) }}</span>
-                    <span class="muted" style="font-size: 12px">{{ changeSummary(e.id) }}</span>
+                    <span class="muted" style="font-size: 13px">{{ eventSummary(e) }}</span>
+                    <span class="muted" style="font-size: 13px">{{ changeSummary(e.id) }}</span>
                     <span class="muted" style="margin-left: auto">{{ isDetailOpen(e.id) ? '▾' : '▸' }}</span>
                   </div>
                   <template v-if="isDetailOpen(e.id)">
@@ -709,10 +724,10 @@ onMounted(loadList)
                       <div v-for="a in judgmentFor(e.id).suggested_changes" :key="a.name" style="margin-top: 4px">
                         <span class="attr-name">{{ a.name }}</span>
                         <span :class="a.delta >= 0 ? 'positive' : 'negative'">{{ a.delta >= 0 ? '+' : '' }}{{ a.delta }}</span>
-                        <span class="muted" style="font-size: 12px">{{ a.reason }}</span>
+                        <span class="muted" style="font-size: 13px">{{ a.reason }}</span>
                       </div>
                     </div>
-                    <div v-else class="muted" style="font-size: 12px">尚未判定</div>
+                    <div v-else class="muted" style="font-size: 13px">尚未判定</div>
                   </template>
                 </div>
               </template>

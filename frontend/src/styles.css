@@ -1,29 +1,14 @@
-/* 游戏人生 · 浅色主题样式（符合用户 UI 偏好） */
-:root {
-  --bg: #f6f7fb;
-  --card: #ffffff;
-  --border: #e6e8ef;
-  --text: #2b2f3a;
-  --text-sub: #7a7f8c;
-  --primary: #4f6ef7;
-  --primary-soft: #eef1fe;
-  --positive: #e0533d; /* 增长/正向（中文语境：红涨） */
-  --negative: #1f9e6a; /* 减少/负向（绿跌） */
-  --warn: #d97706;
-  --radius: 12px;
-  --shadow: 0 2px 12px rgba(30, 40, 80, 0.06);
-}
-
 * {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+  font-family: var(--font);
+  font-size: 16px;
   background: var(--bg);
   color: var(--text);
-  line-height: 1.6;
+  line-height: 1.75;
 }
 
 #app {
@@ -74,16 +59,17 @@ h3 {
 }
 
 .btn.primary:hover {
-  opacity: 0.9;
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
 }
 
 .btn.danger {
   border-color: #f3c2c2;
-  color: var(--positive);
+  color: var(--danger);
 }
 
 .btn.danger:hover {
-  background: #fdf0ef;
+  background: var(--danger-soft);
 }
 
 .btn.small {
@@ -96,17 +82,18 @@ textarea,
 select {
   width: 100%;
   padding: 9px 12px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--control-border);
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--text);
-  background: #fff;
+  background: var(--card);
 }
 
 input:focus,
 textarea:focus,
 select:focus {
-  outline: none;
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
   border-color: var(--primary);
 }
 
@@ -136,7 +123,7 @@ label {
   display: inline-block;
   padding: 2px 10px;
   border-radius: 20px;
-  font-size: 12px;
+  font-size: 13px;
   background: var(--primary-soft);
   color: var(--primary);
 }
@@ -263,19 +250,19 @@ label {
   background: rgba(0, 0, 0, 0.06);
   padding: 1px 6px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .conn-banner.conn-ok {
   background: #eafaf1;
   border-color: #b8e6cd;
-  color: #1f9e6a;
+  color: var(--success);
 }
 
 .conn-banner.conn-error {
-  background: #fdf0ef;
+  background: var(--danger-soft);
   border-color: #f3c2c2;
-  color: #c0392b;
+  color: var(--danger);
 }
 
 /* AI 分析过程（v1.1） */
@@ -299,7 +286,7 @@ label {
 }
 
 .analysis-title {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--primary);
   margin-bottom: 6px;
@@ -315,7 +302,7 @@ label {
 }
 
 .audit-title {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-sub);
   margin-bottom: 8px;
@@ -394,8 +381,8 @@ label {
    但金币不是股票，**刻意避开红绿歧义**——获得用绿色正向色，消耗用灰色。
    ============================================================ */
 :root {
-  --coin-in: #1f9e6a;   /* 金币获得：正向绿 */
-  --coin-out: #8a8f9c;  /* 金币消耗：中性灰 */
+  --coin-in: var(--success);   /* 金币获得：正向绿 */
+  --coin-out: var(--text-sub);  /* 金币消耗：中性灰 */
 }
 
 /* ---- 金币条 ---- */
@@ -425,7 +412,7 @@ label {
 }
 .coin-hint {
   margin: 6px 0 0;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* ---- 金币流水 ---- */
@@ -463,10 +450,10 @@ label {
 }
 .ledger-tag {
   margin-left: 6px;
-  font-size: 11px;
+  font-size: 13px;
 }
 .ledger-time {
-  font-size: 12px;
+  font-size: 13px;
   white-space: nowrap;
 }
 
@@ -497,7 +484,7 @@ label {
 
 /* ---- 挑战卡 ---- */
 .challenge-card.finished {
-  opacity: 0.62;
+  background: var(--surface-subtle);
 }
 .challenge-card.highlight {
   animation: gol-highlight 1.6s ease 2;
@@ -525,7 +512,7 @@ label {
   border-radius: 8px;
   background: var(--primary-soft);
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.75;
 }
 .self-report {
   width: 100%;
@@ -542,14 +529,14 @@ label {
 }
 .slow-hint {
   margin: 6px 0 0;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* ---- outcome 徽章 ---- */
 .outcome-badge {
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 13px;
 }
 .outcome-badge.ok {
   background: #e6f7ef;
@@ -564,8 +551,8 @@ label {
   color: var(--primary);
 }
 .outcome-badge.bad {
-  background: #fdeceb;
-  color: var(--positive);
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 .chip {
   display: inline-block;
@@ -573,14 +560,14 @@ label {
   padding: 1px 8px;
   border-radius: 999px;
   background: var(--bg);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* ---- 商店 ---- */
 .pricing-reason {
   margin-top: 6px;
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.75;
 }
 .worth-note {
   margin-top: 6px;
@@ -588,7 +575,7 @@ label {
   border-radius: 8px;
   background: var(--bg);
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.75;
 }
 /* 有劝阻语义时给醒目但不刺眼的提示色 */
 .worth-note.warn {
@@ -622,7 +609,7 @@ label {
   background: var(--card);
 }
 .voucher.done {
-  opacity: 0.6;
+  background: var(--surface-subtle);
 }
 
 /* ---- 停滞提示卡（中性、不指责） ---- */
@@ -648,7 +635,7 @@ label {
   border-radius: 999px;
   background: var(--primary-soft);
   color: var(--primary);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   vertical-align: 1px;
 }
@@ -660,7 +647,7 @@ label {
   border-radius: 10px;
   background: var(--primary-soft);
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.75;
 }
 .coins-grant b {
   color: var(--primary);
@@ -696,9 +683,9 @@ label {
   line-height: 1.5;
   color: var(--text);
 }
-.toast-success { border-left-color: #1f9e6a; }
-.toast-error   { border-left-color: #d94b3d; }
-.toast-info    { border-left-color: #5b76d8; }
+.toast-success { border-left-color: var(--success); }
+.toast-error   { border-left-color: var(--danger); }
+.toast-info    { border-left-color: var(--primary); }
 .toast-icon {
   flex: 0 0 auto;
   width: 16px;
@@ -708,14 +695,14 @@ label {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   color: #fff;
   background: var(--text-sub);
 }
-.toast-success .toast-icon { background: #1f9e6a; }
-.toast-error   .toast-icon { background: #d94b3d; }
-.toast-info    .toast-icon { background: #5b76d8; }
+.toast-success .toast-icon { background: var(--success); }
+.toast-error   .toast-icon { background: var(--danger); }
+.toast-info    .toast-icon { background: var(--primary); }
 .toast-msg {
   flex: 1;
   word-break: break-word;
@@ -761,7 +748,7 @@ label {
 }
 .variant-note {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* ============================================================
@@ -775,7 +762,7 @@ label {
   border-left: 3px solid var(--primary);
   border-radius: 6px;
   background: var(--bg);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.65;
   color: var(--text-sub);
   word-break: break-word;
@@ -787,7 +774,7 @@ label {
   border-radius: 4px;
   background: var(--primary-soft);
   color: var(--primary);
-  font-size: 11px;
+  font-size: 13px;
   white-space: nowrap;
 }
 .hit-snippet mark {
@@ -800,7 +787,7 @@ label {
 .seg-count {
   align-self: center;
   margin-left: 6px;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* ============================================================
@@ -823,7 +810,7 @@ label {
   background: var(--card);
 }
 .ach-badge.locked {
-  opacity: 0.55;
+  background: var(--surface-subtle);
   filter: grayscale(1);
 }
 .ach-icon {
@@ -855,7 +842,7 @@ label {
   background: #fdf6e8;
   border-left: 3px solid var(--warn);
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.75;
 }
 .milestone-card .row { margin-top: 8px; }
 
@@ -871,6 +858,6 @@ label {
 .sub-row {
   display: flex;
   justify-content: space-between;
-  font-size: 12.5px;
+  font-size: 13px;
   color: #4a5060;
 }

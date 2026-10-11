@@ -6,6 +6,7 @@
 
 金币与属性点**完全隔离**：金币不能兑换属性点，属性点也不能换金币。
 """
+from app.services.time_service import clock_now
 from datetime import datetime, timedelta
 
 from sqlalchemy import func
@@ -80,10 +81,15 @@ def grant(
     """
     if isinstance(delta, bool) or not isinstance(delta, int) or not -(2**63) <= delta < 2**63:
         raise ValueError("金币金额超出整数存储范围或不合法。")
+    if delta == -(2**63):
+        raise InsufficientCoins("金币不足。")
     profile = _profile(db, user)
+    from app.config import settings
+    if settings.cloud and not profile.onboarding_completed:
+        raise ValueError("记录已保存；游戏结算前请先选择角色基线。")
     updated = db.query(UserProfile).filter(
         UserProfile.user_id == user.id,
-        func.coalesce(UserProfile.coins, 0) + delta >= 0,
+        func.coalesce(UserProfile.coins, 0) >= max(0, -delta),
         func.coalesce(UserProfile.coins, 0) <= (2**63 - 1) - max(delta, 0),
     ).update({UserProfile.coins: func.coalesce(UserProfile.coins, 0) + delta}, synchronize_session=False)
     if updated != 1:
@@ -143,11 +149,12 @@ def _journal_days(db: Session, user: User) -> int:
         .order_by(Event.created_at.desc())
         .all()
     )
-    days = {r[0].date() for r in rows if r[0] is not None}
+    from app.services.time_service import local_day
+    days = {local_day(r[0], user.timezone) for r in rows if r[0] is not None}
     if not days:
         return 0
 
-    today = datetime.now().date()
+    today = clock_now().date()
     cursor = today if today in days else today - timedelta(days=1)
     streak = 0
     while cursor in days:

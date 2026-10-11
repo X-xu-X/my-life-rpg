@@ -13,6 +13,7 @@
 v1.10 变更（N1）：**金额改由 AI 定价** —— `COIN_TABLE` 降级为"解析兜底表"，
 押金统一由 `derive_deposit()` 按奖励比例派生。**不要在代码里加"金额必须等于参数表"的校验。**
 """
+from app.services.time_service import clock_now
 import json
 from datetime import datetime, timedelta
 
@@ -59,7 +60,7 @@ VALID_OUTCOMES = ("done", "partial", "excused", "retreated")
 
 def period_key(scope: str, now: datetime | None = None) -> str:
     """归属周期键：日=`2026-09-28`，周=`2026-W40`（用于过期与"每天换新"）。"""
-    now = now or datetime.now()
+    now = now or clock_now()
     if scope == "weekly":
         iso = now.isocalendar()
         return f"{iso[0]}-W{iso[1]:02d}"
@@ -68,7 +69,7 @@ def period_key(scope: str, now: datetime | None = None) -> str:
 
 def period_end(scope: str, now: datetime | None = None) -> datetime:
     """周期截止时间：日=当天 23:59:59；周=当周周日 23:59:59。"""
-    now = now or datetime.now()
+    now = now or clock_now()
     if scope == "weekly":
         # weekday(): 周一=0 … 周日=6
         days_to_sunday = 6 - now.weekday()
@@ -201,7 +202,14 @@ def generate(db: Session, user: User, scope: str = "daily", force: bool = False)
     )
 
     config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_AUX)
+    db.commit()
     result = llm_service.chat_json(messages, config=config)
+    lock_profile(db, user.id)
+    llm_config.assert_current(db, config)
+    if period_key(scope) != pkey:
+        raise ValueError('挑战周期已变化，请重新生成。')
+    existing = db.query(Challenge).filter_by(user_id=user.id,scope=scope,period_key=pkey).populate_existing().all()
+    need = max(0,target-sum(ch.status in ('candidate','accepted') for ch in existing))
     raw_list = result.get("challenges") or []
 
     expires = period_end(scope)
@@ -356,11 +364,11 @@ def _long_term_memory(db: Session, user_id: int) -> str:
 # ============ B3-1 · 接受（扣押金） ============
 
 @rollback_on_error
-def accept(db: Session, user: User, challenge: Challenge) -> Challenge:
+def accept(db: Session, user: User, challenge: Challenge, *, commit: bool = True) -> Challenge:
     """接受挑战：校验状态与余额 → 扣押金 → 置 accepted 并重设截止时间。"""
     if challenge.status != "candidate":
         raise ValueError(f"该挑战当前状态为 {challenge.status}，无法接受。")
-    now = datetime.now()
+    now = clock_now()
     if challenge.expires_at and challenge.expires_at < now:
         raise ValueError("该挑战已过期，请刷新后接受新挑战。")
 
@@ -391,7 +399,10 @@ def accept(db: Session, user: User, challenge: Challenge) -> Challenge:
     challenge.accepted_at = now
     # 重设为周期末：日挑战当天 23:59:59；周挑战当周周日 23:59:59
     challenge.expires_at = period_end(challenge.scope, now)
-    db.commit()
+    if commit:
+        db.commit()
+    else:
+        db.flush()
     db.refresh(challenge)
     return challenge
 
@@ -457,7 +468,7 @@ def complete(db: Session, user: User, challenge: Challenge, note: str) -> dict:
     if challenge.status != "accepted":
         raise ValueError("挑战已结算，不能再次修改。")
     judgment = db.get(AIJudgment, challenge.judgment_id) if challenge.judgment_id else None
-    if judgment is not None and judgment.status not in ("pending", "adjusted"):
+    if judgment is not None and judgment.status not in ("pending", "adjusted", "invalidated"):
         raise ValueError("该判定已入账或失效。")
 
     # 1. 创建记录（复用判定链路；params 的 "_" 前缀键会被 format_event_description 跳过）
@@ -473,9 +484,10 @@ def complete(db: Session, user: User, challenge: Challenge, note: str) -> dict:
         content=note or "",
         params={"_challenge_id": challenge.id},
         origin="challenge",  # v1.9 F5：标记为挑战来源（前端显示「挑战」徽章）
-        occurred_at=datetime.now(),
+        occurred_at=clock_now(),
     )
     event.content = note or ""
+    event.content_version = (event.content_version or 0) + 1
     db.add(event)
     db.flush()
 
@@ -494,7 +506,27 @@ def complete(db: Session, user: User, challenge: Challenge, note: str) -> dict:
         + "\n【子维度】\n" + judge_service._subdimension_context(db, user)
         + "\n【禁用维度】\n" + json.dumps(sorted(disabled), ensure_ascii=False))
     config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_JUDGE)
+    challenge.event_id = event.id
+    prior_judgment_version = (judgment.id, judgment.updated_at) if judgment else None
+    if judgment:
+        judgment.status = "invalidated"
+    db.flush()
+    event_version = judge_service._event_version(event)
+    # 先保存自述；网络调用期间不持有挑战或画像写锁。
+    db.commit()
+    if judgment:
+        prior_judgment_version = (judgment.id, judgment.updated_at)
     result = llm_service.chat_json(messages, config=config)
+    lock_profile(db, user.id)
+    db.query(Challenge).filter_by(id=challenge.id, user_id=user.id).with_for_update().populate_existing().one()
+    if challenge.status != "accepted":
+        raise ValueError("挑战生命周期已变化，请刷新。")
+    event = judge_service._lock_event(db, event.id, user.id, event_version)
+    llm_config.assert_current(db, config)
+    if judgment:
+        db.refresh(judgment)
+        if (judgment.id, judgment.updated_at) != prior_judgment_version or judgment.status != "invalidated":
+            raise ValueError("挑战判定已变化，请重新读取。")
     if result.get("realistic") is not True:
         db.rollback()
         raise ValueError("挑战自述未通过真实性校验：" + str(result.get("realistic_reason", "请补充可验证的真实细节。")))
@@ -536,6 +568,7 @@ def complete(db: Session, user: User, challenge: Challenge, note: str) -> dict:
     challenge.judgment_id = judgment.id
     challenge.outcome = outcome
     challenge.outcome_note = explanation
+    challenge.updated_at = clock_now()
     db.flush()
 
     judge_service._log(
@@ -561,7 +594,7 @@ def complete(db: Session, user: User, challenge: Challenge, note: str) -> dict:
 # ============ B3-3 · 结算 ============
 
 @rollback_on_error
-def settle(db: Session, user: User, challenge: Challenge, final_status: str = "settled") -> dict:
+def settle(db: Session, user: User, challenge: Challenge, final_status: str = "settled", *, commit: bool = True) -> dict:
     """确认结算：加点（复用 judge_service.confirm）+ 押金/奖励发放。
 
     `final_status` 用于区分「正常结算」(settled) 与「放弃后结算」(abandoned)，
@@ -622,7 +655,12 @@ def settle(db: Session, user: User, challenge: Challenge, final_status: str = "s
         )
 
     challenge.status = final_status
-    challenge.resolved_at = datetime.now()
+    challenge.resolved_at = clock_now()
+    if not commit:
+        db.flush()
+        return {"challenge_id":challenge.id,"outcome":outcome,"explanation":challenge.outcome_note,
+            "coins_delta":coins_delta,"balance":coin_service.balance(db,user),
+            "applied_changes":applied_changes,"unlocked_achievements":[]}
     db.commit()
     db.refresh(challenge)
 
@@ -655,14 +693,14 @@ def _make_retreat_judgment(db: Session, user: User, challenge: Challenge, note_t
     if challenge.status != "accepted":
         raise ValueError("挑战已结束，不能重复退缩结算。")
     judgment = db.get(AIJudgment, challenge.judgment_id) if challenge.judgment_id else None
-    if judgment is not None and judgment.status not in ("pending", "adjusted"):
+    if judgment is not None and judgment.status not in ("pending", "adjusted", "invalidated"):
         raise ValueError("挑战判定已入账或失效。")
     event = db.get(Event, challenge.event_id) if challenge.event_id else None
     if event is not None and event.is_deleted:
         raise ValueError("挑战事件已删除。")
     event = event or Event(user_id=user.id, event_type="negative", category="目标", source="form",
         title=f"挑战：{challenge.title}", content=note_text, params={"_challenge_id": challenge.id},
-        origin="challenge", occurred_at=datetime.now())
+        origin="challenge", occurred_at=clock_now())
     db.add(event)
     db.flush()
     rejudging = judgment is not None
@@ -723,7 +761,7 @@ def expire_stale(db: Session, user: User) -> int:
     - accepted 过期 → 押金没收 + 按难度扣点（走 retreated 同一套）
     - 以状态判断实现幂等：已 expired/settled/abandoned 的不再处理
     """
-    now = datetime.now()
+    now = clock_now()
     rows = (
         db.query(Challenge)
         .filter(
@@ -760,7 +798,9 @@ def expire_stale(db: Session, user: User) -> int:
 
 def list_challenges(db: Session, user: User, scope: str | None = None) -> list[Challenge]:
     """列出挑战（先惰性过期结算，再返回；按 scope 过滤可选）。"""
-    expire_stale(db, user)
+    from app.config import settings
+    if not settings.cloud:
+        expire_stale(db, user)
     q = db.query(Challenge).filter(Challenge.user_id == user.id)
     if scope:
         q = q.filter(Challenge.scope == scope)
@@ -769,7 +809,9 @@ def list_challenges(db: Session, user: User, scope: str | None = None) -> list[C
 
 def current_period(db: Session, user: User) -> dict:
     """本期（日/周）挑战概览，供前端分组展示。"""
-    expire_stale(db, user)
+    from app.config import settings
+    if not settings.cloud:
+        expire_stale(db, user)
     result: dict[str, list[Challenge]] = {}
     for scope in ("daily", "weekly"):
         pkey = period_key(scope)

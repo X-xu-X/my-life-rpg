@@ -14,6 +14,7 @@
 3. **允许跨零点**（用户 2026-09-30 拍板）：`end_time <= start_time` 表示区间延到次日。
 """
 
+from app.services.time_service import clock_now
 from datetime import date as _date
 from datetime import datetime, time as _time
 from datetime import timedelta
@@ -91,6 +92,10 @@ def window_of(row: Exemption) -> tuple[datetime, datetime]:
     end = datetime(d.year, d.month, d.day, et.hour, et.minute)
     if end <= start:
         end += timedelta(days=1)  # 跨零点：22:00 – 次日 02:00
+    from app.config import settings
+    if settings.cloud:
+        from app.services.time_service import stored_time
+        return stored_time(start, row.timezone_at_capture), stored_time(end, row.timezone_at_capture)
     return start, end
 
 
@@ -113,7 +118,7 @@ def serialize(row: Exemption) -> dict:
         "start_time": row.start_time,
         "end_time": row.end_time,
         "label": label_of(row),
-        "cross_midnight": end.date() != start.date(),
+        "cross_midnight": row.end_time <= row.start_time,
         "reason": row.reason,
         "coin_cost": row.coin_cost,
         "motive": row.motive,
@@ -136,7 +141,7 @@ def expire_stale(db: Session, user: User) -> int:
 
     参考 `challenge_service.expire_stale` 的做法：不新增定时任务，读列表/判定时顺带执行。
     """
-    now = datetime.now()
+    now = clock_now()
     changed = 0
     rows = (
         db.query(Exemption)
@@ -156,19 +161,17 @@ def expire_stale(db: Session, user: User) -> int:
 def find_active(db: Session, user: User, at: datetime) -> Exemption | None:
     """查询覆盖时刻 `at` 的券。
 
-    - 只认 `active` / `used`：**`used` 也要继续匹配**，否则「补充信息重判」时同一张券
+    - `active` / `used` / `expired` 均按原覆盖区间匹配：**`used` 也要继续匹配**，否则「补充信息重判」时同一张券
       第一次生效、第二次不生效，重判结果会前后不一致（v1.5「重判就地更新」契约）。
-    - 候选只取 `target_date` 为当天或前一天的券（跨零点最多覆盖到次日），再逐个比对真实区间。
+    - 按每张券创建时的时区解释覆盖区间，不因账号后来改变时区而重新解释。
     """
     if at is None:
         return None
-    d = at.date()
     candidates = (
         db.query(Exemption)
         .filter(
             Exemption.user_id == user.id,
             Exemption.status.in_(["active", "used", "expired"]),
-            Exemption.target_date.in_([d.isoformat(), (d - timedelta(days=1)).isoformat()]),
         )
         .all()
     )
@@ -183,7 +186,7 @@ def mark_used(db: Session, row: Exemption) -> None:
     """券真正发挥豁免作用时置 `used`（幂等，只记第一次）。"""
     if row.status in ("active", "expired"):
         row.status = "used"
-        row.used_at = datetime.now()
+        row.used_at = clock_now()
         db.flush()
 
 
@@ -246,7 +249,7 @@ def _long_term_memory(db: Session, user_id: int) -> str:
 
 def _recent_events(db: Session, user: User, days: int = 7, limit: int = 12) -> str:
     """近 N 天记录摘要（供 AI 判断「他最近是不是已经在频繁停摆」）。"""
-    cutoff = datetime.now() - timedelta(days=days)
+    cutoff = clock_now() - timedelta(days=days)
     rows = (
         db.query(Event)
         .filter(Event.user_id == user.id, Event.is_deleted.is_(False), Event.created_at >= cutoff)
@@ -256,7 +259,7 @@ def _recent_events(db: Session, user: User, days: int = 7, limit: int = 12) -> s
     )
     lines = []
     for e in rows:
-        when = (e.created_at or datetime.now()).strftime("%m-%d")
+        when = (e.created_at or clock_now()).strftime("%m-%d")
         title = (e.title or "").strip() or "(无标题)"
         lines.append(f"- {when} {title}（{e.event_type}）")
     return "\n".join(lines)
@@ -340,6 +343,7 @@ def buy(
     start_time: str = "",
     end_time: str = "",
     reason: str = "",
+    *, commit=True, before_write=None,
 ) -> dict:
     """购买一张豁免券：校验 → AI 定价与判动机 → 扣币（+ 可能的额外扣点）→ 落库。
 
@@ -354,7 +358,7 @@ def buy(
         target = _date.fromisoformat((target_date or "").strip())
     except ValueError as exc:
         raise ValueError("请指定合法的目标日期（YYYY-MM-DD）。") from exc
-    if target < datetime.now().date():
+    if target < clock_now().date():
         raise ValueError("豁免券只能为今天或之后的日期购买（过期作废，不能补买）。")
 
     key, start, end = resolve_period(period, start_time, end_time)
@@ -372,9 +376,17 @@ def buy(
         dimension_list="、".join(sorted(ATTRIBUTE_DIMENSIONS_SET)),
     )
     config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_AUX)
+    captured_zone = user.timezone
+    db.commit()  # Release read transaction before waiting for the supplier.
     priced = _parse_pricing(llm_service.chat_json(messages, config=config))
+    from app.services.transactions import lock_profile
+    lock_profile(db, user.id)
+    if before_write:
+        prior=before_write()
+        if prior is not None: return {'replayed':prior}
+    llm_config.assert_current(db, config)
 
-    row = Exemption(
+    row = Exemption(timezone_at_capture=captured_zone,
         user_id=user.id,
         target_date=target.isoformat(),
         period=key,
@@ -404,15 +416,18 @@ def buy(
     # 额外扣点：购买时立刻生效，并与 motive_note 一起展示给用户
     penalty = _apply_extra_penalty(db, user, row)
 
-    db.commit()
-    db.refresh(row)
+    if commit:
+        db.commit()
+        db.refresh(row)
     return {"exemption": row, "penalty": penalty, "balance": coin_service.balance(db, user)}
 
 
 def list_for_user(db: Session, user: User, limit: int = 30) -> list[Exemption]:
     """券列表（倒序）。顺带做惰性过期。"""
-    expire_stale(db, user)
-    db.commit()
+    from app.config import settings
+    if not settings.cloud:
+        expire_stale(db, user)
+        db.commit()
     return (
         db.query(Exemption)
         .filter(Exemption.user_id == user.id)

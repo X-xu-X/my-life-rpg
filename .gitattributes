@@ -1,0 +1,8 @@
+ops/*.sh text eol=lf
+deploy/* text eol=lf
+*.bat text eol=crlf
+
+# Markdown uses trailing spaces for hard line breaks.
+docs/*.md whitespace=-blank-at-eol
+# Preserve captured test output verbatim, including its original whitespace.
+docs/review/OPS_REVIEW_TEST_LOG_2026-10-10.txt -whitespace

@@ -1,0 +1,14 @@
+.git
+.env*
+.venv
+**/node_modules
+**/dist
+**/__pycache__
+*.db
+*.sqlite3
+backups
+release-artifacts
+images-*.tar
+_tmp_*
+_shots
+docs/review

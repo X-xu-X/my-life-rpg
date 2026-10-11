@@ -58,11 +58,11 @@ onMounted(load)
 
 <template>
   <div class="card">
-    <h2>量化锚点库</h2>
+    <h1>旧规则锚点与个人校准</h1>
     <p class="muted">AI 判定以此为基准按强度/时长/质量加权。你可以校准基准值，校准后后续判定随之调整。</p>
-    <p v-if="error" class="muted" style="color: #d33">{{ error }}</p>
+    <p v-if="error" class="muted" style="color: var(--danger)">{{ error }}</p>
 
-    <table style="width: 100%; border-collapse: collapse; font-size: 14px">
+    <div class="table-scroll" role="region" aria-label="锚点基准与校准表" tabindex="0"><table style="width: 100%; border-collapse: collapse; font-size: 14px">
       <thead>
         <tr style="text-align: left; border-bottom: 1px solid var(--border)">
           <th style="padding: 8px">标准事件</th>
@@ -81,7 +81,7 @@ onMounted(load)
           </td>
           <td>
             <template v-if="editingId === a.id">
-              <input v-model="editValue" style="width: 70px" />
+              <input :aria-label="'校准 '+a.name+' 的基准量'" v-model="editValue" style="width: 70px" />
             </template>
             <template v-else>
               {{ a.calibrated_value != null ? a.calibrated_value : a.base_value }} {{ a.unit }}
@@ -109,6 +109,6 @@ onMounted(load)
           </td>
         </tr>
       </tbody>
-    </table>
+    </table></div>
   </div>
 </template>

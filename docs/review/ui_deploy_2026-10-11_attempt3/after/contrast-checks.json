@@ -1,0 +1,65 @@
+[
+  {
+    "label": "body secondary",
+    "selector": ".page-intro .muted",
+    "color": "rgb(98, 105, 122)",
+    "background": "rgb(246, 247, 251)",
+    "outline": "rgb(98, 105, 122)",
+    "outlineWidth": "3px",
+    "ratio": 5.133713196494991
+  },
+  {
+    "label": "selected nav",
+    "selector": ".mobile-nav a.selected",
+    "color": "rgb(64, 88, 214)",
+    "background": "rgb(238, 241, 254)",
+    "outline": "rgb(64, 88, 214)",
+    "outlineWidth": "3px",
+    "ratio": 5.2020208132270565
+  },
+  {
+    "label": "preview link",
+    "selector": ".preview-link",
+    "color": "rgb(64, 88, 214)",
+    "background": "rgb(246, 247, 251)",
+    "outline": "rgb(64, 88, 214)",
+    "outlineWidth": "3px",
+    "ratio": 5.4718139121409255
+  },
+  {
+    "label": "normal search",
+    "selector": ".record-search button",
+    "color": "rgb(43, 47, 58)",
+    "background": "rgb(255, 255, 255)",
+    "outline": "rgb(43, 47, 58)",
+    "outlineWidth": "3px",
+    "ratio": 13.372201873752555
+  },
+  {
+    "label": "primary save",
+    "selector": ".record-composer .primary",
+    "color": "rgb(255, 255, 255)",
+    "background": "rgb(64, 88, 214)",
+    "outline": "rgb(255, 255, 255)",
+    "outlineWidth": "3px",
+    "ratio": 5.857912043394605
+  },
+  {
+    "label": "primary hover",
+    "selector": ".record-composer .primary",
+    "color": "rgb(255, 255, 255)",
+    "background": "rgb(52, 73, 188)",
+    "outline": "rgb(255, 255, 255)",
+    "outlineWidth": "3px",
+    "ratio": 7.433106474225896
+  },
+  {
+    "label": "warning",
+    "selector": ".settings-section > p[style]",
+    "color": "rgb(140, 83, 8)",
+    "background": "rgb(255, 255, 255)",
+    "outline": "rgb(140, 83, 8)",
+    "outlineWidth": "3px",
+    "ratio": 6.257638139225744
+  }
+]

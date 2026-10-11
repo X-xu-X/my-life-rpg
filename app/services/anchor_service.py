@@ -344,7 +344,7 @@ BUILTIN_ANCHORS = [
 ]
 
 
-def seed_anchors(db: Session) -> int:
+def seed_anchors(db: Session, *, commit: bool = True) -> int:
     """启动时幂等写入内置锚点（v1.8 扩展为**三级**）。返回本次新增+回填的条数。
 
     三级逻辑（务必严格）：
@@ -374,13 +374,21 @@ def seed_anchors(db: Session) -> int:
                 row.intensity_note = item["intensity_note"]
             created += 1
     if created:
-        db.commit()
+        if commit:
+            db.commit()
     return created
 
 
 def list_anchors(db: Session) -> list[Anchor]:
     """返回全部锚点（内置 + 用户自定义）。"""
-    return db.query(Anchor).order_by(Anchor.id).all()
+    rows = db.query(Anchor).order_by(Anchor.id).all()
+    if db.info.get("user_id") is not None:
+        from app.models.access import AnchorOverride
+        from types import SimpleNamespace
+        overrides = {r.anchor_id: r.calibrated_value for r in db.query(AnchorOverride).all()}
+        return [SimpleNamespace(**{c.name: getattr(row, c.name) for c in Anchor.__table__.columns
+            if c.name != "calibrated_value"}, calibrated_value=overrides.get(row.id), __table__=Anchor.__table__) for row in rows]
+    return rows
 
 
 def get_anchor(db: Session, anchor_id: int) -> Anchor | None:
@@ -392,6 +400,20 @@ def calibrate_anchor(db: Session, anchor_id: int, calibrated_value: float | None
     anchor = db.get(Anchor, anchor_id)
     if anchor is None:
         return None
+    if db.info.get("user_id") is not None:
+        from app.models.access import AnchorOverride
+        from app.services.transactions import lock_profile
+        from types import SimpleNamespace
+        lock_profile(db, db.info["user_id"])
+        row = db.query(AnchorOverride).filter_by(anchor_id=anchor_id).first()
+        if row is None:
+            row = AnchorOverride(user_id=db.info["user_id"], anchor_id=anchor_id, version=0)
+            db.add(row)
+        row.calibrated_value = calibrated_value
+        row.version = (row.version or 0) + 1
+        db.commit()
+        return SimpleNamespace(id=anchor.id, name=anchor.name, base_value=anchor.base_value,
+                               calibrated_value=calibrated_value)
     anchor.calibrated_value = calibrated_value
     db.commit()
     db.refresh(anchor)

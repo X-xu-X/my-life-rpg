@@ -1,0 +1,8 @@
+{
+    email {$ACME_EMAIL}
+    admin off
+}
+{$DOMAIN} {
+    header Retry-After 300
+    respond "游戏人生正在维护，已保存的记录会保留，请稍后再来。" 503
+}

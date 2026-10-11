@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../api'
+import { account } from '../session'
 import { toast } from '../composables/useToast'
 import { useDateGroups } from '../composables/useDateGroups'
 
@@ -134,18 +135,18 @@ const STATUS_LABEL = {
 }
 
 async function confirm(id) {
-  await runAction(id, () => api.confirmJudgment(id), '已确认入账')
+  await runAction(id, () => api.confirmJudgment(id, judgments.value.find(j=>j.id===id)?.updated_at), '已确认入账')
 }
 
 async function supplement(id) {
   if (!inputText.value.trim()) return toast.error('请填写补充信息')
-  await runAction(id, () => api.supplementJudgment(id, inputText.value.trim()), '已重新判定')
+  await runAction(id, () => api.supplementJudgment(id, inputText.value.trim(), judgments.value.find(j=>j.id===id)?.updated_at), account.value?.mode === 'cloud' ? '补充已排队，可在待办查看结果' : '已重新判定')
 }
 
 async function dispute(id) {
   if (!inputText.value.trim()) return toast.error('请填写反驳理由')
-  const res = await runAction(id, () => api.disputeJudgment(id, inputText.value.trim()), '已提交反驳复核')
-  if (res) {
+  const res = await runAction(id, () => api.disputeJudgment(id, inputText.value.trim(), judgments.value.find(j=>j.id===id)?.updated_at), '已提交反驳复核，可在待办查看进度')
+  if (res && res.state !== 'queued') {
     // v1.5 A2：复核结论就地展示（替代阻塞式 alert）
     disputeResult.value = { id, conclusion: res.conclusion, explanation: res.explanation || '' }
   }
@@ -214,7 +215,8 @@ async function runAction(id, fn, okMsg) {
     return res
   } catch (e) {
     // v1.4：失败不收起输入框、不清空内容，错误就近显示在输入框上方
-    actionError.value = { id, msg: e.message }
+    if (e.status === 409) await load()
+    actionError.value = { id, msg: e.message + (e.status === 409 ? ' 已重读最新结果；输入已保留，请比较后重新提交。' : '') }
   } finally {
     busy.value = false
     endBusy() // v1.7 C1：请求返回（成功或失败）才恢复
@@ -301,13 +303,14 @@ onMounted(load)
 </script>
 
 <template>
+  <header class="page-intro"><h1>判定与审计</h1></header>
   <div class="card">
-    <h2>判定中心</h2>
+    <h1>判定与审计</h1>
     <p class="muted">未入账判定可确认、补充或反驳。已入账后冻结正文与判定，可删除事件撤销属性；金币保留。挑战判定请在挑战页处理。</p>
 
-    <p v-if="error" class="muted" style="color: #d33">{{ error }}</p>
+    <p v-if="error" class="muted" style="color: var(--danger)">{{ error }}</p>
     <!-- v1.5 A2：轻提示（删除/保存等成功反馈，2 秒消失） -->
-    <p v-if="notice" class="muted" style="color: #2f855a; font-size: 13px">✓ {{ notice }}</p>
+    <p v-if="notice" class="muted" style="color: var(--success); font-size: 13px">✓ {{ notice }}</p>
     <p v-if="judgments.length === 0 && !error" class="muted">暂无判定记录，先去「记录事件」打卡吧。</p>
 
     <div class="field" v-if="judgments.length > 0">
@@ -315,42 +318,42 @@ onMounted(load)
     </div>
 
     <!-- v1.5 B1：按日期分组折叠；每条判定默认收起为一行摘要 -->
-    <p v-if="judgments.length > 0" class="muted" style="font-size: 12px">点击标题行展开详情；组头可折叠（搜索时自动展开命中项）。</p>
+    <p v-if="judgments.length > 0" class="muted" style="font-size: 13px">点击标题行展开详情；组头可折叠（搜索时自动展开命中项）。</p>
 
     <div v-for="g in groupedJudgments" :key="g.key" style="margin-bottom: 12px">
       <div
-        class="row"
+        class="action-group"
         style="align-items: center; cursor: pointer; padding: 6px 4px; border-bottom: 1px solid #eee; user-select: none"
         @click="toggleGroup(g.key)"
-      >
+       role="button" tabindex="0" @keydown.enter.self.prevent="toggleGroup(g.key)" @keydown.space.self.prevent="toggleGroup(g.key)">
         <b>{{ g.label }}</b>
-        <span class="muted" style="font-size: 12px">{{ g.dateRange }}</span>
-        <span class="muted" style="font-size: 12px">{{ g.items.length }} 条</span>
+        <span class="muted" style="font-size: 13px">{{ g.dateRange }}</span>
+        <span class="muted" style="font-size: 13px">{{ g.items.length }} 条</span>
         <span class="muted" style="margin-left: auto">{{ groupIsOpen(g.key) ? '▾' : '▸' }}</span>
       </div>
 
       <template v-if="groupIsOpen(g.key)">
         <div v-for="j in g.items" :key="j.id" class="judgment-item">
           <!-- 摘要行（点击展开/收起详情） -->
-          <div class="row" style="align-items: center; cursor: pointer" @click="toggleItem(j.id)">
+          <div class="action-group" style="align-items: center; cursor: pointer" @click="toggleItem(j.id)" role="button" tabindex="0" @keydown.enter.self.prevent="toggleItem(j.id)" @keydown.space.self.prevent="toggleItem(j.id)">
             <b>{{ j.event_title || j.category }}</b>
             <span v-if="j.origin === 'challenge'" class="tag" title="由挑战结算生成">挑战</span>
             <span class="tag">{{ j.event_type }}</span>
             <span class="tag">{{ STATUS_LABEL[j.status] || j.status }}</span>
             <span v-if="j.rejudge_count > 0" class="tag" title="从审计日志统计的重判次数">已重判 · 第 {{ j.rejudge_count }} 次</span>
             <span class="muted">置信度 {{ (j.confidence * 100).toFixed(0) }}%</span>
-            <span class="muted" style="margin-left: auto; font-size: 12px">{{ new Date(j.created_at).toLocaleString('zh-CN') }}</span>
+            <span class="muted" style="margin-left: auto; font-size: 13px">{{ new Date(j.created_at).toLocaleString('zh-CN') }}</span>
             <span class="muted">{{ itemIsOpen(j.id) ? '▾' : '▸' }}</span>
           </div>
 
           <template v-if="itemIsOpen(j.id)">
             <!-- v1.4：置信度说明（低置信度时 AI 给出的不确定点） -->
-            <div v-if="j.confidence_reason && j.status !== 'confirmed'" class="muted" style="font-size: 12px; margin-bottom: 6px; color: #b7791f">
+            <div v-if="j.confidence_reason && j.status !== 'confirmed'" class="muted" style="font-size: 13px; margin-bottom: 6px; color: var(--warn)">
               💡 {{ j.confidence_reason }}
             </div>
 
             <!-- v1.7：跨来源合并明细（已与 N 条记录合并，可反驳撤销） -->
-            <div v-if="j.merged_with && j.merged_with.length" class="muted" style="font-size: 12px; margin-bottom: 6px; color: #7c5cbf">
+            <div v-if="j.merged_with && j.merged_with.length" class="muted" style="font-size: 13px; margin-bottom: 6px; color: #7c5cbf">
               <span class="tag">已与 {{ j.merged_with.length }} 条记录合并</span>
               <div v-for="(m, i) in j.merged_with" :key="i" style="margin-top: 2px">
                 · {{ m.ref }}<template v-if="m.note">：{{ m.note }}</template>
@@ -365,7 +368,7 @@ onMounted(load)
             >
               <div>🎖 <b>AI 认为这是一个里程碑：</b>{{ j.achievement_suggestion.name }}</div>
               <div class="muted" style="margin-top: 4px">「{{ j.achievement_suggestion.reason }}」</div>
-              <div class="row">
+              <div class="action-group">
                 <button class="btn small primary" :disabled="anyBusy" @click="handleMilestone(j, 'grant')">
                   <template v-if="isBusy(`milestone-${j.id}`)">处理中…</template>
                   <template v-else>追授（+50 币）</template>
@@ -377,13 +380,13 @@ onMounted(load)
             </div>
 
             <!-- v1.6：本次修订说明（重判改变了什么，无修订不显示） -->
-            <div v-if="j.revision_notes && j.revision_notes.length" class="muted" style="font-size: 12px; margin-bottom: 6px; color: #2b6cb0">
+            <div v-if="j.revision_notes && j.revision_notes.length" class="muted" style="font-size: 13px; margin-bottom: 6px; color: #2b6cb0">
               <span class="tag">本次修订</span>
               <div v-for="(n, i) in j.revision_notes" :key="i" style="margin-top: 2px">{{ n }}</div>
             </div>
 
             <!-- v1.5 A2：最近一次用户提交的补充/反驳（数据源=审计日志，默认收起） -->
-            <div v-if="j.last_user_input" class="muted" style="font-size: 12px; margin-bottom: 6px">
+            <div v-if="j.last_user_input" class="muted" style="font-size: 13px; margin-bottom: 6px">
               <span style="cursor: pointer; user-select: none" @click="toggleMyInput(j.id)">
                 {{ myInputOpen === j.id ? '▾' : '▸' }} 我的{{ j.last_user_input.action === 'dispute' ? '反驳' : '补充' }}（{{ new Date(j.last_user_input.created_at).toLocaleString('zh-CN') }}）
               </span>
@@ -401,7 +404,7 @@ onMounted(load)
       <div v-for="a in j.suggested_changes" :key="a.name" class="judgment-item">
         <span class="attr-name">{{ a.name }}</span>
         <span :class="a.delta >= 0 ? 'positive' : 'negative'">{{ a.delta >= 0 ? '+' : '' }}{{ a.delta }}</span>
-        <span class="muted" style="font-size: 12px">
+        <span class="muted" style="font-size: 13px">
           → 入账 {{ (a.delta * (j.confidence || 1)).toFixed(1) }}（置信度 {{ ((j.confidence || 1) * 100).toFixed(0) }}%）
         </span>
         <div class="muted">{{ a.reason }}</div>
@@ -409,9 +412,9 @@ onMounted(load)
       </div>
 
       <!-- 操作区（v1.6 B1：成功状态整体替换主操作区；v1.7 C1：处理中显示「AI 正在分析…」） -->
-      <div class="row" style="margin-top: 10px; align-items: center">
+      <div class="action-group" style="margin-top: 10px; align-items: center">
         <template v-if="actionSuccess.id === j.id">
-          <span class="muted" style="flex: 1; color: #2f855a; font-weight: 600; font-size: 14px">✓ {{ actionSuccess.msg }}</span>
+          <span class="muted" style="flex: 1; color: var(--success); font-weight: 600; font-size: 14px">✓ {{ actionSuccess.msg }}</span>
         </template>
         <template v-else-if="isBusy(j.id)">
           <!-- v1.7 C1：AI 正在分析中——整卡操作禁用，文案即时变化 -->
@@ -420,7 +423,7 @@ onMounted(load)
           </span>
         </template>
         <template v-else>
-          <div v-if="j.status !== 'confirmed' && j.origin !== 'challenge'" class="row" style="gap: 8px; flex: 1">
+          <div v-if="j.status !== 'confirmed' && j.origin !== 'challenge'" class="action-group" style="gap: 8px; flex: 1">
             <button
               class="btn small primary"
               :disabled="busy || (j.confidence || 0) < 0.8"
@@ -442,7 +445,7 @@ onMounted(load)
       </div>
 
       <!-- v1.7 C1：响应较慢提示（超过 60 秒未返回；不自动清空状态） -->
-      <p v-if="slowHintId === j.id" class="muted" style="color: #b7791f; font-size: 12px; margin-top: 6px">
+      <p v-if="slowHintId === j.id" class="muted" style="color: var(--warn); font-size: 13px; margin-top: 6px">
         ⏳ AI 响应较慢，可继续等待或点「取消」。
       </p>
 
@@ -450,21 +453,21 @@ onMounted(load)
       <p
         v-if="actionError.id === j.id"
         class="muted"
-        style="color: #d33; font-size: 12px; margin-top: 6px"
+        style="color: var(--danger); font-size: 13px; margin-top: 6px"
       >⚠️ {{ actionError.msg }}</p>
 
       <!-- v1.5 A2：反驳复核结论就地展示（替代 alert） -->
       <div
         v-if="disputeResult.id === j.id"
         class="muted"
-        style="font-size: 12px; margin-top: 6px; padding: 6px 8px; background: #f7f7f9; border-radius: 6px"
+        style="font-size: 13px; margin-top: 6px; padding: 6px 8px; background: #f7f7f9; border-radius: 6px"
       >⚖️ {{ disputeResult.conclusion === 'adjust' ? '复核已调整判定' : 'AI 坚持原判' }}<template v-if="disputeResult.explanation">：{{ disputeResult.explanation }}</template></div>
 
       <!-- 补充/反驳输入框（v1.4：就近渲染在操作按钮行正下方；v1.7 C2：加「取消」） -->
       <div v-if="actionTarget === j.id" class="field" style="margin-top: 10px">
-        <label>{{ j.status === 'confirmed' ? '反驳理由（已入账，仅可反驳）' : '补充信息 / 反驳理由：' }}</label>
-        <textarea v-model="inputText" rows="2" placeholder="说明你的补充或反驳理由…" :disabled="isBusy(j.id)"></textarea>
-        <div class="row" style="margin-top: 8px">
+        <label for="judgmentlist-field-1">{{ j.status === 'confirmed' ? '反驳理由（已入账，仅可反驳）' : '补充信息 / 反驳理由：' }}</label>
+        <textarea id="judgmentlist-field-1" v-model="inputText" rows="2" placeholder="说明你的补充或反驳理由…" :disabled="isBusy(j.id)"></textarea>
+        <div class="action-group" style="margin-top: 8px">
           <button class="btn small primary" :disabled="isBusy(j.id)" @click="supplement(j.id)">
             {{ isBusy(j.id) ? 'AI 正在分析…' : '提交补充' }}
           </button>
@@ -480,20 +483,20 @@ onMounted(load)
       <p
         v-if="j.status !== 'confirmed' && (j.confidence || 0) < 0.8"
         class="muted"
-        style="color: #b7791f; font-size: 12px; margin-top: 6px"
+        style="color: var(--warn); font-size: 13px; margin-top: 6px"
       >
         ⚠️ 置信度 {{ ((j.confidence || 0) * 100).toFixed(0) }}%<template v-if="j.confidence_reason">：{{ j.confidence_reason }}</template>，可补充信息后重判或直接反驳。
       </p>
 
       <!-- 编辑表单 -->
       <div v-if="editTarget === j.event_id" class="field" style="margin-top: 10px">
-        <label>标题</label>
-        <input v-model="editForm.title" placeholder="事件标题" />
-        <label>类别</label>
-        <input v-model="editForm.category" placeholder="锻炼/学习/作息/…" />
-        <label>内容（日记原文，可选）</label>
-        <textarea v-model="editForm.content" rows="2" placeholder="事件内容"></textarea>
-        <div class="row" style="margin-top: 8px">
+        <label for="judgmentlist-field-2">标题</label>
+        <input id="judgmentlist-field-2" v-model="editForm.title" placeholder="事件标题" />
+        <label for="judgmentlist-field-3">类别</label>
+        <input id="judgmentlist-field-3" v-model="editForm.category" placeholder="锻炼/学习/作息/…" />
+        <label for="judgmentlist-field-4">内容（日记原文，可选）</label>
+        <textarea id="judgmentlist-field-4" v-model="editForm.content" rows="2" placeholder="事件内容"></textarea>
+        <div class="action-group" style="margin-top: 8px">
           <button class="btn small primary" :disabled="busy" @click="saveEdit">保存</button>
           <button class="btn small" @click="editTarget = null">取消</button>
         </div>
@@ -506,7 +509,7 @@ onMounted(load)
         <div v-for="log in auditLogs" :key="log.id" class="audit-item">
           <span class="tag">{{ ACTION_LABEL[log.action] || log.action }}</span>
           <span class="muted">{{ log.detail }}</span>
-          <div class="muted" style="font-size: 12px">{{ new Date(log.created_at).toLocaleString('zh-CN') }}</div>
+          <div class="muted" style="font-size: 13px">{{ new Date(log.created_at).toLocaleString('zh-CN') }}</div>
         </div>
       </div>
           </template><!-- /itemIsOpen -->

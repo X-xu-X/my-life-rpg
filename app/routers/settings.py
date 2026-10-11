@@ -84,6 +84,9 @@ def _group_out(db: Session, user_id: int, setting_key: str) -> dict:
 def get_llm_config(db: Session = Depends(get_db)):
     """读取两组模型配置（api_key 掩码回显）+ .env 默认配置状态。"""
     user = get_or_create_default_user(db)
+    if settings.cloud:
+        from app.services.credentials import read_config
+        return read_config(db, user.id)
     return {
         "primary": _group_out(db, user.id, SETTING_KEY_PRIMARY),
         "aux": _group_out(db, user.id, SETTING_KEY_AUX),
@@ -103,6 +106,9 @@ def put_llm_config(body: LLMConfigIn, db: Session = Depends(get_db)):
     （更换判定模型后加点口径可能与之前不同）。
     """
     user = get_or_create_default_user(db)
+    if settings.cloud:
+        from app.services.credentials import save_config
+        return save_config(db, user.id, body)
     setting_key = SETTING_KEY_PRIMARY if body.group == "primary" else SETTING_KEY_AUX
     row = db.query(Setting).filter(Setting.user_id == user.id, Setting.key == setting_key).first()
     old = dict(row.value) if row and isinstance(row.value, dict) else {}
@@ -146,3 +152,21 @@ def put_llm_config(body: LLMConfigIn, db: Session = Depends(get_db)):
             "长期记忆会自动注入新模型衔接上下文）。"
         )
     return {"ok": True, "group": body.group, "model_changed": model_changed, "message": message}
+
+
+@router.post('/llm-config/test')
+def test_llm_config(body: LLMConfigIn, db: Session = Depends(get_db)):
+    from app.services import llm_config
+    from app.services.llm_service import llm_service, LLMError
+    user = get_or_create_default_user(db)
+    key = SETTING_KEY_PRIMARY if body.group == 'primary' else SETTING_KEY_AUX
+    group = llm_config.read_group(db, user.id, key)
+    if not group:
+        raise HTTPException(422, '请先保存并启用本组配置。')
+    config = llm_config._from_group(group)
+    db.commit()
+    try:
+        llm_service.chat([{'role':'user','content':'Reply OK.'}], config=config)
+    except LLMError as exc:
+        raise HTTPException(503, str(exc)) from None
+    return {'status':'connected','group':body.group}

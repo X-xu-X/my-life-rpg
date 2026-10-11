@@ -40,6 +40,8 @@ def get_attributes(db: Session = Depends(get_db)):
         return "show"
 
     return {
+        "onboarding_completed": bool(profile and profile.onboarding_completed),
+        "baseline_kind": profile.baseline_kind if profile else 'legacy',
         "attributes": [
             {
                 "name": a.name,

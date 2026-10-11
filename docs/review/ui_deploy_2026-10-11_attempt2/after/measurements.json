@@ -1,0 +1,1532 @@
+[
+  {
+    "path": "/",
+    "width": 360,
+    "scrollWidth": 345,
+    "firstRecord": {
+      "x": 16,
+      "y": 790.640625,
+      "width": 313,
+      "height": 219.0625,
+      "bottom": 1009.703125
+    },
+    "save": {
+      "x": 33,
+      "y": 555.5,
+      "width": 279,
+      "height": 44,
+      "bottom": 599.5
+    },
+    "links": {
+      "x": 16,
+      "y": 632.5,
+      "width": 313,
+      "height": 74.140625,
+      "bottom": 706.640625
+    },
+    "nav": {
+      "x": 0,
+      "y": 736,
+      "width": 345,
+      "height": 64,
+      "bottom": 800
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/journal",
+    "width": 360,
+    "scrollWidth": 345,
+    "firstRecord": {
+      "x": 16,
+      "y": 335.75,
+      "width": 313,
+      "height": 219.0625,
+      "bottom": 554.8125
+    },
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 736,
+      "width": 345,
+      "height": 64,
+      "bottom": 800
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/events/101",
+    "width": 360,
+    "scrollWidth": 345,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 736,
+      "width": 345,
+      "height": 64,
+      "bottom": 800
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/growth",
+    "width": 360,
+    "scrollWidth": 345,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 736,
+      "width": 345,
+      "height": 64,
+      "bottom": 800
+    },
+    "radar": {
+      "x": 33,
+      "y": 2643.265625,
+      "width": 279,
+      "height": 360,
+      "bottom": 3003.265625
+    },
+    "growth": {
+      "x": 33,
+      "y": 2762.125,
+      "width": 279,
+      "height": 320,
+      "bottom": 3082.125
+    },
+    "heatmap": {
+      "x": 33,
+      "y": 602.8125,
+      "width": 640,
+      "height": 220,
+      "bottom": 822.8125
+    }
+  },
+  {
+    "path": "/reports",
+    "width": 360,
+    "scrollWidth": 360,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 736,
+      "width": 360,
+      "height": 64,
+      "bottom": 800
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/me",
+    "width": 360,
+    "scrollWidth": 345,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 736,
+      "width": 345,
+      "height": 64,
+      "bottom": 800
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/checkin",
+    "width": 360,
+    "scrollWidth": 345,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 736,
+      "width": 345,
+      "height": 64,
+      "bottom": 800
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/pending",
+    "width": 360,
+    "scrollWidth": 360,
+    "firstRecord": {
+      "x": 16,
+      "y": 253.671875,
+      "width": 328,
+      "height": 219.0625,
+      "bottom": 472.734375
+    },
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 736,
+      "width": 360,
+      "height": 64,
+      "bottom": 800
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/judgments",
+    "width": 360,
+    "scrollWidth": 360,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 736,
+      "width": 360,
+      "height": 64,
+      "bottom": 800
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/review",
+    "width": 360,
+    "scrollWidth": 345,
+    "firstRecord": {
+      "x": 16,
+      "y": 411.890625,
+      "width": 313,
+      "height": 219.0625,
+      "bottom": 630.953125
+    },
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 736,
+      "width": 345,
+      "height": 64,
+      "bottom": 800
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/challenges",
+    "width": 360,
+    "scrollWidth": 345,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 736,
+      "width": 345,
+      "height": 64,
+      "bottom": 800
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/onboarding",
+    "width": 360,
+    "scrollWidth": 345,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 736,
+      "width": 345,
+      "height": 64,
+      "bottom": 800
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/anchors",
+    "width": 360,
+    "scrollWidth": 360,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 736,
+      "width": 360,
+      "height": 64,
+      "bottom": 800
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/settings",
+    "width": 360,
+    "scrollWidth": 345,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 736,
+      "width": 345,
+      "height": 64,
+      "bottom": 800
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/",
+    "width": 390,
+    "scrollWidth": 375,
+    "firstRecord": {
+      "x": 16,
+      "y": 770.5,
+      "width": 343,
+      "height": 219.0625,
+      "bottom": 989.5625
+    },
+    "save": {
+      "x": 33,
+      "y": 535.359375,
+      "width": 309,
+      "height": 44,
+      "bottom": 579.359375
+    },
+    "links": {
+      "x": 16,
+      "y": 612.359375,
+      "width": 343,
+      "height": 74.140625,
+      "bottom": 686.5
+    },
+    "nav": {
+      "x": 0,
+      "y": 780,
+      "width": 375,
+      "height": 64,
+      "bottom": 844
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/journal",
+    "width": 390,
+    "scrollWidth": 375,
+    "firstRecord": {
+      "x": 16,
+      "y": 335.75,
+      "width": 343,
+      "height": 219.0625,
+      "bottom": 554.8125
+    },
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 780,
+      "width": 375,
+      "height": 64,
+      "bottom": 844
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/events/101",
+    "width": 390,
+    "scrollWidth": 375,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 780,
+      "width": 375,
+      "height": 64,
+      "bottom": 844
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/growth",
+    "width": 390,
+    "scrollWidth": 375,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 780,
+      "width": 375,
+      "height": 64,
+      "bottom": 844
+    },
+    "radar": {
+      "x": 33,
+      "y": 2615.265625,
+      "width": 309,
+      "height": 360,
+      "bottom": 2975.265625
+    },
+    "growth": {
+      "x": 33,
+      "y": 2734.125,
+      "width": 309,
+      "height": 320,
+      "bottom": 3054.125
+    },
+    "heatmap": {
+      "x": 33,
+      "y": 574.8125,
+      "width": 640,
+      "height": 220,
+      "bottom": 794.8125
+    }
+  },
+  {
+    "path": "/reports",
+    "width": 390,
+    "scrollWidth": 390,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 780,
+      "width": 390,
+      "height": 64,
+      "bottom": 844
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/me",
+    "width": 390,
+    "scrollWidth": 375,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 780,
+      "width": 375,
+      "height": 64,
+      "bottom": 844
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/checkin",
+    "width": 390,
+    "scrollWidth": 375,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 780,
+      "width": 375,
+      "height": 64,
+      "bottom": 844
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/pending",
+    "width": 390,
+    "scrollWidth": 390,
+    "firstRecord": {
+      "x": 16,
+      "y": 233.53125,
+      "width": 358,
+      "height": 219.0625,
+      "bottom": 452.59375
+    },
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 780,
+      "width": 390,
+      "height": 64,
+      "bottom": 844
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/judgments",
+    "width": 390,
+    "scrollWidth": 390,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 780,
+      "width": 390,
+      "height": 64,
+      "bottom": 844
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/review",
+    "width": 390,
+    "scrollWidth": 375,
+    "firstRecord": {
+      "x": 16,
+      "y": 411.890625,
+      "width": 343,
+      "height": 219.0625,
+      "bottom": 630.953125
+    },
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 780,
+      "width": 375,
+      "height": 64,
+      "bottom": 844
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/challenges",
+    "width": 390,
+    "scrollWidth": 375,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 780,
+      "width": 375,
+      "height": 64,
+      "bottom": 844
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/onboarding",
+    "width": 390,
+    "scrollWidth": 375,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 780,
+      "width": 375,
+      "height": 64,
+      "bottom": 844
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/anchors",
+    "width": 390,
+    "scrollWidth": 390,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 780,
+      "width": 390,
+      "height": 64,
+      "bottom": 844
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/settings",
+    "width": 390,
+    "scrollWidth": 375,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 780,
+      "width": 375,
+      "height": 64,
+      "bottom": 844
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/",
+    "width": 768,
+    "scrollWidth": 753,
+    "firstRecord": {
+      "x": 24,
+      "y": 703.75,
+      "width": 705,
+      "height": 219.0625,
+      "bottom": 922.8125
+    },
+    "save": {
+      "x": 610,
+      "y": 460.609375,
+      "width": 94,
+      "height": 44,
+      "bottom": 504.609375
+    },
+    "links": {
+      "x": 24,
+      "y": 545.609375,
+      "width": 705,
+      "height": 74.140625,
+      "bottom": 619.75
+    },
+    "nav": {
+      "x": 0,
+      "y": 936,
+      "width": 753,
+      "height": 64,
+      "bottom": 1000
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/journal",
+    "width": 768,
+    "scrollWidth": 768,
+    "firstRecord": {
+      "x": 24,
+      "y": 253.609375,
+      "width": 720,
+      "height": 219.0625,
+      "bottom": 472.671875
+    },
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 936,
+      "width": 768,
+      "height": 64,
+      "bottom": 1000
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/events/101",
+    "width": 768,
+    "scrollWidth": 753,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 936,
+      "width": 753,
+      "height": 64,
+      "bottom": 1000
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/growth",
+    "width": 768,
+    "scrollWidth": 753,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 936,
+      "width": 753,
+      "height": 64,
+      "bottom": 1000
+    },
+    "radar": {
+      "x": 49,
+      "y": 2509.3125,
+      "width": 655,
+      "height": 360,
+      "bottom": 2869.3125
+    },
+    "growth": {
+      "x": 49,
+      "y": 2664.3125,
+      "width": 655,
+      "height": 320,
+      "bottom": 2984.3125
+    },
+    "heatmap": {
+      "x": 49,
+      "y": 492.140625,
+      "width": 655,
+      "height": 220,
+      "bottom": 712.140625
+    }
+  },
+  {
+    "path": "/reports",
+    "width": 768,
+    "scrollWidth": 768,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 936,
+      "width": 768,
+      "height": 64,
+      "bottom": 1000
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/me",
+    "width": 768,
+    "scrollWidth": 768,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 936,
+      "width": 768,
+      "height": 64,
+      "bottom": 1000
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/checkin",
+    "width": 768,
+    "scrollWidth": 753,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 936,
+      "width": 753,
+      "height": 64,
+      "bottom": 1000
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/pending",
+    "width": 768,
+    "scrollWidth": 768,
+    "firstRecord": {
+      "x": 24,
+      "y": 233.53125,
+      "width": 720,
+      "height": 219.0625,
+      "bottom": 452.59375
+    },
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 936,
+      "width": 768,
+      "height": 64,
+      "bottom": 1000
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/judgments",
+    "width": 768,
+    "scrollWidth": 768,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 936,
+      "width": 768,
+      "height": 64,
+      "bottom": 1000
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/review",
+    "width": 768,
+    "scrollWidth": 753,
+    "firstRecord": {
+      "x": 24,
+      "y": 303.609375,
+      "width": 705,
+      "height": 219.0625,
+      "bottom": 522.671875
+    },
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 936,
+      "width": 753,
+      "height": 64,
+      "bottom": 1000
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/challenges",
+    "width": 768,
+    "scrollWidth": 768,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 936,
+      "width": 768,
+      "height": 64,
+      "bottom": 1000
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/onboarding",
+    "width": 768,
+    "scrollWidth": 753,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 936,
+      "width": 753,
+      "height": 64,
+      "bottom": 1000
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/anchors",
+    "width": 768,
+    "scrollWidth": 768,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 936,
+      "width": 768,
+      "height": 64,
+      "bottom": 1000
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/settings",
+    "width": 768,
+    "scrollWidth": 753,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 936,
+      "width": 753,
+      "height": 64,
+      "bottom": 1000
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/",
+    "width": 1024,
+    "scrollWidth": 1009,
+    "firstRecord": {
+      "x": 248,
+      "y": 693.359375,
+      "width": 729,
+      "height": 219.0625,
+      "bottom": 912.421875
+    },
+    "save": {
+      "x": 858,
+      "y": 450.21875,
+      "width": 94,
+      "height": 44,
+      "bottom": 494.21875
+    },
+    "links": {
+      "x": 248,
+      "y": 535.21875,
+      "width": 729,
+      "height": 74.140625,
+      "bottom": 609.359375
+    },
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/journal",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "firstRecord": {
+      "x": 248,
+      "y": 243.21875,
+      "width": 744,
+      "height": 219.0625,
+      "bottom": 462.28125
+    },
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/events/101",
+    "width": 1024,
+    "scrollWidth": 1009,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/growth",
+    "width": 1024,
+    "scrollWidth": 1009,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": {
+      "x": 273,
+      "y": 2493.453125,
+      "width": 679,
+      "height": 360,
+      "bottom": 2853.453125
+    },
+    "growth": {
+      "x": 273,
+      "y": 2672.3125,
+      "width": 679,
+      "height": 340,
+      "bottom": 3012.3125
+    },
+    "heatmap": {
+      "x": 273,
+      "y": 476.28125,
+      "width": 679,
+      "height": 220,
+      "bottom": 696.28125
+    }
+  },
+  {
+    "path": "/reports",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/me",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/checkin",
+    "width": 1024,
+    "scrollWidth": 1009,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/pending",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "firstRecord": {
+      "x": 248,
+      "y": 223.140625,
+      "width": 744,
+      "height": 219.0625,
+      "bottom": 442.203125
+    },
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/judgments",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/review",
+    "width": 1024,
+    "scrollWidth": 1009,
+    "firstRecord": {
+      "x": 248,
+      "y": 293.21875,
+      "width": 729,
+      "height": 219.0625,
+      "bottom": 512.28125
+    },
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/challenges",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/onboarding",
+    "width": 1024,
+    "scrollWidth": 1009,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/anchors",
+    "width": 1024,
+    "scrollWidth": 1024,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/settings",
+    "width": 1024,
+    "scrollWidth": 1009,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/",
+    "width": 1440,
+    "scrollWidth": 1425,
+    "firstRecord": {
+      "x": 410.5,
+      "y": 693.359375,
+      "width": 820,
+      "height": 219.0625,
+      "bottom": 912.421875
+    },
+    "save": {
+      "x": 1111.5,
+      "y": 450.21875,
+      "width": 94,
+      "height": 44,
+      "bottom": 494.21875
+    },
+    "links": {
+      "x": 410.5,
+      "y": 535.21875,
+      "width": 820,
+      "height": 74.140625,
+      "bottom": 609.359375
+    },
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/journal",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "firstRecord": {
+      "x": 418,
+      "y": 243.21875,
+      "width": 820,
+      "height": 219.0625,
+      "bottom": 462.28125
+    },
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/events/101",
+    "width": 1440,
+    "scrollWidth": 1425,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/growth",
+    "width": 1440,
+    "scrollWidth": 1425,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": {
+      "x": 951.890625,
+      "y": 942.703125,
+      "width": 343.609375,
+      "height": 360,
+      "bottom": 1302.703125
+    },
+    "growth": {
+      "x": 345.5,
+      "y": 2542.3125,
+      "width": 950,
+      "height": 340,
+      "bottom": 2882.3125
+    },
+    "heatmap": {
+      "x": 345.5,
+      "y": 476.28125,
+      "width": 950,
+      "height": 220,
+      "bottom": 696.28125
+    }
+  },
+  {
+    "path": "/reports",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/me",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/checkin",
+    "width": 1440,
+    "scrollWidth": 1425,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/pending",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "firstRecord": {
+      "x": 418,
+      "y": 223.140625,
+      "width": 820,
+      "height": 219.0625,
+      "bottom": 442.203125
+    },
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/judgments",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/review",
+    "width": 1440,
+    "scrollWidth": 1425,
+    "firstRecord": {
+      "x": 410.5,
+      "y": 293.21875,
+      "width": 820,
+      "height": 219.0625,
+      "bottom": 512.28125
+    },
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/challenges",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/onboarding",
+    "width": 1440,
+    "scrollWidth": 1425,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/anchors",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  },
+  {
+    "path": "/settings",
+    "width": 1440,
+    "scrollWidth": 1425,
+    "firstRecord": null,
+    "save": null,
+    "links": null,
+    "nav": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "bottom": 0
+    },
+    "radar": null,
+    "growth": null,
+    "heatmap": null
+  }
+]

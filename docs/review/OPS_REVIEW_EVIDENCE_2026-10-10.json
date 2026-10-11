@@ -1,0 +1,191 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-10-10T12:19:54.130348+00:00",
+  "verified_at_local": "2026-10-10T20:19:54.130348+08:00",
+  "release_id": "rr-20261010-22ce20e6-40852598288d",
+  "source": {
+    "release_id": "rr-20261010-22ce20e6-40852598288d",
+    "runtime_sha256": "40852598288daf084febdf69d2c636445b79b8de96770281155c96380be21b28",
+    "git_head": "22ce20e6117db979df38f5c49cc1c2d7c1694ce8",
+    "worktree": "includes uncommitted A/B baseline and release-readiness changes",
+    "target_platforms": [
+      "linux/amd64",
+      "linux/arm64"
+    ],
+    "image_status": "NOT_BUILT",
+    "dependency_locks": [
+      "requirements.lock",
+      "frontend/package-lock.json"
+    ]
+  },
+  "scope": "three P2 operations review fixes; no application/frontend/migration changes",
+  "gates": {
+    "RR01": "NOT_RUN",
+    "RR02": "NOT_RUN",
+    "RR03": "NOT_RUN",
+    "RR04": "NOT_RUN",
+    "RR05": "NOT_RUN",
+    "RR06": "NOT_RUN",
+    "RR07": "NOT_RUN",
+    "RR08": "BLOCKED",
+    "RR09": "BLOCKED",
+    "RR10": "BLOCKED",
+    "RR11": "BLOCKED",
+    "RR12": "BLOCKED"
+  },
+  "prior_application_validation": {
+    "source_release": "rr-20261010-22ce20e6-2cee7bc912b7",
+    "evidence": "RELEASE_READINESS_EVIDENCE_2026-10-10.json",
+    "tests": 82,
+    "rerun_this_turn": false,
+    "unchanged_app_frontend_migration_files": 117,
+    "unchanged_files_sha256": "2fc7b046ef20f139b79f3206e49323490cc63450dd54dd3b3577e23a9c95c8af",
+    "note": "Historical 82-test and browser results preserved, not relabeled as current fresh results."
+  },
+  "environment": {
+    "os": "Windows-11-10.0.26200-SP0",
+    "python": "3.13.14",
+    "docker_available": false,
+    "database": "synthetic SQLite in memory + failed read-only nonexistent SQLite connection; no real database",
+    "repository": "new temporary local restic repository only",
+    "https": "loopback Caddy + synthetic trust certificate",
+    "real_notifications": 0,
+    "synthetic_https_alerts_received": 2
+  },
+  "checks": [
+    {
+      "id": "OP01",
+      "status": "PASS",
+      "task": "PublishedPort false positive",
+      "related_gates": [
+        "RR08"
+      ],
+      "tests": [
+        "test_compose_internal_ports_allowed_host_bindings_rejected"
+      ],
+      "expected": "EXPOSE PublishedPort0 allowed, real host mapping rejected",
+      "actual": "null/empty/0 allowed; IPv4/IPv6/loopback positive bindings rejected; malformed port data rejected",
+      "target_docker_status": "BLOCKED"
+    },
+    {
+      "id": "OP02",
+      "status": "PASS",
+      "task": "stable restic deployment identity",
+      "related_gates": [
+        "RR10",
+        "RR11"
+      ],
+      "tests": [
+        "test_real_restic_retention_stable_host_and_other_deployment_preserved",
+        "test_stable_backup_identity_survives_container_hostname_changes_and_scopes_forget"
+      ],
+      "expected": "same deployment grouped after rebuild; unrelated snapshots unaffected",
+      "actual": {
+        "same_deployment_before": 35,
+        "same_deployment_after": 9,
+        "unrelated_before": 2,
+        "unrelated_after": 2,
+        "restic_check": "PASS",
+        "explicit_host_on_backup_and_forget": true,
+        "retention_filter": "host and game-of-life tag",
+        "policy": "7 daily + 4 weekly union"
+      },
+      "limits": "Actual restic subprocesses and metadata verified. Different HOSTNAME inputs exercised; Docker containers/OS hostnames not rebuilt locally.",
+      "target_docker_and_remote_status": "BLOCKED"
+    },
+    {
+      "id": "OP03",
+      "status": "PASS",
+      "task": "public app readiness independent of homepage",
+      "related_gates": [
+        "RR11"
+      ],
+      "tests": [
+        "test_real_caddy_homepage_stays_ok_api_stop_and_db_failure_alert",
+        "test_public_probe_requires_api_database_readiness_even_when_homepage_ok"
+      ],
+      "actual": {
+        "healthy_exit": 0,
+        "recovered_exit": 0,
+        "api_stopped_exit": 2,
+        "database_connection_failed_exit": 2,
+        "homepage_during_failures": 200,
+        "synthetic_https_alerts": 2,
+        "alert_code": "PUBLIC_APPLICATION_UNAVAILABLE",
+        "internal_paths_status": 404,
+        "no_store": true,
+        "oversized_html_or_wrong_json_rejected": true
+      },
+      "limits": "Real Caddy on Windows; real API stopped; SQLite connection failure. No target Linux/PostgreSQL network fault or real recipient.",
+      "target_monitor_status": "BLOCKED"
+    }
+  ],
+  "runs": [
+    {
+      "command": "python -m unittest discover -s tests -p test_*ops*.py -v (verified tool environment set)",
+      "exit_code": 0,
+      "tests": 12,
+      "skipped": 0,
+      "duration_seconds": 42.715,
+      "completed_at": "2026-10-10T12:15:24.148735+00:00",
+      "test_cases": [
+        "test_frozen_migrations_empty_sqlite_and_repeat",
+        "test_preflight_preserves_dangling_judgment_35_event_34",
+        "test_real_caddy_homepage_stays_ok_api_stop_and_db_failure_alert",
+        "test_real_restic_retention_stable_host_and_other_deployment_preserved",
+        "test_backup_remote_password_disk_alert_failures_do_not_update_success",
+        "test_cleanup_classification_keep_failed_latest_verified_and_path_guard",
+        "test_compose_internal_ports_allowed_host_bindings_rejected",
+        "test_monitor_detects_stale_backup_worker_api_disk_and_no_secret_payload",
+        "test_public_probe_requires_api_database_readiness_even_when_homepage_ok",
+        "test_release_gate_fail_closed_and_private_env_placeholders",
+        "test_stable_backup_identity_survives_container_hostname_changes_and_scopes_forget",
+        "test_symlink_and_checksum_never_classified_or_deleted"
+      ],
+      "log": "OPS_REVIEW_TEST_LOG_2026-10-10.txt"
+    },
+    {
+      "kind": "static",
+      "exit_code": 0,
+      "checks": [
+        "Python compile app/ops/tests",
+        "Compose topology and RESTIC_HOST wiring",
+        "all ops sh -n",
+        "Caddy adapt production and maintenance"
+      ]
+    }
+  ],
+  "tool_integrity": {
+    "restic": {
+      "version": "0.14.0 windows/amd64",
+      "archive_sha256": "e1d81195194f684a0df34da1b4ff305d1c033283521c02f36a6f5cdeffcd6f2d",
+      "source": "https://github.com/restic/restic/releases/tag/v0.14.0"
+    },
+    "caddy": {
+      "version": "2.11.7 windows/amd64",
+      "archive_sha512": "c308154504e53755958ffc62d8a2657ab17eefd6dd25c45dbb2c3d93d29519971f77ca652f7d0f2bcb7f980b9ba3822478865e29969d0272d7613550a43152b1",
+      "source": "https://github.com/caddyserver/caddy/releases/tag/v2.11.7"
+    }
+  },
+  "prior_failures_fixed": [
+    "Original Caddy request_body inline block failed actual adapter: Unexpected next token after opening brace; corrected multiline block.",
+    "Actual HTTPS internal /api/ready assertion failed (no HTTPError); fixed explicit route ordering; all five internal paths now404.",
+    "Tool setup corrected checksum text parsing and Caddy SHA512 vs SHA256 algorithm; no unverified binary executed.",
+    "Static shell assertion corrected PowerShell interpolation of Compose literal; actual Compose identity assertion nowPASS."
+  ],
+  "external_blockers": [
+    "Linux Docker images/Compose/container rebuild/permissions",
+    "target30min resources",
+    "independent remote retention/restore",
+    "real notification receiver and independent probe host",
+    "public TLS/restarts/real phone"
+  ],
+  "source_archive": {
+    "name": "rr-20261010-22ce20e6-40852598288d.zip",
+    "checksum_file": "rr-20261010-22ce20e6-40852598288d.sha256",
+    "verification_receipt": "rr-20261010-22ce20e6-40852598288d.verification.json",
+    "images": "NOT_BUILT"
+  },
+  "log_sha256": "599f3314f5a45964556f6135466f41929295101abed59b31c3d70a5285b9a342",
+  "release_eligibility": "BLOCKED; no invitations"
+}

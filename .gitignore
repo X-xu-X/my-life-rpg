@@ -8,6 +8,14 @@ env/
 
 # 环境变量（真实密钥绝不入库）
 .env
+.env.production
+deploy/.env.production
+*.dump
+*.secret.json
+backups/
+release-artifacts/
+images-*.tar
+images-*.tar.sha256
 
 # 数据库文件
 *.db

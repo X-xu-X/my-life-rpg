@@ -71,6 +71,26 @@ python3 -B ops/image_identity.py create --archive "$test_root/containerd.tar" --
 "$original_docker" exec -i "$classic_id" docker load < "$test_root/containerd.tar"
 export IMAGE_TEST_NODE="$classic_id"
 python3 -B ops/image_identity.py verify --manifest "$test_root/containerd.jsonl" --release-id "$release" --platform linux/amd64 > "$test_root/containerd-to-classic.json"
+# A second real Docker build deliberately omits USER; retain the explicit sample above.
+cat > "$test_root/context/Dockerfile" <<'DOCKERFILE'
+FROM scratch
+COPY Dockerfile /fixture-default-user
+DOCKERFILE
+"$original_docker" cp "$test_root/context/Dockerfile" "$classic_id:/context/Dockerfile"
+"$original_docker" exec "$classic_id" docker build --network none --platform linux/amd64 -t postgres:18.6-bookworm /context
+"$original_docker" exec "$classic_id" docker image save --platform linux/amd64 "$@" > "$test_root/default-classic.tar"
+python3 -B ops/image_identity.py create --archive "$test_root/default-classic.tar" --manifest "$test_root/default-classic.jsonl" --release-id "$release" --platform linux/amd64
+python3 -B ops/image_identity.py verify --manifest "$test_root/default-classic.jsonl" --release-id "$release" --platform linux/amd64 > "$test_root/default-classic-self.json"
+"$original_docker" exec -i "$containerd_id" docker load < "$test_root/default-classic.tar"
+export IMAGE_TEST_NODE="$containerd_id"
+python3 -B ops/image_identity.py verify --manifest "$test_root/default-classic.jsonl" --release-id "$release" --platform linux/amd64 > "$test_root/default-classic-to-containerd.json"
+python3 -B ops/image_identity.py verify --manifest "$test_root/default-classic.jsonl" --release-id "$release" --platform linux/amd64 --core-only > "$test_root/default-core-only.json"
+docker image inspect postgres:18.6-bookworm --format '{{json (index .Config "User")}}' > "$test_root/default-user.json"
+docker image save --platform linux/amd64 "$@" > "$test_root/default-containerd.tar"
+python3 -B ops/image_identity.py create --archive "$test_root/default-containerd.tar" --manifest "$test_root/default-containerd.jsonl" --release-id "$release" --platform linux/amd64
+"$original_docker" exec -i "$classic_id" docker load < "$test_root/default-containerd.tar"
+export IMAGE_TEST_NODE="$classic_id"
+python3 -B ops/image_identity.py verify --manifest "$test_root/default-containerd.jsonl" --release-id "$release" --platform linux/amd64 > "$test_root/default-containerd-to-classic.json"
 "$original_docker" exec "$classic_id" docker version --format '{{.Server.Version}}' > "$test_root/docker-version.txt"
 python3 - "$test_root" <<'PY'
 import json, sys
@@ -81,11 +101,20 @@ matrix = {name: json.loads((root / (name + '.json')).read_text()) for name in
 assert all(row['status'] == 'PASS' for row in matrix.values())
 assert set(matrix['classic-to-containerd']['outer_id_changed']) == {'api', 'web', 'ops', 'postgres'}
 assert set(matrix['containerd-to-classic']['outer_id_changed']) == {'api', 'web', 'ops', 'postgres'}
+default_matrix = {name: json.loads((root / ('default-' + name + '.json')).read_text()) for name in matrix}
+assert all(row['status'] == 'PASS' for row in default_matrix.values())
+assert json.loads((root / 'default-user.json').read_text()) in (None, '')
+for direction in ('classic-to-containerd', 'containerd-to-classic'):
+    assert set(default_matrix[direction]['outer_id_changed']) == {'api', 'web', 'ops', 'postgres'}
+for name in ('default-classic', 'default-containerd'):
+    rows = [json.loads(line) for line in (root / (name + '.jsonl')).read_text().splitlines()]
+    assert next(row['user'] for row in rows if row['role'] == 'postgres') == ''
 report = {'status': 'PASS', 'scope': 'synthetic-image-protocol-only',
           'docker_version': (root / 'docker-version.txt').read_text().strip(),
           'dind_image': json.loads((root / 'dind-image.json').read_text()),
           'classic_driver': (root / 'classic.driver').read_text().strip(),
-          'containerd_driver': (root / 'containerd.driver').read_text().strip(), 'matrix': matrix}
+          'containerd_driver': (root / 'containerd.driver').read_text().strip(), 'matrix': matrix,
+          'default_user_matrix': default_matrix, 'default_user_template_value': json.loads((root / 'default-user.json').read_text())}
 (root / 'IMAGE_STORE_COMPAT.json').write_text(json.dumps(report, indent=2) + '\n')
 print(json.dumps(report))
 PY

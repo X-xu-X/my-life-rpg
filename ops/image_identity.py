@@ -22,7 +22,7 @@ MAX_MEMBERS = 4096
 TIMEOUT = 300
 DIGEST = re.compile(r'sha256:[0-9a-f]{64}')
 INSPECT_FORMAT = ('{"observed_id":{{json .Id}},"os":{{json .Os}},'
-                  '"architecture":{{json .Architecture}},"user":{{json .Config.User}},'
+                  '"architecture":{{json .Architecture}},"user":{{json (index .Config "User")}},'
                   '"tags":{{json .RepoTags}}}')
 FIELDS = {'schema_version', 'release_id', 'role', 'image', 'config_digest',
           'observed_id', 'platform', 'user'}
@@ -76,6 +76,13 @@ def check_platform(platform):
     if platform not in ('linux/amd64', 'linux/arm64'): fail('IMAGE_PLATFORM_UNSUPPORTED')
 
 
+def normalize_user(value, category):
+    # OCI optional User: missing/null means the default, but 0/false are errors.
+    if value is None: return ''
+    if not isinstance(value, str): fail(category)
+    return value
+
+
 def read_manifest(path, release_id, platform):
     check_platform(platform)
     names = image_names(release_id)
@@ -112,12 +119,13 @@ def config_identity(raw, name):
     rootfs = value['rootfs']
     if not isinstance(rootfs, dict) or rootfs.get('type') != 'layers' or not isinstance(rootfs.get('diff_ids'), list): fail('IMAGE_ARCHIVE_CONFIG_INVALID')
     if any(not isinstance(d, str) or not DIGEST.fullmatch(d) for d in rootfs['diff_ids']): fail('IMAGE_ARCHIVE_CONFIG_INVALID')
-    if not isinstance(value['config'], dict) or not isinstance(value['config'].get('User', ''), str): fail('IMAGE_ARCHIVE_CONFIG_INVALID')
+    if not isinstance(value['config'], dict): fail('IMAGE_ARCHIVE_CONFIG_INVALID')
+    user = normalize_user(value['config'].get('User'), 'IMAGE_ARCHIVE_CONFIG_INVALID')
     if not isinstance(value['os'], str) or not isinstance(value['architecture'], str): fail('IMAGE_ARCHIVE_CONFIG_INVALID')
     digest = hashlib.sha256(raw).hexdigest()
     # Both Docker legacy config names and OCI content-addressed paths bind raw bytes.
     if name not in (digest + '.json', 'blobs/sha256/' + digest): fail('IMAGE_ARCHIVE_CONFIG_HASH_MISMATCH')
-    return {'config_digest': 'sha256:' + digest, 'platform': value['os'] + '/' + value['architecture'], 'user': value['config'].get('User', '')}
+    return {'config_digest': 'sha256:' + digest, 'platform': value['os'] + '/' + value['architecture'], 'user': user}
 
 
 def archive_identities(stream, images):
@@ -190,6 +198,7 @@ def inspect_images(images):
     for image, line in zip(images, lines):
         meta = decode(line)
         if not isinstance(meta, dict) or set(meta) != {'observed_id', 'os', 'architecture', 'user', 'tags'}: fail('IMAGE_INSPECT_INVALID')
+        meta['user'] = normalize_user(meta['user'], 'IMAGE_INSPECT_INVALID')
         if not isinstance(meta['observed_id'], str) or not DIGEST.fullmatch(meta['observed_id']): fail('IMAGE_INSPECT_INVALID')
         if not isinstance(meta['tags'], list) or any(not isinstance(t, str) for t in meta['tags']) or image not in meta['tags']: fail('IMAGE_TAG_MISMATCH')
         if any(not isinstance(meta[k], str) for k in ('os', 'architecture', 'user')): fail('IMAGE_INSPECT_INVALID')

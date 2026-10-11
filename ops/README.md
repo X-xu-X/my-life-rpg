@@ -6,6 +6,8 @@
 
 > 2026-10-11：新构建采用 schema v2 原始镜像配置身份协议，兼容 classic/containerd 的不同外层 ID。旧清单必须重建；新包操作以 [离线构建指南](../docs/GITHUB_OFFLINE_BUILD_GUIDE.md) 为准。Linux 跨存储实测结果须查看本次 Actions 的 IMAGE_STORE_COMPAT.json，不能把已准备脚本记为通过。
 
+> PostgreSQL 缺省 User 续修：安全读取 inspect 可选 User，仅缺省/null 与空字符串按同一语义比较，不改变原始配置摘要；应用 UID/GID 和 PG 用户／摘要／平台检查保留。CI 新增本次真实四个生产镜像的 containerd 导入验证，结果见 PRODUCTION_CONTAINERD_VERIFY.json；必须使用含续修的新包，不替换原835ebc2候选脚本。详见 [续修交付](../docs/POSTGRES_DEFAULT_USER_FIX_DELIVERY_2026-10-11.md)。
+
 本包供经过授权的预发部署使用。2026-10-09 只在本机合成库完成 PostgreSQL 18.6、迁移、备份恢复和浏览器检查；当前电脑没有 Docker，镜像、Compose、Caddy、systemd、远端 restic 和真机网络尚未执行。不得据此开放正式邀请。完整状态见 [开发交付记录](../docs/NEXT_ITERATION_DELIVERY.md)。
 
 ## 运行与秘密文件

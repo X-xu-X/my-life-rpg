@@ -6,9 +6,13 @@
 
 文件：`.github/workflows/build-deployment-bundle.yml`，页面名称为 `Build deployment bundle`。只允许手动运行 main，使用 GitHub 标准 Ubuntu 24.04 构建机，为服务器构建 linux/amd64 镜像。工作流 token 仅有仓库内容读取权限，checkout 不保留凭据。
 
-流程先运行协议单元测试，在两个独立 Docker 29 DinD 测试容器中实测 classic→containerd 和反向导入。测试镜像是 FROM scratch 合成样本，结果只证明身份协议，不代表 PostgreSQL 服务验收。测试容器不挂宿主 Docker socket、不开放网络端口，不修改服务器的存储后端；仅在临时 GitHub runner 运行。实际 Docker 版本和 DinD 镜像摘要写入 IMAGE_STORE_COMPAT.json，矩阵失败即停止构建。
+流程先运行协议单元测试，在两个独立 Docker 29 DinD 测试容器中实测 classic→containerd 和反向导入。合成样本分别包含显式 USER 999:999 和未声明 USER 的 PostgreSQL 标签，保留三个应用的 USER 10001:10001；结果只证明身份协议，不代表 PostgreSQL 服务验收。测试容器不挂宿主 Docker socket、不开放网络端口，不修改服务器的存储后端；仅在临时 GitHub runner 运行。实际 Docker 版本和 DinD 镜像摘要、显式／缺省 User 两套矩阵写入 IMAGE_STORE_COMPAT.json，矩阵失败即停止构建。
 
 随后从运行对应的 Git commit 打包源码，在独立目录解包并校验全部文件，再运行 `ops/build-images.sh`。它构建 api、web、ops 和 PostgreSQL 四个部署镜像，导出 TAR，按原始配置 JSON 字节生成 schema_version=2 清单，并与构建机实际安装镜像交叉核验。工作流还使用同一模块分别验证归档和已安装镜像，压缩后上传为私有仓库的 Actions artifact。未添加自动部署步骤，也不需要服务器密码、SSH 私钥或模型 API Key。
+
+压缩交付前，另启一套隔离 containerd DinD，导入**本次实际四个生产镜像 TAR**，对 api/web/ops 和真实官方 postgres:18.6-bookworm 执行完整及 core-only verify。PRODUCTION_CONTAINERD_VERIFY.json 记录官方 PG RepoDigests、原始配置摘要、缺省用户及真实 CLI 键存在性、平台、实际 Docker 版本和验证结果。该步骤失败就没有新可部署包；只导入与验证镜像，不启动数据库。
+
+2026-10-11 续修：inspect 模板用 index 安全读取 User，只将缺省／null 归一化为空字符串；配置原始 SHA256 不变，数值／布尔／数组／对象拒绝，应用仍严格要求 10001:10001，PG 的有效字符串继续比对。旧候选 835ebc2 已留作诊断，不能直接替换其中脚本或重写校验和。续修必须使用新 commit 的完整同次包。
 
 源码 manifest 原有 `image_status=NOT_BUILT` 保留为打包时事实；成功构建的事实单独写入 `BUILD_RECEIPT.json`。原打包脚本的固定日期前缀及 worktree 描述不能替代当前实际 commit 校验，工作流另行核对 `git_head == GITHUB_SHA`。构建成功不等于登录、数据库恢复、模型调用、负载和正式发布门槛通过。
 
@@ -17,14 +21,14 @@
 在 Windows 项目 PowerShell 中检查并提交本次修复的文件；保留其他未提交改动：
 
 ```powershell
-git add -- .github/workflows/build-deployment-bundle.yml ops/image_identity.py ops/preflight.py ops/build-images.sh ops/test-image-store-compat.sh tests/test_image_identity.py ops/README.md docs/GITHUB_OFFLINE_BUILD_GUIDE.md docs/PREFLIGHT_DEPLOY_CHECKLIST.md docs/CLOUD_DEPLOY_WALKTHROUGH_2026-10-11.md docs/DOCKER29_IMAGE_ID_COMPAT_DELIVERY_2026-10-11.md
+git add -- .github/workflows/build-deployment-bundle.yml ops/image_identity.py ops/test-image-store-compat.sh ops/test-containerd-deployment.sh tests/test_image_identity.py ops/README.md docs/GITHUB_OFFLINE_BUILD_GUIDE.md docs/POSTGRES_DEFAULT_USER_FIX_DELIVERY_2026-10-11.md
 git --no-pager diff --cached --check
 ```
 
 检查无输出且退出码为 0 后：
 
 ```powershell
-git commit -m "fix: 兼容 Docker 29 跨存储后端镜像身份校验"
+git commit -m "fix: 兼容 PostgreSQL 缺省镜像用户并验证真实 containerd 导入"
 git push origin main
 ```
 
@@ -50,6 +54,7 @@ git push origin main
 - `images-*.manifest.jsonl`：schema_version=2，四个镜像的原始配置 config_digest、构建观察值 observed_id、固定 image 标签、role、release_id、platform、user；observed_id 仅作诊断。
 - `images-*.tar.sha256`：未压缩 TAR 和镜像配置身份清单的校验和。
 - `IMAGE_STORE_COMPAT.json`：本次 Linux 跨存储合成镜像测试结果和实际 Docker/DinD 身份。
+- `PRODUCTION_CONTAINERD_VERIFY.json`：本次真实四个部署镜像（含官方 PostgreSQL）在独立 containerd 导入后的完整和 core-only 身份校验；不代表数据库初始化或服务器部署通过。
 - `BUILD_RECEIPT.json`：实际 commit、发布 ID、平台、构建运行编号；部署状态为 NOT_DEPLOYED，发布门槛为 NOT_RUN。
 - `SHA256SUMS`：上述交付文件的 SHA256。
 

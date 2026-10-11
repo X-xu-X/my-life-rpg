@@ -114,6 +114,68 @@ class ImageIdentityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'IMAGE_CONFIG_DIGEST_MISMATCH'):
             self.live(fixture(changed, oci=True))
 
+    def user_config(self, role, value, missing=False):
+        data = json.loads(config(role))
+        if missing: data['config'].pop('User')
+        else: data['config']['User'] = value
+        return json.dumps(data, indent=2).encode() + b'\n'
+
+    def test_optional_user_raw_config_normalization_preserves_exact_digest(self):
+        digests = set()
+        for value, missing, expected in [(None, True, ''), ('', False, ''), (None, False, ''), ('999:999', False, '999:999')]:
+            with self.subTest(value=value, missing=missing):
+                raw = self.user_config('postgres', value, missing)
+                digest = hashlib.sha256(raw).hexdigest(); digests.add(digest)
+                result = identity.config_identity(raw, digest + '.json')
+                self.assertEqual(result['user'], expected)
+                self.assertEqual(result['config_digest'], 'sha256:' + digest)
+        self.assertEqual(len(digests), 4)  # normalized user equality never changes raw identity
+
+    def test_optional_user_wrong_types_rejected_in_raw_config(self):
+        for value in (0, 1, False, True, [], {}, ['10001:10001']):
+            with self.subTest(value=value):
+                raw = self.user_config('postgres', value)
+                with self.assertRaisesRegex(ValueError, 'IMAGE_ARCHIVE_CONFIG_INVALID'):
+                    identity.config_identity(raw, hashlib.sha256(raw).hexdigest() + '.json')
+
+    def test_postgres_missing_empty_null_and_explicit_users_verified(self):
+        for value, missing, expected in [(None, True, ''), ('', False, ''), (None, False, ''), ('999:999', False, '999:999')]:
+            with self.subTest(value=value, missing=missing):
+                raws = dict(self.raws); raws['postgres'] = self.user_config('postgres', value, missing)
+                actual = identity.archive_identities(io.BytesIO(fixture(raws)), list(NAMES.values()))
+                self.rows[-1].update(actual[NAMES['postgres']]); self.write()
+                self.actual[NAMES['postgres']] = actual[NAMES['postgres']]
+                self.assertEqual(self.live(fixture(raws, oci=True))['status'], 'PASS')
+                self.assertEqual(self.rows[-1]['user'], expected)
+
+    def test_postgres_explicit_user_is_not_ignored(self):
+        raws = dict(self.raws); raws['postgres'] = self.user_config('postgres', '999:999')
+        self.actual[NAMES['postgres']]['user'] = '999:999'  # inspect agrees with exported raw config
+        with self.assertRaisesRegex(ValueError, '^IMAGE_USER_MISMATCH$'):
+            self.live(fixture(raws, oci=True))  # manifest still expects the default user
+
+    def test_application_default_or_wrong_user_still_rejected(self):
+        for role in ('api', 'web', 'ops'):
+            for value, missing in ((None, True), ('', False), (None, False), ('0:0', False)):
+                with self.subTest(role=role, value=value, missing=missing):
+                    raws = dict(self.raws); raws[role] = self.user_config(role, value, missing)
+                    old_identity = self.actual[NAMES[role]]
+                    self.actual[NAMES[role]] = {**old_identity, 'user': '' if value is None else value}
+                    try:
+                        with self.assertRaisesRegex(ValueError, '^IMAGE_APPLICATION_UID_MISMATCH$'):
+                            self.live(fixture(raws, oci=True))
+                    finally: self.actual[NAMES[role]] = old_identity
+
+    def test_postgres_default_user_config_digest_change_still_rejected(self):
+        for value, missing in ((None, True), ('', False), (None, False)):
+            with self.subTest(value=value, missing=missing):
+                raws = dict(self.raws); raws['postgres'] = self.user_config('postgres', value, missing)
+                actual = identity.archive_identities(io.BytesIO(fixture(raws)), list(NAMES.values()))
+                self.rows[-1].update(actual[NAMES['postgres']]); self.write()
+                raws['postgres'] = raws['postgres'].replace(b'FIXTURE=yes', b'FIXTURE=changed')
+                with self.assertRaisesRegex(ValueError, '^IMAGE_CONFIG_DIGEST_MISMATCH$'):
+                    self.live(fixture(raws, oci=True))
+
     def test_installed_wrong_platform_user_tag_and_missing_image_fail(self):
         cases = [('platform', 'api', 'IMAGE_ARCH_MISMATCH'), ('platform', 'postgres', 'IMAGE_ARCH_MISMATCH'),
                  ('user', 'api', 'IMAGE_USER_MISMATCH'), ('tag', 'api', 'IMAGE_ARCHIVE_TAG_MISSING')]
@@ -271,6 +333,24 @@ class ImageIdentityTests(unittest.TestCase):
             return original([sys.executable, '-c', 'import sys;sys.stdout.buffer.write(b"x"*200000)'], **kwargs)
         with patch.object(identity.subprocess, 'Popen', side_effect=huge):
             with self.assertRaisesRegex(ValueError, 'INSPECT_TOO_LARGE'): identity.inspect_images(list(NAMES.values()))
+
+    def test_inspect_nullable_user_normalizes_only_null_and_strings(self):
+        original = subprocess.Popen
+        for value in (None, '', '999:999', 0, False, True, [], {}):
+            with self.subTest(value=value):
+                observed = self.observed(); observed[NAMES['postgres']]['user'] = value
+                raw = '\n'.join(json.dumps(v) for v in observed.values())
+                def launch(args, **kwargs):
+                    self.assertIn('index .Config "User"', args[4])
+                    self.assertNotIn('{{json .Config}}', args[4])
+                    return original([sys.executable, '-c', 'import sys;print(sys.argv[1])', raw], **kwargs)
+                with patch.object(identity.subprocess, 'Popen', side_effect=launch):
+                    if value is None or isinstance(value, str):
+                        result = identity.inspect_images(list(NAMES.values()))
+                        self.assertEqual(result[NAMES['postgres']]['user'], '' if value is None else value)
+                    else:
+                        with self.assertRaisesRegex(ValueError, 'IMAGE_INSPECT_INVALID'):
+                            identity.inspect_images(list(NAMES.values()))
 
     def test_preflight_identity_gate_precedes_execution_for_full_and_core(self):
         values = {'RELEASE_ID': RELEASE, 'OPS_WORK_DIR': str(self.root)}

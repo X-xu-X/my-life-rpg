@@ -74,6 +74,13 @@ jobs:
           python3 -B ops/image_identity.py verify-archive --archive "images-$RELEASE_ID.tar" --manifest "images-$RELEASE_ID.manifest.jsonl" --release-id "$RELEASE_ID" --platform "$TARGET_PLATFORM"
           python3 -B ops/image_identity.py verify --manifest "images-$RELEASE_ID.manifest.jsonl" --release-id "$RELEASE_ID" --platform "$TARGET_PLATFORM"
 
+      - name: Verify the actual deployment images after containerd import
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$BUILD_SOURCE"
+          timeout --signal=TERM --kill-after=15s 15m sh ops/test-containerd-deployment.sh
+
       - name: Compress and record the delivery files
         shell: bash
         run: |
@@ -82,6 +89,7 @@ jobs:
           gzip -n -c "images-$RELEASE_ID.tar" > "$DELIVERY_DIR/images-$RELEASE_ID.tar.gz"
           cp "images-$RELEASE_ID.manifest.jsonl" "images-$RELEASE_ID.tar.sha256" "$DELIVERY_DIR/"
           cp "$RUNNER_TEMP/IMAGE_STORE_COMPAT.json" "$DELIVERY_DIR/"
+          cp "$RUNNER_TEMP/PRODUCTION_CONTAINERD_VERIFY.json" "$DELIVERY_DIR/"
           python3 - <<'PY'
           import hashlib, json, os
           from pathlib import Path
@@ -99,6 +107,7 @@ jobs:
               'image_identity_schema': 2,
               'image_identity_type': 'raw-image-config-sha256',
               'image_store_compatibility': 'PASS_SYNTHETIC_MATRIX',
+              'production_containerd_import': 'PASS',
               'deployment_status': 'NOT_DEPLOYED',
               'release_gates': 'NOT_RUN',
           }

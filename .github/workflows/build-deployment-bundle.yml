@@ -1,0 +1,116 @@
+name: Build deployment bundle
+
+"on":
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deployment-bundle-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      TARGET_PLATFORM: linux/amd64
+    steps:
+      - name: Check out the selected commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Package and verify the committed source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git --no-pager diff HEAD --exit-code
+          python3 -B ops/package_release.py --output "$RUNNER_TEMP/lifexp-source" > "$RUNNER_TEMP/package-result.json"
+          python3 - <<'PY'
+          import hashlib, json, os, re, shutil, zipfile
+          from pathlib import Path
+          temp = Path(os.environ['RUNNER_TEMP'])
+          meta = json.loads((temp / 'package-result.json').read_text())
+          archive = Path(meta['archive'])
+          assert hashlib.sha256(archive.read_bytes()).hexdigest() == meta['sha256']
+          assert re.fullmatch(r'[a-zA-Z0-9._-]+', meta['release_id'])
+          source = temp / 'lifexp-build'
+          delivery = temp / 'lifexp-delivery'
+          source.mkdir()
+          delivery.mkdir()
+          with zipfile.ZipFile(archive) as bundle:
+              manifest = json.loads(bundle.read('RELEASE_MANIFEST.json'))
+              assert manifest['git_head'] == os.environ['GITHUB_SHA']
+              assert set(bundle.namelist()) == set(manifest['files']) | {'RELEASE_MANIFEST.json'}
+              for name in bundle.namelist():
+                  path = Path(name)
+                  assert not path.is_absolute() and '..' not in path.parts
+              bundle.extractall(source)
+          for file in archive.parent.iterdir():
+              shutil.copy2(file, delivery / file.name)
+          with open(os.environ['GITHUB_ENV'], 'a') as env:
+              env.write(f"RELEASE_ID={meta['release_id']}\nBUILD_SOURCE={source}\nDELIVERY_DIR={delivery}\n")
+          PY
+          python3 -B "$RUNNER_TEMP/lifexp-build/ops/verify_package.py" "$RUNNER_TEMP/lifexp-build/RELEASE_MANIFEST.json"
+
+      - name: Build the four deployment images
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$BUILD_SOURCE"
+          sh ops/build-images.sh
+          sha256sum -c "images-$RELEASE_ID.tar.sha256"
+          for image in "game-of-life-api:$RELEASE_ID" "game-of-life-web:$RELEASE_ID" "game-of-life-ops:$RELEASE_ID" postgres:18.6-bookworm; do
+            test "$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "$image")" = "$TARGET_PLATFORM"
+          done
+
+      - name: Compress and record the delivery files
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$BUILD_SOURCE"
+          gzip -n -c "images-$RELEASE_ID.tar" > "$DELIVERY_DIR/images-$RELEASE_ID.tar.gz"
+          cp "images-$RELEASE_ID.manifest.jsonl" "images-$RELEASE_ID.tar.sha256" "$DELIVERY_DIR/"
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          source = Path(os.environ['BUILD_SOURCE'])
+          delivery = Path(os.environ['DELIVERY_DIR'])
+          manifest = json.loads((source / 'RELEASE_MANIFEST.json').read_text())
+          receipt = {
+              'git_head': os.environ['GITHUB_SHA'],
+              'release_id': os.environ['RELEASE_ID'],
+              'runtime_sha256': manifest['runtime_sha256'],
+              'target_platform': os.environ['TARGET_PLATFORM'],
+              'github_run_id': os.environ['GITHUB_RUN_ID'],
+              'github_run_attempt': os.environ['GITHUB_RUN_ATTEMPT'],
+              'image_status': 'BUILT',
+              'deployment_status': 'NOT_DEPLOYED',
+              'release_gates': 'NOT_RUN',
+          }
+          (delivery / 'BUILD_RECEIPT.json').write_text(json.dumps(receipt, indent=2) + '\n')
+          with (delivery / 'SHA256SUMS').open('x') as checksums:
+              for file in sorted(delivery.iterdir()):
+                  if file.name != 'SHA256SUMS':
+                      with file.open('rb') as stream:
+                          digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+                      checksums.write(f'{digest}  {file.name}\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write(f"Commit: `{receipt['git_head']}`\n\nRelease: `{receipt['release_id']}`\n\nPlatform: `linux/amd64`\n\nImages built; cloud deployment and release gates remain pending.\n")
+          PY
+          cd "$DELIVERY_DIR"
+          sha256sum -c SHA256SUMS
+          du -sh .
+
+      - name: Upload the private deployment bundle
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: lifexp-linux-amd64-${{ github.sha }}
+          path: ${{ env.DELIVERY_DIR }}/
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0

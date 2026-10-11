@@ -4,6 +4,8 @@
 
 > 运维复审已修正端口误报、临时容器备份身份和仅首页探测；当前源码候选版及本机真实restic/Caddy验证见 [复审交付](../docs/OPS_REVIEW_FIXES_2026-10-10.md)。以下目标机步骤仍待执行。
 
+> 2026-10-11：新构建采用 schema v2 原始镜像配置身份协议，兼容 classic/containerd 的不同外层 ID。旧清单必须重建；新包操作以 [离线构建指南](../docs/GITHUB_OFFLINE_BUILD_GUIDE.md) 为准。Linux 跨存储实测结果须查看本次 Actions 的 IMAGE_STORE_COMPAT.json，不能把已准备脚本记为通过。
+
 本包供经过授权的预发部署使用。2026-10-09 只在本机合成库完成 PostgreSQL 18.6、迁移、备份恢复和浏览器检查；当前电脑没有 Docker，镜像、Compose、Caddy、systemd、远端 restic 和真机网络尚未执行。不得据此开放正式邀请。完整状态见 [开发交付记录](../docs/NEXT_ITERATION_DELIVERY.md)。
 
 ## 运行与秘密文件
@@ -26,9 +28,12 @@ PostgreSQL 18 的数据卷挂在 `/var/lib/postgresql`，固定卷名为 `game_o
 export PRODUCTION_ENV_FILE=/etc/game-of-life/production.env
 export RELEASE_ID=$(python3 -c 'import json; print(json.load(open("RELEASE_MANIFEST.json"))["release_id"])')
 export IMAGES_ARCHIVE="images-$RELEASE_ID.tar"
+export TARGET_PLATFORM=linux/amd64
+python3 -B ops/verify_package.py RELEASE_MANIFEST.json
 docker compose --env-file "$PRODUCTION_ENV_FILE" -f deploy/compose.prod.yml config --quiet
 sha256sum -c "$IMAGES_ARCHIVE.sha256"
 docker load -i "$IMAGES_ARCHIVE"
+python3 -B ops/image_identity.py verify --manifest "images-$RELEASE_ID.manifest.jsonl" --release-id "$RELEASE_ID" --platform "$TARGET_PLATFORM"
 python3 ops/preflight.py --env-file "$PRODUCTION_ENV_FILE"
 docker compose --env-file "$PRODUCTION_ENV_FILE" -f deploy/compose.prod.yml up -d db
 docker compose --env-file "$PRODUCTION_ENV_FILE" -f deploy/compose.prod.yml run --rm migrate
@@ -78,7 +83,7 @@ docker compose --env-file "$PRODUCTION_ENV_FILE" -f deploy/compose.prod.yml run 
 
 ## 本轮构建、预检与清理约束
 
-固定源码 ZIP 的全部文件哈希由 RELEASE_MANIFEST.json 校验，`python3 ops/verify_package.py RELEASE_MANIFEST.json` 不依赖Git。镜像构建在Linux构建机按实际架构设置RELEASE_ID/TARGET_PLATFORM，执行 `sh ops/build-images.sh`；脚本串行构建、拒绝覆盖同名档案，导出三个应用镜像及PG。目标机先验SHA再docker load，预检核对镜像ID/架构/应用UID10001。当前没有实际镜像，不把Dockerfile当产物。
+固定源码 ZIP 的全部文件哈希由 RELEASE_MANIFEST.json 校验，`python3 ops/verify_package.py RELEASE_MANIFEST.json` 不依赖Git。镜像构建在Linux构建机按实际架构设置RELEASE_ID/TARGET_PLATFORM，执行 `sh ops/build-images.sh`；脚本串行构建、拒绝覆盖同名档案，导出三个应用镜像及PG。目标机先验SHA再docker load，导入与预检共用 ops/image_identity.py，以原始配置SHA256核对实际安装的标签/平台/应用UID10001:10001，并核对PG身份；不直接比较两端.Id，也不对inspect.Config重序列化求摘要。docker save只流式读取有界JSON，默认总时限300秒并回收子进程，不缓存或落盘整个目标导出TAR。缺字段/未知版本/坏摘要/缺镜像均拒绝，旧v1清单要求从新commit重建，不改写历史包。Dockerfile不是镜像产物。
 
 预检 `python3 ops/preflight.py --env-file "$PRODUCTION_ENV_FILE"` 只输出类别和非秘密摘要。空私有预发可用 `--core-only` 暂缺远端配置，但需要空0600的backup.env供Compose解析；这不满足正式发布。已有数据库卷默认阻断，只在核对用途、备份和目标后使用 `--reviewed-existing-volume`。app-password需owner10001/group实际PG GID/0440，admin-password归PG UID，主密钥归10001，细节见部署清单。迁移后仍需init_db核对头；没有自动修改生产结构。
 

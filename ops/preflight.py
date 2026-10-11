@@ -65,10 +65,10 @@ def check(env_file, allow_existing=False, core_only=False):
     arch={'x86_64':'amd64','aarch64':'arm64'}.get(platform.machine())
     if not arch:raise ValueError('ARCH_UNSUPPORTED')
     if shutil.disk_usage(values['OPS_WORK_DIR']).free<5*1024**3:raise ValueError('DISK_FREE_BELOW_5_GIB')
+    from ops.image_identity import verify_installed
+    images=verify_installed(f'images-{values["RELEASE_ID"]}.manifest.jsonl',values['RELEASE_ID'],'linux/'+arch,core_only)
     pg_uid=int(run(['docker','run','--rm','--network','none','--entrypoint','id','postgres:18.6-bookworm','-u','postgres']))
     pg_gid=int(run(['docker','run','--rm','--network','none','--entrypoint','id','postgres:18.6-bookworm','-g','postgres']))
-    if run(['docker','image','inspect','postgres:18.6-bookworm','--format','{{.Os}}/{{.Architecture}}'])!='linux/'+arch:
-        raise ValueError('POSTGRES_IMAGE_ARCH_MISMATCH')
     root=Path(values['SECRETS_DIR'])
     admin=private(root/'admin-password',pg_uid)
     app=private(root/'app-password',10001,(0o440,))
@@ -81,16 +81,6 @@ def check(env_file, allow_existing=False, core_only=False):
     if any(len(base64.urlsafe_b64decode(value))!=32 for value in ring['keys'].values()):raise ValueError('KEYRING_INVALID')
     ops=Path(values['OPS_CONFIG_DIR'])
     if not core_only:check_backup(ops)
-    for kind in ('api','web','ops'):
-        if core_only and kind=='ops':continue
-        meta=json.loads(run(['docker','image','inspect',f'game-of-life-{kind}:{values["RELEASE_ID"]}',
-            '--format','{{json .}}']))
-        if meta.get('Architecture')!=arch or meta.get('Os')!='linux':raise ValueError('IMAGE_ARCH_MISMATCH')
-        if meta.get('Config',{}).get('User')!='10001:10001':raise ValueError('IMAGE_APPLICATION_UID_MISMATCH')
-        expected=[json.loads(line) for line in Path(f'images-{values["RELEASE_ID"]}.manifest.jsonl').read_text().splitlines() if line.strip()]
-        image_name=f'game-of-life-{kind}:{values["RELEASE_ID"]}'
-        if not any(meta['Id']==row['id'] and image_name in row.get('tags',[]) for row in expected):
-            raise ValueError('IMAGE_DIGEST_MISMATCH')
     output=run(compose+['ps','--all','--format','json'])
     try:containers=json.loads(output or '[]')
     except ValueError:containers=[json.loads(line) for line in output.splitlines() if line.strip()]
@@ -106,7 +96,7 @@ def check(env_file, allow_existing=False, core_only=False):
                 except OSError:raise ValueError('PUBLIC_PORT_IN_USE') from None
     return {'status':'PASS','scope':'empty-private-staging' if core_only else 'configured-deployment',
         'backup_gate':'NOT_RUN' if core_only else 'configuration-only',
-        'architecture':arch,'application_uid':10001,'postgres_uid':pg_uid,
+        'architecture':arch,'application_uid':10001,'postgres_uid':pg_uid,'image_identity':images,
         'database_target':'db:5432/game_of_life','database_volume':'game_of_life_pg18',
         'volume_exists':volume,'migration':'checked after explicit migrate by check-release.sh'}
 

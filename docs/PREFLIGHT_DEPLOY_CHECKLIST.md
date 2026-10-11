@@ -4,6 +4,8 @@
 
 2026-10-10 运维复审修订见 [三项修复及当前候选版](OPS_REVIEW_FIXES_2026-10-10.md)。必须补填稳定BACKUP_ID，并使用同时探测首页与/service-status的新监测脚本。
 
+2026-10-11 镜像协议修订：当前阿里云目标及同版本新包下载步骤以 [GitHub 离线构建指南](GITHUB_OFFLINE_BUILD_GUIDE.md) 为准。导入后以 schema v2 原始配置 SHA256 核验目标已安装镜像；旧 id 清单拒绝并要求重建，不能修改历史交付文件绕过校验。
+
 每次 SSH 操作先确认机器身份。目录固定为 `/opt/game-of-life`，秘密放仓库外。后续升级在停写、备份和审核后替换此目录中的版本，不混用版本目录或移动正在运行的挂载目录。所有密码、主密钥、恢复码和连接串仅保存在用户控制的受限文件，不发送到聊天或截图。
 
 ## 1. 最少输入与只读检查
@@ -38,9 +40,9 @@ export TARGET_PLATFORM=linux/amd64
 sh ops/build-images.sh
 ```
 
-`TARGET_PLATFORM` 必须按第 1 步实际架构设置。预期：串行构建三个镜像，生成 `images-$RELEASE_ID.tar`、`.manifest.jsonl` 和 `.tar.sha256`，含匹配架构的 PG 镜像。镜像 ID 清单与源码 manifest 分开保存；目前源码 manifest 的 `image_status=NOT_BUILT` 是本轮交付事实，不改成虚假 PASS。
+`TARGET_PLATFORM` 必须按第 1 步实际架构设置。预期：串行构建三个镜像，生成 `images-$RELEASE_ID.tar`、schema v2 `.manifest.jsonl` 和 `.tar.sha256`，含匹配架构的 PG 镜像。原始配置 config_digest 与诊断 observed_id 分开记录；清单与源码 manifest 分开保存。源码 manifest 的 `image_status=NOT_BUILT` 是打包时事实，后续构建结果见独立 BUILD_RECEIPT.json，不改写原 manifest。
 
-失败停点：任一步非零，不进入目标部署。失败的半成品单独保留以便定位，脚本拒绝覆盖同名档案。默认把此预构建档案传入目标机；没有构建机时，只有在明确安排维护时段、记录内存/磁盘且确认空间后，才在目标机串行构建。不要在服务启动时 npm build，不同时运行备份与构建。
+失败停点：任一步非零，不进入目标部署。失败的半成品单独保留以便定位，脚本拒绝覆盖同名档案。当前约 1.6GiB 的阿里云目标机只导入预构建档案，不在目标机重建镜像。
 
 位置：服务器管理员终端。前提：确认 `/opt/game-of-life` 是本轮空预发目录，已有目录或数据库卷必须先核对用途。
 
@@ -49,9 +51,12 @@ cd /opt/game-of-life
 python3 ops/verify_package.py RELEASE_MANIFEST.json
 sha256sum -c images-*.tar.sha256
 docker load -i images-实际发布ID.tar
+export RELEASE_ID=$(python3 -c 'import json; print(json.load(open("RELEASE_MANIFEST.json"))["release_id"])')
+export TARGET_PLATFORM=linux/amd64
+python3 -B ops/image_identity.py verify --manifest "images-$RELEASE_ID.manifest.jsonl" --release-id "$RELEASE_ID" --platform "$TARGET_PLATFORM"
 ```
 
-最后一行将文件名替换为校验通过的实际档案，禁止直接照抄占位符。预期：导入固定版本镜像，目录中保留对应 JSONL 清单。禁止改打 `latest` 标签覆盖已验收版本。
+docker load 行将文件名替换为校验通过的实际档案，禁止直接照抄占位符；平台按实际架构填写。预期：四个镜像的原始配置摘要、标签、平台和应用 UID/GID 一致，输出 status=PASS/schema_version=2。外层 observed_id 变化只列诊断角色，不视为配置变化。完整配置不一致返回 IMAGE_CONFIG_DIGEST_MISMATCH，旧协议返回 IMAGE_MANIFEST_REBUILD_REQUIRED，任何失败都停在创建秘密和启动数据库之前。目录中保留本次原样 JSONL 清单。禁止改打 latest 标签覆盖已验收版本。
 
 ## 3. 受限配置与秘密
 
@@ -88,7 +93,7 @@ docker compose --env-file "$PRODUCTION_ENV_FILE" -f deploy/compose.prod.yml run 
 docker compose --env-file "$PRODUCTION_ENV_FILE" -f deploy/compose.prod.yml up -d api worker caddy
 ```
 
-预期：预检核对源码全部文件哈希、发布标识、镜像 ID/架构/UID、秘密、目标库、磁盘和端口；初次发现数据库卷时拒绝继续。已有卷仅在管理员核对确属本应用、已有备份且目标正确后才加 `--reviewed-existing-volume`。`--core-only` 仅跳过远端备份配置，不跳过认证、HTTPS或密钥；它不能通过正式发布门槛。
+预期：预检核对源码全部文件哈希、发布标识、已安装镜像原始配置 SHA256/标签/架构/UID、秘密、目标库、磁盘和端口；包括 PostgreSQL 身份，且在执行 PG 镜像取 UID/GID 之前完成。初次发现数据库卷时拒绝继续。已有卷仅在管理员核对确属本应用、已有备份且目标正确后才加 `--reviewed-existing-volume`。`--core-only` 跳过远端备份配置和 ops 镜像检查，保留 api/web/postgres 身份与完整清单结构验证，不跳过认证、HTTPS或密钥；它不能通过正式发布门槛。
 
 Compose的db Publishers中仅内部声明、PublishedPort=0允许通过；实际PublishedPort>0的宿主机映射（含本机回环映射）仍拒绝。这里是禁止数据库映射宿主机的部署策略，不把EXPOSE当作公开端口。
 

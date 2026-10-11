@@ -6,23 +6,25 @@
 
 文件：`.github/workflows/build-deployment-bundle.yml`，页面名称为 `Build deployment bundle`。只允许手动运行 main，使用 GitHub 标准 Ubuntu 24.04 构建机，为服务器构建 linux/amd64 镜像。工作流 token 仅有仓库内容读取权限，checkout 不保留凭据。
 
-流程从运行对应的 Git commit 打包源码，在独立目录解包并校验全部文件，再运行现有 `ops/build-images.sh`。它构建 api、web、ops 和 PostgreSQL 四个部署镜像，核对架构，导出镜像 ID 清单及 TAR，压缩后上传为私有仓库的 Actions artifact。未添加自动部署步骤，也不需要服务器密码、SSH 私钥或模型 API Key。
+流程先运行协议单元测试，在两个独立 Docker 29 DinD 测试容器中实测 classic→containerd 和反向导入。测试镜像是 FROM scratch 合成样本，结果只证明身份协议，不代表 PostgreSQL 服务验收。测试容器不挂宿主 Docker socket、不开放网络端口，不修改服务器的存储后端；仅在临时 GitHub runner 运行。实际 Docker 版本和 DinD 镜像摘要写入 IMAGE_STORE_COMPAT.json，矩阵失败即停止构建。
+
+随后从运行对应的 Git commit 打包源码，在独立目录解包并校验全部文件，再运行 `ops/build-images.sh`。它构建 api、web、ops 和 PostgreSQL 四个部署镜像，导出 TAR，按原始配置 JSON 字节生成 schema_version=2 清单，并与构建机实际安装镜像交叉核验。工作流还使用同一模块分别验证归档和已安装镜像，压缩后上传为私有仓库的 Actions artifact。未添加自动部署步骤，也不需要服务器密码、SSH 私钥或模型 API Key。
 
 源码 manifest 原有 `image_status=NOT_BUILT` 保留为打包时事实；成功构建的事实单独写入 `BUILD_RECEIPT.json`。原打包脚本的固定日期前缀及 worktree 描述不能替代当前实际 commit 校验，工作流另行核对 `git_head == GITHUB_SHA`。构建成功不等于登录、数据库恢复、模型调用、负载和正式发布门槛通过。
 
 ## 2. 提交与手动运行
 
-在 Windows 项目 PowerShell 中先暂存这两个新文件并检查：
+在 Windows 项目 PowerShell 中检查并提交本次修复的文件；保留其他未提交改动：
 
 ```powershell
-git add -- .github/workflows/build-deployment-bundle.yml docs/GITHUB_OFFLINE_BUILD_GUIDE.md
+git add -- .github/workflows/build-deployment-bundle.yml ops/image_identity.py ops/preflight.py ops/build-images.sh ops/test-image-store-compat.sh tests/test_image_identity.py ops/README.md docs/GITHUB_OFFLINE_BUILD_GUIDE.md docs/PREFLIGHT_DEPLOY_CHECKLIST.md docs/CLOUD_DEPLOY_WALKTHROUGH_2026-10-11.md docs/DOCKER29_IMAGE_ID_COMPAT_DELIVERY_2026-10-11.md
 git --no-pager diff --cached --check
 ```
 
 检查无输出且退出码为 0 后：
 
 ```powershell
-git commit -m "ci: 添加手动构建云端离线部署包"
+git commit -m "fix: 兼容 Docker 29 跨存储后端镜像身份校验"
 git push origin main
 ```
 
@@ -45,8 +47,9 @@ git push origin main
 
 - `rr-*.zip`、对应 `.sha256` 和 `.manifest.json`：本次 Linux 构建实际使用的源码包。
 - `images-*.tar.gz`：包含四个部署镜像的压缩归档。
-- `images-*.manifest.jsonl`：四个镜像的实际 ID、标签、平台。
-- `images-*.tar.sha256`：未压缩 TAR 和镜像 ID 清单的校验和。
+- `images-*.manifest.jsonl`：schema_version=2，四个镜像的原始配置 config_digest、构建观察值 observed_id、固定 image 标签、role、release_id、platform、user；observed_id 仅作诊断。
+- `images-*.tar.sha256`：未压缩 TAR 和镜像配置身份清单的校验和。
+- `IMAGE_STORE_COMPAT.json`：本次 Linux 跨存储合成镜像测试结果和实际 Docker/DinD 身份。
 - `BUILD_RECEIPT.json`：实际 commit、发布 ID、平台、构建运行编号；部署状态为 NOT_DEPLOYED，发布门槛为 NOT_RUN。
 - `SHA256SUMS`：上述交付文件的 SHA256。
 
@@ -56,9 +59,27 @@ git push origin main
 
 1. 校验 `SHA256SUMS`，所有条目必须 OK。
 2. 解压 `.tar.gz`，保留压缩档；校验原 `images-*.tar.sha256`。
-3. 导入实际镜像 TAR，核对镜像 ID 与平台。
-4. 解压同一次源码 ZIP，运行 `ops/verify_package.py`。
-5. 按 `PREFLIGHT_DEPLOY_CHECKLIST.md` 创建仓库外的受限配置、密码和主密钥，再进行预检、空库迁移及所有者初始化。
+3. 解压同一次源码 ZIP 至新源码目录，先运行 `ops/verify_package.py` 校验全部源码哈希，再使用其中的校验脚本。保留原候选目录和诊断材料，不覆盖。
+4. 导入实际镜像 TAR，然后以 schema v2 校验**目标机实际安装的镜像**，命令如下。
+5. 只有全部通过后，按 `PREFLIGHT_DEPLOY_CHECKLIST.md` 创建仓库外的受限配置、密码和主密钥，再进行预检、空库迁移及所有者初始化。
+
+在校验通过的新源码目录执行（交付文件仍位于外层目录）：
+
+```sh
+set -eu
+python3 -B ops/verify_package.py RELEASE_MANIFEST.json
+export RELEASE_ID=$(python3 -c 'import json; print(json.load(open("RELEASE_MANIFEST.json"))["release_id"])')
+export TARGET_PLATFORM=linux/amd64
+(cd .. && sha256sum -c "images-$RELEASE_ID.tar.sha256")
+docker load -i "../images-$RELEASE_ID.tar"
+python3 -B ops/image_identity.py verify --manifest "../images-$RELEASE_ID.manifest.jsonl" --release-id "$RELEASE_ID" --platform "$TARGET_PLATFORM"
+test ! -e "images-$RELEASE_ID.manifest.jsonl"
+cp "../images-$RELEASE_ID.manifest.jsonl" .
+```
+
+最后两行把**本次校验通过的 v2 JSONL**复制到新源码目录的 `images-$RELEASE_ID.manifest.jsonl`，供 preflight 查找，已有同名文件时停止；该文件是镜像交付清单，不在源码 RELEASE_MANIFEST.json 的 files 中。只复制，不改写摘要或字段。preflight 再次从目标已安装镜像执行同一检查，完整模式检查四个角色，core-only 检查 api/web/postgres，仍要求完整四行清单。
+
+旧版只有 id/platform/tags 的 JSONL 明确返回 `IMAGE_MANIFEST_REBUILD_REQUIRED`。必须从包含本修复的新 commit 手动构建新包；不能修改旧 JSONL、SHA256、源码 manifest 或 receipt 来放行，也不能混用旧镜像与新源码。`.Id` 是 config、manifest 或 index 仅影响 observed_id 诊断，不决定通过。真正的配置变化、错误标签／平台／应用 UID/GID、缺镜像或未知清单格式均非零退出。目标机只流式导出已安装镜像，不在小内存服务器重建镜像。
 
 ICP 审核期间保持网站公网关闭，可完成构建、传输及私有预发准备。备案通过后再配置公开访问、HTTPS、备案号展示和真实客户端验收；不要通过公网 IP 或额外端口绕过备案。
 

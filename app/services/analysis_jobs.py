@@ -20,7 +20,17 @@ _claim_lock = threading.Lock()
 
 
 def configuration(db, user_id):
-    return {str(r.id): r.config_version for r in db.query(LLMCredential).filter_by(user_id=user_id).all()}
+    result={str(r.id):r.config_version for r in db.query(LLMCredential).filter_by(user_id=user_id).populate_existing().all()}
+    from app.models.policies import AIPreference,HostedAI
+    pref=db.query(AIPreference).filter_by(user_id=user_id).populate_existing().first()
+    if pref:
+        result['_preference']=pref.version
+        if pref.mode=='hosted':
+            hosted=db.query(HostedAI).filter_by(id=1).populate_existing().first();result['_hosted']=hosted.version if hosted else 0
+            if hosted and hosted.enabled:
+                from app.services.hosted_ai import read_secret
+                result['_hosted_secret']=hashlib.sha256(read_secret(hosted.payload).encode()).hexdigest()
+    return result
 
 
 def judgment_version(judgment):
@@ -182,7 +192,7 @@ def process(factory, claimed):
                 job.safe_error_code = 'MODEL_FACT_REJECTED' if rejected else 'INPUT_CHANGED'
             else:
                 code = str(exc).split("：",1)[0] if isinstance(exc, LLMError) else "ANALYSIS_FAILED"
-                allowed = {"MODEL_TIMEOUT", "MODEL_UNAVAILABLE", "MODEL_RATE_LIMITED", "MODEL_AUTH_FAILED", "MODEL_BALANCE_INSUFFICIENT", "MODEL_ATTEMPT_LIMIT", "MODEL_NOT_CONFIGURED", "MODEL_DAILY_LIMIT", "MODEL_BUSY", "MODEL_INVALID_RESPONSE"}
+                allowed = {"MODEL_TIMEOUT", "MODEL_UNAVAILABLE", "MODEL_RATE_LIMITED", "MODEL_AUTH_FAILED", "MODEL_BALANCE_INSUFFICIENT", "MODEL_ATTEMPT_LIMIT", "MODEL_NOT_CONFIGURED", "MODEL_DAILY_LIMIT", "MODEL_BUSY", "MODEL_INVALID_RESPONSE", "MODEL_DISABLED", "MODEL_INPUT_LIMIT", "MODEL_SERVICE_ERROR", "MODEL_NOT_FOUND"}
                 job.safe_error_code = code if code in allowed else "ANALYSIS_FAILED"
                 job.state = "queued" if code in ("MODEL_UNAVAILABLE", "MODEL_RATE_LIMITED", "MODEL_BUSY") and job.attempts < 2 else "failed"
                 job.next_retry_at = utc_now() + timedelta(seconds=30)

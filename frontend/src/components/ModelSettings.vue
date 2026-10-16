@@ -1,4 +1,5 @@
 <script setup>
+import AIChoice from './AIChoice.vue'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { api } from '../api'
 import { account, accountEpoch } from '../session'
@@ -40,7 +41,7 @@ async function test(group){
 onMounted(()=>load().catch(e=>{if(current())message.value.primary=e.message}))
 onUnmounted(()=>{alive=false})
 </script>
-<template><section class="card settings-section" id="settings-models"><h2 tabindex="-1">模型与 AI</h2>
+<template><AIChoice/><section class="card settings-section" id="settings-models"><h2 tabindex="-1">模型与 AI</h2>
 <p class="muted">个人配置。主组用于事件分析与追问，辅组用于报告；未启用主组时沿用现有辅组回退规则。原文无需模型也能保存。</p>
 <p class="muted">保存不会联网。主动测试或分析会发送内容至所选供应商，可能计费；聊天连通通过不保证 JSON 业务能力或永久可用。</p>
 <p v-if="account?.mode==='local'&&raw?.env_fallback?.ready" class="muted">本地服务端默认配置：{{ raw.env_fallback.model }}。不是站点托管 AI。</p>

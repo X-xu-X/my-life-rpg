@@ -171,3 +171,6 @@ main > .reading-page { max-width: 820px; margin-inline: auto; }
 @media (max-width:759px) {
   .action-group > .btn.primary, .form-grid + .btn.primary { width: 100%; }
 }
+
+.policy-workflows code{overflow-wrap:anywhere;white-space:normal}
+.plan-card,.review-turn{padding:16px 0;border-top:1px solid var(--line)}

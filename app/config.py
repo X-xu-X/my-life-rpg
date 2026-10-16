@@ -39,11 +39,13 @@ class Settings(BaseSettings):
     public_origin: str = ""
     credential_key_file: str = ""
     allow_cloud_sqlite: bool = False
+    hosted_secret_file: str = ''
     mail_host: str = ''
     mail_port: int = 465
     mail_from: str = ''
     mail_username: str = ''
     mail_password: str = ''
+    mail_password_file: str = ''
     ai_daily_limit: int = 30
     ai_timeout: float = 90.0
 

@@ -31,6 +31,7 @@ JOURNAL_STREAK_REWARDS = [(7, 30), (3, 10)]  # 从高到低匹配，避免 3 天
 SOURCES = (
     "onboarding_bonus",
     "event_confirm",
+    "mainline_reward",
     "journal_streak",
     "challenge_reward",
     "challenge_deposit",

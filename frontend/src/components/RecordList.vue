@@ -4,23 +4,23 @@ import { api } from '../api'
 import { displayTime, displayEventTime } from '../session'
 import PageHeader from './ui/PageHeader.vue'
 import RecordPreview from './ui/RecordPreview.vue'
-const rows=ref([]),query=ref(''),filter=ref(''),error=ref('')
+const rows=ref([]),query=ref(''),filter=ref(''),dateFilter=ref(''),error=ref('')
 const loading=ref(false),loaded=ref(false),exhausted=ref(false)
 let generation=0,failedMore=false
 async function load(more=false) {
   const current=++generation;loading.value=true;error.value='';failedMore=more
   try {
-    const data=await api.records({q:query.value,...(filter.value?{pure:filter.value==='pure'}:{}),...(more&&rows.value.length?{cursor:rows.value.at(-1).id}:{})})
+    const data=await api.records({q:query.value,...(['pure','ordinary'].includes(filter.value)?{pure:filter.value==='pure'}:{kind:filter.value}),date:dateFilter.value,...(more&&rows.value.length?{cursor:rows.value.at(-1).id}:{})})
     if(current===generation){rows.value=more?[...rows.value,...data]:data;loaded.value=true;exhausted.value=more&&data.length===0}
   }catch(e){if(current===generation)error.value=e.message}
   finally{if(current===generation)loading.value=false}
 }
-function clearSearch(){query.value='';filter.value='';load()}
+function clearSearch(){query.value='';filter.value='';dateFilter.value='';load()}
 onMounted(()=>load())
 </script>
 <template><div class="reading-page">
   <PageHeader title="手账" description="原文一直在这里。是否分析，都可以回看。" />
-  <form class="record-search" @submit.prevent="load()"><label>搜索记录<input v-model="query" type="search" placeholder="一句话、一件事…" /></label><button class="btn" :disabled="loading">搜索</button><label class="search-filter">筛选<select v-model="filter" @change="load()"><option value="">全部</option><option value="pure">历史纯享记录</option><option value="ordinary">其他记录</option></select></label></form>
+  <form class="record-search" @submit.prevent="load()"><label>搜索记录<input v-model="query" type="search" placeholder="一句话、一件事…" /></label><button class="btn" :disabled="loading">搜索</button><label class="search-filter">筛选<select v-model="filter" @change="load()"><option value="">全部</option><option value="event">事件</option><option value="diary">晚间日记</option><option value="legacy">旧记录 · 未分类</option><option value="pure">历史纯享记录</option><option value="ordinary">其他记录</option></select></label><label>内容日期<input type="date" v-model="dateFilter" @change="load()"/></label></form>
   <p class="muted">历史纯享标记与当前是否分析是两种设置。</p>
   <p v-if="loading" role="status">正在读取记录…</p>
   <div v-if="error" class="read-error" role="alert"><p>{{ error }}{{ loaded?' · 显示上次读取的记录，本次未刷新成功。':'' }}</p><button class="btn" :disabled="loading" @click="load(failedMore)">重新读取</button></div>

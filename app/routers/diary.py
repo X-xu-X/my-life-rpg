@@ -61,6 +61,8 @@ def put_diary(day: date, body: DiaryIn, db: Session = Depends(get_db)):
             occurred_on=str(day), occurred_at=date_range(day,user.timezone)[0], time_precision='date',
             timezone_at_capture=user.timezone, analysis_intent='later', content_version=0)
         db.add(row); db.flush()
+        from app.services.time_service import capture_saved_day
+        capture_saved_day(row,user.timezone)
     row.content = body.content
     row.content_version += 1
     db.add(DiaryRevision(user_id=user.id, event_id=row.id, version=row.content_version, content=row.content))

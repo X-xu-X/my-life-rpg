@@ -1,6 +1,6 @@
 """Shared ownership/version/receipt boundaries for new workflows."""
 from fastapi import HTTPException
-from pydantic import ConfigDict
+from pydantic import ConfigDict,StrictInt
 from app.services.receipts import MutationIn, replay, record
 from app.services.transactions import lock_profile
 def get_owned(db, model, resource_id):
@@ -14,6 +14,7 @@ def get_owned(db, model, resource_id):
 
 class WriteIn(MutationIn):
     model_config = ConfigDict(extra='forbid')
+    expected_version:StrictInt|None=None
 
 
 def begin(db, user, operation, body, *, create=False):

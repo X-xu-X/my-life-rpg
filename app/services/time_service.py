@@ -42,3 +42,9 @@ def local_day(value, timezone):
     if value.tzinfo is None:
         value = value.replace(tzinfo=STORAGE_ZONE)
     return value.astimezone(zone(timezone)).date()
+
+
+def capture_saved_day(event, timezone):
+    """Only new records: preserve first-save local date independently from content time."""
+    event.saved_timezone=timezone
+    event.saved_on=local_day(event.created_at,timezone).isoformat()

@@ -4,7 +4,7 @@ import path from 'node:path'
 import http from 'node:http'
 import {spawn} from 'node:child_process'
 import crypto from 'node:crypto'
-const root='docs/review/trial_p1_2026-10-16';fs.mkdirSync(root,{recursive:true})
+const root=process.env.P1_EVIDENCE_DIR||'docs/review/trial_p1_2026-10-16';fs.mkdirSync(root,{recursive:true})
 const profile=fs.mkdtempSync(path.resolve('_tmp_trial_edge_'))
 const pause=ms=>new Promise(r=>setTimeout(r,ms))
 const server=http.createServer((req,res)=>{const name=decodeURIComponent(req.url.split('?')[0]);const file=path.resolve('frontend/dist','.'+(name==='/'?'/index.html':name));if(!file.startsWith(path.resolve('frontend/dist')+path.sep)||!fs.existsSync(file)){res.writeHead(404);res.end();return}res.setHeader('Content-Type',file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html');fs.createReadStream(file).pipe(res)})
@@ -32,7 +32,15 @@ async function respond(p){
  if(url.origin!==origin){await send('Fetch.failRequest',{requestId:p.requestId,errorReason:'BlockedByClient'});return}
  if(!url.pathname.startsWith('/api/')){await send('Fetch.continueRequest',{requestId:p.requestId});return}
  const route=url.pathname.slice(4),method=p.request.method;let status=200,body
- if(route==='/auth/me')body=account
+ if(route==='/ai/preferences')body={mode:'personal',version:0,hosted:{available:false,version:0}}
+ else if(route==='/mainlines')body={items:[],previews:[],rule:null}
+ else if(route==='/dynamic-candidates')body={items:[],rule:null}
+ else if(route==='/plan-schedules')body=[]
+ else if(route==='/plan-occurrences')body=(url.searchParams.has('day')||url.searchParams.has('today'))?{items:[]}:{history:[]}
+ else if(route==='/fact-relations')body=[]
+ else if(route==='/record-metrics')body={policy_version:'candidate-date-v1',legacy_unclassified:0,metrics:{}}
+ else if(route.startsWith('/life-checklists/'))body={version:0,payload:{enabled:false,entries:{},event_ids:[]}}
+ else if(route==='/auth/me')body=account
  else if(route==='/events'&&method==='POST'){saveCalls++;const input=JSON.parse(p.request.postData);body={...record,...input,id:302};check('date-only payload without invented timestamp',input.time_precision==='date'&&!input.occurred_at&&input.source==='form')}
  else if(route==='/events')body=[record]
  else if(route==='/events/301')body=record

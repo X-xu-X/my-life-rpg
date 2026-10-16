@@ -10,8 +10,9 @@ def metrics(db,user):
     for kind in ('event','diary'):
         selected=[r for r in rows if r.record_kind==kind]
         for basis in ('content','saved'):
-            values={r.occurred_on or str(local_day(r.occurred_at,r.timezone_at_capture)) for r in selected} if basis=='content' else {str(local_day(r.created_at,user.timezone)) for r in selected}
+            eligible=selected if basis=='content' else [r for r in selected if r.saved_on]
+            values={r.occurred_on or str(local_day(r.occurred_at,r.timezone_at_capture)) for r in eligible} if basis=='content' else {r.saved_on for r in eligible}
             ordered=sorted(date.fromisoformat(d) for d in values);longest=run=0;last=None
             for d in ordered:run=run+1 if last and d-last==timedelta(days=1) else 1;longest=max(longest,run);last=d
-            result['metrics'][f'{kind}_{basis}_days']={'count':len(values),'longest_contiguous_days':longest,'dates':sorted(values),'event_ids':[r.id for r in selected]}
+            result['metrics'][f'{kind}_{basis}_days']={'count':len(values),'longest_contiguous_days':longest,'dates':sorted(values),'event_ids':[r.id for r in eligible],'unknown_saved_dates':len(selected)-len(eligible) if basis=='saved' else 0}
     return result

@@ -362,8 +362,9 @@ onMounted(load)
             </div>
 
             <!-- v1.10 M1：AI 发现型里程碑建议（必须用户点按钮才发放） -->
+            <p v-if="j.event_record_kind&&j.achievement_suggestion?.name" class="muted">里程碑建议：{{ j.achievement_suggestion.name }}。<RouterLink to="/plans">到核实型候选核对指标与规则 →</RouterLink></p>
             <div
-              v-if="j.achievement_suggestion && j.achievement_suggestion.name && j.achievement_suggestion.state === 'pending'"
+              v-if="!j.event_record_kind && j.achievement_suggestion && j.achievement_suggestion.name && j.achievement_suggestion.state === 'pending'"
               class="milestone-card"
             >
               <div>🎖 <b>AI 认为这是一个里程碑：</b>{{ j.achievement_suggestion.name }}</div>

@@ -98,11 +98,11 @@ def recover(body: RecoverIn, request: Request, db: Session = Depends(get_db)):
     token = db.query(RecoveryToken).filter_by(token_hash=auth.digest(body.recovery_code)).first()
     if not token:
         raise HTTPException(400, "恢复信息无效。")
+    user = db.query(User).filter_by(id=token.user_id).populate_existing().with_for_update().one()
     claimed = db.query(RecoveryToken).filter(RecoveryToken.id == token.id,
         RecoveryToken.consumed_at.is_(None)).update({RecoveryToken.consumed_at: utc_now()}, synchronize_session=False)
     if claimed != 1:
         db.rollback(); raise HTTPException(400, "恢复信息无效。")
-    user = db.query(User).filter_by(id=token.user_id).populate_existing().with_for_update().one()
     if user.status!='active':raise HTTPException(400,'恢复信息无效。')
     user.credentials_version+=1
     db.query(RecoveryToken).filter_by(user_id=user.id,consumed_at=None).update({RecoveryToken.consumed_at:utc_now()})

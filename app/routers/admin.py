@@ -63,6 +63,7 @@ def users(offset:int=0,limit:int=50,db:Session=Depends(get_db)):
 
 @router.post('/users/{user_id}/status')
 def status(user_id:int,body:StatusIn,db:Session=Depends(get_db),owner=Depends(require_owner)):
+    lock(db)
     op=f'admin-status:{user_id}';fp,prior=begin(db,owner,op,body)
     if prior is not None:return prior
     lock(db);user=db.query(User).filter_by(id=user_id).populate_existing().with_for_update().first()
@@ -70,6 +71,10 @@ def status(user_id:int,body:StatusIn,db:Session=Depends(get_db),owner=Depends(re
     if user.credentials_version!=body.expected_version:raise HTTPException(409,'账号版本已变化。')
     if body.status=='disabled' and user.role=='owner' and db.query(User).filter_by(role='owner',status='active').count()<=1:raise HTTPException(409,'不能停用唯一可用管理账号。')
     if user.id==owner.id and body.status=='disabled':raise HTTPException(409,'不能在当前会话停用自己。')
+    from app.services.transactions import lock_profile
+    db.info['manage_profile_locks']=True
+    try:lock_profile(db,user.id)
+    finally:db.info.pop('manage_profile_locks',None)
     user.status=body.status;user.credentials_version+=1
     # Explicit security capability applies only to auth-session metadata. All diary/game scopes remain bound.
     db.info['manage_auth_sessions']=True
@@ -85,6 +90,7 @@ def site(db:Session=Depends(get_db)):return read(db)
 
 @router.put('/site')
 def save_site(body:PolicyIn,db:Session=Depends(get_db),owner=Depends(require_owner)):
+    lock(db)
     fp,prior=begin(db,owner,'admin-site',body)
     if prior is not None:return prior
     lock(db);row=db.query(SitePolicy).filter_by(id=1).populate_existing().with_for_update().first()
@@ -106,6 +112,7 @@ def announcements(offset:int=0,db:Session=Depends(get_db)):
 @router.post('/announcements')
 @router.put('/announcements/{announcement_id}')
 def save_announcement(body:AnnouncementIn,announcement_id:int|None=None,db:Session=Depends(get_db),owner=Depends(require_owner)):
+    lock(db)
     op=f'admin-notice:{announcement_id or "create"}';fp,prior=begin(db,owner,op,body,create=announcement_id is None)
     if prior is not None:return prior
     lock(db);row=db.get(Announcement,announcement_id) if announcement_id else None

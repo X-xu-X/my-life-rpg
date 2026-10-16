@@ -121,6 +121,8 @@ def create_event(body: EventCreate, db: Session = Depends(get_db)):
     )
     db.add(event)
     db.flush()
+    from app.services.time_service import capture_saved_day
+    capture_saved_day(event,user.timezone)
     if request_key:
         db.add(RequestReceipt(user_id=user.id, operation="create_event", request_key=request_key,
             payload_hash=payload_hash, resource_id=event.id,
@@ -134,6 +136,7 @@ def create_event(body: EventCreate, db: Session = Depends(get_db)):
 def list_events(
     db: Session = Depends(get_db),
     pure: bool | None = None,
+    kind: str = "",
     q: str = "",
     date: str = "",
     cursor: int | None = None,
@@ -142,6 +145,8 @@ def list_events(
     """事件列表（按创建时间倒序）。支持：pure 纯享过滤、q 关键词（标题/内容/类别）、date 日期（YYYY-MM-DD）。"""
     user = get_or_create_default_user(db)
     query = db.query(Event).filter(Event.user_id == user.id, Event.is_deleted.is_(False))
+    if kind not in ('','event','diary','legacy'):raise HTTPException(422,'记录类型无效。')
+    if kind:query=query.filter(Event.record_kind.is_(None)) if kind=='legacy' else query.filter(Event.record_kind==kind)
     if pure is not None:
         query = query.filter(Event.is_pure == pure)
     if q:

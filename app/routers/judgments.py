@@ -75,6 +75,7 @@ def list_judgments(db: Session = Depends(get_db)):
             "id": j.id,
             "event_id": j.event_id,
             "event_title": e.title or e.content[:40],
+            "event_record_kind":e.record_kind,
             "event_type": e.event_type,
             "category": e.category,
             "origin": e.origin,  # v1.9 F5：事件来源（"challenge" → 前端显示「挑战」徽章）
@@ -86,6 +87,7 @@ def list_judgments(db: Session = Depends(get_db)):
             "confidence": j.confidence,
             "confidence_reason": j.confidence_reason or "",  # v1.4：置信度说明
             "revision_notes": j.revision_notes or [],  # v1.6：本次修订说明
+            "model_provenance":j.model_provenance,
             "merged_with": j.merged_with or [],  # v1.7：跨来源合并明细
             # v1.10 M1：AI 发现型成就建议（{name, reason, state}；无建议为 {}）
             "achievement_suggestion": j.achievement_suggestion or {},
@@ -113,6 +115,7 @@ def get_judgment(judgment_id: int, db: Session = Depends(get_db)):
         "confidence": j.confidence,
         "confidence_reason": j.confidence_reason or "",  # v1.4：置信度说明
         "revision_notes": j.revision_notes or [],  # v1.6：本次修订说明
+        "model_provenance":j.model_provenance,
         "merged_with": j.merged_with or [],  # v1.7：跨来源合并明细
         "achievement_suggestion": j.achievement_suggestion or {},  # v1.10 M1
         "created_at": j.created_at,
@@ -142,12 +145,19 @@ def get_logs(judgment_id: int, db: Session = Depends(get_db)):
     ]
 
 
+class ConfirmIn(receipts.MutationIn):
+    reward_preview_id: int | None = None
+
+
 @router.post("/judgments/{judgment_id}/confirm")
-def confirm(judgment_id: int, db: Session = Depends(get_db), body: receipts.MutationIn = receipts.MutationIn()):
+def confirm(judgment_id: int, db: Session = Depends(get_db), body: ConfirmIn = ConfirmIn()):
     """确认入账：写属性流水 + 更新属性值。低置信度会被拦截。
 
     v1.8：入账成功后按净 delta 发放日常金币（净 delta ≤ 0 不给币也不扣币）。
     """
+    if body.reward_preview_id is not None:
+        from app.services.economy import lock_rules
+        lock_rules(db)
     user = get_or_create_default_user(db)
     lock_profile(db, user.id)
     operation = f"confirm:{judgment_id}"
@@ -168,10 +178,14 @@ def confirm(judgment_id: int, db: Session = Depends(get_db), body: receipts.Muta
     if event.origin == "challenge":
         raise HTTPException(409, "挑战判定请在挑战页结算。")
     try:
+        from app.services import economy
+        selected=economy.prepare(db,user,body.reward_preview_id,judgment,event) if body.reward_preview_id is not None else None
         judgment = judge_service.confirm(db, judgment, commit=False)
-        coins_gained = coin_service.reward_event_confirm(db, user, judgment, event_title=event.title or "")
+        coins_gained = coin_service.reward_event_confirm(db,user,judgment,event_title=event.title or '') if not selected or selected[1].payload['stacking']=='stack' else None
+        if selected:economy.award(db,user,*selected,event)
+        awarded_amount=(coin_service.EVENT_CONFIRM_REWARD if coins_gained is not None else 0)+(selected[0].amount if selected else 0)
         result = {"status": judgment.status, "final_changes": judgment.final_changes,
-            "coins_gained": coin_service.EVENT_CONFIRM_REWARD if coins_gained is not None else 0,
+            "coins_gained": awarded_amount,
             "balance": coin_service.balance(db, user), "unlocked_achievements": [],
             "achievement_suggestion": judgment.achievement_suggestion or {}}
         receipts.record(db, user.id, operation, body, fingerprint, judgment_id, result)
@@ -253,6 +267,7 @@ def handle_achievement(
             "balance": coin_service.balance(db, get_or_create_default_user(db)),
         }
 
+    if action=='grant' and event.record_kind is not None:raise HTTPException(409,'新记录请使用核实型成就候选；未配置金额不沿用旧50币追授。')
     achievement = None
     if action == "grant":
         reason = str(suggestion.get("reason", "")).strip()

@@ -38,7 +38,7 @@ def text_blocks(records,game=None):
     for row in records:
         e=row['record'];label={'event':'事件','diary':'晚间日记'}.get(e['record_kind'],'旧记录 · 未分类')
         blocks.append((f"{row['date']} · {label} · #{e['id']} · v{e['content_version']}",e['title']+'\n'+e['content']))
-        blocks.append(('记录元数据',json.dumps({k:e[k] for k in ('source','timezone_at_capture','time_precision','created_at','is_deleted')},ensure_ascii=False,indent=2)))
+        blocks.append(('记录元数据',json.dumps({k:e[k] for k in ('source','timezone_at_capture','time_precision','created_at','saved_on','saved_timezone','is_deleted')},ensure_ascii=False,indent=2)))
         for rev in row['revisions']:blocks.append((f"原稿历史 v{rev['version']}",rev['content']))
         for session in row['sessions']:
             s=session['session'];blocks.append((f"回顾会话 #{s['id']} · 来源 v{s['source_version']}",json.dumps(s['sources'],ensure_ascii=False,indent=2)))

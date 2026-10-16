@@ -201,6 +201,8 @@ class Event(Base):
     # 用户录入的事件永远不可能是挑战来源（EventCreate 不提供该字段）。
     origin: Mapped[str | None] = mapped_column(String(20), nullable=True)
     occurred_at: Mapped[datetime] = mapped_column(DateTime, default=_now)  # 事件发生时间
+    saved_on: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    saved_timezone: Mapped[str | None] = mapped_column(String(60), nullable=True)
     occurred_on: Mapped[str | None] = mapped_column(String(10), nullable=True)
     time_precision: Mapped[str | None] = mapped_column(String(10), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
@@ -516,3 +518,5 @@ class Exemption(Base):
 from app.models.workflow import DiaryRevision, ReviewSession, ReviewTurn, ReviewAnalysis, LifeChecklist
 
 import app.models.accounts
+
+import app.models.policies

@@ -25,6 +25,8 @@ def summary(db, user_id, group, version):
 
 
 MESSAGES = {
+    'MODEL_DISABLED':('你已关闭 AI，原文仍可保存。',False),
+    'MODEL_INPUT_LIMIT':('内容超过站点模型输入上限，请缩短相关内容。',False),
     'MODEL_AUTH_FAILED': ('认证失败，请检查本供应商的 Key。', False),
     'MODEL_NOT_FOUND': ('模型不存在或无访问权限，请核对模型 ID。', False),
     'MODEL_BALANCE_INSUFFICIENT': ('余额或调用配额不足，请在官方控制台核对。', False),
@@ -48,4 +50,4 @@ def controlled_error(exc):
 def provenance(config):
     return {'provider': next((name for name, url in PROVIDERS.items() if url == config.base_url), 'custom-local'),
             'model': config.model, 'config_version': config.config_version,
-            'source': 'personal' if config.config_id or config.config_version else 'local-legacy'}
+            'source': 'hosted' if getattr(config,'scope','personal')=='hosted' else 'personal' if config.config_id or config.config_version else 'local-legacy'}

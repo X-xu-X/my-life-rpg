@@ -153,6 +153,8 @@ class LLMService:
             raise LLMError("MODEL_BUSY：分析正在进行，请稍后重试。")
         client = None
         global_lock = None
+        hosted_usage_id = None
+        hosted_factory = None
         try:
             if settings.cloud:
                 from app.database import SessionLocal
@@ -170,11 +172,17 @@ class LLMService:
             guard = CALL_GUARD.get()
             if guard:
                 guard()
-            reserve_usage(config)
+            if settings.cloud and getattr(config,'scope','personal')=='hosted':
+                from app.services import hosted_ai
+                hosted_factory=factory
+                hosted_usage_id=hosted_ai.reserve(hosted_factory,config,messages)
+            else:reserve_usage(config)
             client = self._get_client(config)
         except Exception:
-            if settings.cloud:
-                _release_model_slot(global_lock)
+            try:
+                if hosted_usage_id is not None:hosted_ai.settle(hosted_factory,hosted_usage_id,error='NOT_DISPATCHED')
+            finally:
+                if settings.cloud:_release_model_slot(global_lock)
             raise
         temp = settings.llm_temperature if temperature is None else temperature
 
@@ -183,6 +191,7 @@ class LLMService:
             "messages": messages,
             "temperature": temp,
         }
+        if getattr(config,'scope','personal')=='hosted':max_tokens=min(max_tokens or config.max_output_tokens,config.max_output_tokens)
         if max_tokens is not None:
             limit_key = 'max_completion_tokens' if config and config.base_url.rstrip('/') == 'https://api.openai.com/v1' else 'max_tokens'
             kwargs[limit_key] = max_tokens
@@ -191,10 +200,13 @@ class LLMService:
             kwargs["response_format"] = {"type": "json_object"}
 
         try:
+            if hosted_usage_id is not None:hosted_ai.dispatched(hosted_factory,config,hosted_usage_id)
             resp = client.chat.completions.create(**kwargs)
+            if hosted_usage_id is not None and hosted_ai.settle(hosted_factory,hosted_usage_id,response=resp)=='overrun':raise LLMError('MODEL_DAILY_LIMIT：供应商报告用量超出配置上限，站点模型已停用。')
         except Exception as exc:
             from app.services.model_errors import category
-            code = category(exc)
+            code = str(exc).split('：',1)[0] if isinstance(exc,LLMError) else category(exc)
+            if hosted_usage_id is not None:hosted_ai.settle(hosted_factory,hosted_usage_id,error=code)
             raise LLMError(code + "：分析失败，原文已保存，请检查模型配置后重试。") from None
         finally:
             if settings.cloud:

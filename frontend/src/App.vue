@@ -30,12 +30,12 @@ onUnmounted(() => window.removeEventListener('gol-auth-lost', lost))
   <AuthView v-else-if="!account" @authenticated="initialize" />
   <div v-else class="app-shell" :key="account.id">
     <aside class="desktop-rail">
-      <RouterLink class="brand" :to="account.role==='owner'?'/admin':'/'">游戏人生<span>LifeXP · 一页一日</span></RouterLink>
+      <RouterLink class="brand" :to="account.role==='owner'?'/admin':'/'">游戏人生<span>LifeXP · {{ account.role==='owner'?'站点管理':'一页一日' }}</span></RouterLink>
       <nav aria-label="主要导航"><RouterLink v-for="tab in tabs" :key="tab.key" :to="tab.path" :class="{selected:selected(tab)}" :aria-current="selected(tab) ? 'page' : undefined"><AppIcon :name="tab.key" /> {{ tab.label }}</RouterLink></nav>
       <p class="muted">{{ account.username }}<br />{{ account.timezone }}</p>
     </aside>
     <div class="app-body">
-      <header class="mobile-heading"><RouterLink :to="account.role==='owner'?'/admin':'/'">游戏人生</RouterLink><span class="muted">一页一日</span></header>
+      <header class="mobile-heading"><RouterLink :to="account.role==='owner'?'/admin':'/'">游戏人生</RouterLink><span class="muted">{{ account.role==='owner'?'站点管理':'一页一日' }}</span></header>
       <p v-if="error" class="error" role="alert">{{ error }}</p>
       <nav v-if="route.meta.section === 'growth'" class="section-links" aria-label="成长功能"><RouterLink to="/growth">历史属性</RouterLink><RouterLink to="/challenges">挑战 · 商店 · 成就</RouterLink></nav>
       <main id="main-content"><RouterLink v-if="route.path!==sectionRoot(route)" class="btn page-back" :to="returnTarget(router,route)" @click="beginReturn(returnTarget(router,route))">← 返回上一页</RouterLink><RouterView :key="account.id + ':' + route.fullPath" /></main>

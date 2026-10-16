@@ -18,7 +18,7 @@ const account={id:99016,username:'trial_fixture',timezone:'Asia/Shanghai',mode:'
 const record={id:301,title:'部署项目的单件事件',content:'整理了部署流程并完成一次隔离验证。',source:'form',occurred_at:'2026-10-15T16:00:00Z',occurred_on:'2026-10-16',time_precision:'date',created_at:'2026-10-16T06:00:00Z',content_version:1,analysis_intent:'never',is_pure:false}
 const group=()=>({provider_id:'deepseek',enabled:true,configured:true,model:'fixture-chat',base_url:'https://api.deepseek.com',config_version:4,validation:{status:'untested'}})
 const models={primary:group(),aux:{...group(),enabled:false},providers:{deepseek:'https://api.deepseek.com',openai:'https://api.openai.com/v1',siliconflow:'https://api.siliconflow.cn/v1'},env_fallback:{ready:false}}
-let diary=null,review=null,schedule=null,occurrence=null,exportCalls=0;
+let diary=null,review=null,schedule=null,occurrence=null,exportCalls=0,AIpreference={mode:"personal",version:0,hosted:{available:false,version:0,provider:"",model:"",limits:{}}},candidate=null,mainlineRule=null;
 const names=['体能','力量','敏捷','智力','专注','意志','情绪','表达','社交','创造','审美','生活','财富']
 function send(method,params={}){return new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});ws.send(JSON.stringify({id,method,params}))})}
 async function evaluate(expression){const result=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(result.exceptionDetails)throw Error(JSON.stringify(result.exceptionDetails));return result.result.value}
@@ -33,7 +33,18 @@ async function respond(p){
  if(url.origin!==origin){await send('Fetch.failRequest',{requestId:p.requestId,errorReason:'BlockedByClient'});return}
  if(!url.pathname.startsWith('/api/')){await send('Fetch.continueRequest',{requestId:p.requestId});return}
  const route=url.pathname.slice(4),method=p.request.method;let status=200,body
- if(route==='/auth/email/bind-request'){status=503;body={detail:'邮件服务未配置，未发送邮件。'}}
+ if(route==='/ai/preferences'&&method==='PUT'){const input=JSON.parse(p.request.postData);AIpreference={...AIpreference,mode:input.mode,version:AIpreference.version+1};body=AIpreference}
+ else if(route==='/ai/preferences')body=AIpreference
+ else if(route==='/mainlines')body={items:[],previews:[],rule:null}
+ else if(route==='/dynamic-candidates'&&method==='POST'){const input=JSON.parse(p.request.postData);candidate={id:907,name:input.name,version:1,state:'candidate',semantic_key:'a'.repeat(64),criteria:input,evidence:{count:1,target:1,eligible:true,sources:[{id:901,version:1}]}};body=candidate}
+ else if(route==='/dynamic-candidates')body={items:candidate?[candidate]:[],rule:null}
+ else if(route==='/admin/rules/mainline'&&method==='PUT'){const input=JSON.parse(p.request.postData);mainlineRule={id:908,version:1,enabled:input.enabled,payload:input};body=mainlineRule}
+ else if(route==='/admin/rules/mainline')body={items:mainlineRule?[mainlineRule]:[]}
+ else if(route==='/admin/rules/dynamic')body={items:[]}
+ else if(route==='/admin/hosted-ai')body={version:0,enabled:false,payload:null}
+ else if(route==='/admin/hosted-monitor')body={date_basis:'UTC',calls:0,tokens:0,cost:0,unknown:0,failures:0}
+ else if(route==='/announcements')body={items:[{id:1,title:'合成站内公告',content:'测试公告，不是真实通知。',version:1}]}
+ else if(route==='/auth/email/bind-request'){status=503;body={detail:'邮件服务未配置，未发送邮件。'}}
  else if(route==='/admin/overview')body={users:2,active:2,published_announcements:0,site:{site_name:'合成站点',registration:'invite'}}
  else if(route==='/admin/users')body={items:[{id:1,username:'fixture_member',status:'active',role:'user',version:1,email_verified:false}]}
  else if(route==='/admin/site')body={version:0,site_name:'合成站点',description:'',registration:'invite',email_required:false,password_sessions:'all'}
@@ -43,7 +54,7 @@ async function respond(p){
  else if(route==='/export'){exportCalls++;body={synthetic:true};check('export selection sent',url.searchParams.get('format')==='html')}
  else if(route==='/plan-schedules'&&method==='POST'){const input=JSON.parse(p.request.postData);schedule={id:905,name:input.name,version:1,enabled:true,rule:{frequency:input.frequency,start:input.start},history:[]};body=schedule}
  else if(route==='/plan-schedules')body=schedule?[schedule]:[]
- else if(route==='/plan-occurrences')body=url.searchParams.has('day')?{items:schedule?[{schedule,occurrence}]:[]}:{history:occurrence?[occurrence]:[]}
+ else if(route==='/plan-occurrences')body=(url.searchParams.has('day')||url.searchParams.has('today'))?{items:schedule?[{schedule,occurrence}]:[]}:{history:occurrence?[occurrence]:[]}
  else if(route.startsWith('/plan-schedules/905/occurrences/')){const input=JSON.parse(p.request.postData);occurrence={id:906,version:1,local_date:'2026-10-16',outcome:input.outcome,facts:{content:input.content,actual:input.actual,unit:input.unit},schedule_snapshot:{name:schedule.name},history:[]};body=occurrence}
  else if(route==='/fact-relations')body=[]
  else if(route.startsWith('/life-checklists/'))body={version:0,payload:{enabled:false,entries:{},event_ids:[]}}
@@ -108,15 +119,21 @@ try{
  for(const width of [390,1440]){await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:false});check('plans layout '+width,await evaluate(`document.documentElement.scrollWidth<=innerWidth+1`));await shot('plans-'+width)}
  await go('/settings');await evaluate(`(()=>{const e=document.querySelector('#settings-data select');e.value='html';e.dispatchEvent(new Event('change',{bubbles:true}))})()`);await click('生成并下载');await wait(`document.body.innerText.includes('文件已生成并开始下载')`);check('real Vue export download',exportCalls===1)
  await go('/security');await fill('input[type=email]','fixture@example.test');await click('发送绑定验证邮件');await wait(`document.body.innerText.includes('邮件服务未配置，未发送邮件。')`);check('mail unconfigured never shown as sent',await evaluate(`!document.body.innerText.includes('验证邮件已投递')`))
+ await go('/settings');check('hosted unconfigured option disabled',await evaluate(`document.querySelector('#ai-choice option[value=hosted]').disabled`));await evaluate(`(()=>{const e=document.querySelector('#ai-choice select');e.value='off';e.dispatchEvent(new Event('change',{bubbles:true}))})()`);await click('保存 AI 选择');await wait(`document.querySelector('#ai-choice').innerText.includes('当前：关闭 AI')`);check('AI off persisted in real form',AIpreference.mode==='off')
+ await go('/plans');await evaluate(`document.querySelector('.policy-workflows>section:last-child>details').open=true`);await fill('.policy-workflows section:last-child form input[maxlength="100"]','合成核实候选');await fill('.policy-workflows section:last-child form input[type=number]','1');await click('保存并核实候选');await wait(`document.querySelector('.policy-workflows').innerText.includes('已核实 1/1')`);check('dynamic candidate real Vue saved',candidate.name==='合成核实候选');check('unconfigured dynamic reward disabled',await evaluate(`[...document.querySelectorAll('.policy-workflows button')].find(e=>e.textContent==='领取已配置奖励').disabled`))
+ await send('Emulation.setDeviceMetricsOverride',{width:390,height:900,deviceScaleFactor:1,mobile:false});check('policy long semantic ID wraps',await evaluate(`document.documentElement.scrollWidth<=innerWidth+1`));await evaluate(`document.querySelector('.policy-workflows>section:last-child').scrollIntoView()`);await shot('policy-candidate-390')
+ await go('/announcements');check('published notice readable in user workspace',await evaluate(`document.body.innerText.includes('合成站内公告')`))
  account.role='owner';await send('Page.reload');await wait(`location.hash==='#/admin'&&document.body.innerText.includes('管理概览')`)
  check('admin workspace separate navigation',await evaluate(`document.querySelector('.mobile-nav').innerText.includes('概览')&&!document.querySelector('#new-record')`))
  for(const route of ['/admin/users','/admin/announcements','/admin/site','/admin/audit']){await go(route);check('admin real page '+route,await evaluate(`!!document.querySelector('#main-content h1')&&!document.querySelector('#new-record')`))}
  await go('/admin/security');await evaluate(`document.querySelector('.page-back').click()`);await pause(200);check('admin security returns to legal admin source',await evaluate(`location.hash==='#/admin/audit'`))
  for(const width of [390,1440]){await go('/admin/users');await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:false});check('admin layout '+width,await evaluate(`document.documentElement.scrollWidth<=innerWidth+1`));await shot('admin-'+width)}
+ await go('/admin/site');await wait(`!!document.querySelector('#admin-policies textarea')`);await evaluate(`document.querySelector('#admin-policies details').open=true`);await fill('#admin-policies textarea',JSON.stringify({enabled:false,approved:false,effective_from:'2026-10-16',reason:'合成候选配置',tiers:[],rewards:{}}));await click('保存主线规则版本');await wait(`document.querySelector('#admin-policies').innerText.includes('配置已保存')`);check('admin candidate rule saved without activation',mainlineRule&&!mainlineRule.enabled)
  check('no unexpected API' ,unknown.length===0);check('no runtime errors',errors.length===0)
  console.log(JSON.stringify({status:'PASS',checks:checks.length}))
 }catch(error){errors.push(String(error));console.error(error);process.exitCode=1}
 finally{
- fs.writeFileSync(`${root}/browser-results.json`,JSON.stringify({status:process.exitCode?'FAIL':'PASS',checks,errors,unknown,limitations:['Compiled Vue; synthetic APIs; no real PG/model/mail/phone']},null,2))
+ const buildHashes=Object.fromEntries(fs.readdirSync('frontend/dist',{recursive:true}).map(name=>path.join('frontend/dist',name)).filter(name=>fs.statSync(name).isFile()).map(name=>[name,crypto.createHash('sha256').update(fs.readFileSync(name)).digest('hex')]))
+ fs.writeFileSync(`${root}/browser-results.json`,JSON.stringify({status:process.exitCode?'FAIL':'PASS',checks,errors,unknown,buildHashes,limitations:['Compiled Vue; synthetic APIs; no real PG/model/mail/phone']},null,2))
  try{if(ws?.readyState===1){await send('Browser.close');ws.close()}}catch{}edge.kill();server.close()
 }

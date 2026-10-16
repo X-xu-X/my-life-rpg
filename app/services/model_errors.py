@@ -8,7 +8,7 @@ def category(exc):
     error = body.get('error', body) if isinstance(body, dict) else {}
     code = error.get('code') if isinstance(error, dict) else None
     if code in ('insufficient_quota', 'insufficient_balance', 'billing_hard_limit_reached'): return 'MODEL_BALANCE_INSUFFICIENT'
-    if type(exc).__name__ in ('APITimeoutError','ReadTimeout','ConnectTimeout') or status in (408,504): return 'MODEL_TIMEOUT'
+    if isinstance(exc,TimeoutError) or type(exc).__name__ in ('APITimeoutError','ReadTimeout','ConnectTimeout') or status in (408,504): return 'MODEL_TIMEOUT'
     if isinstance(status, int) and status >= 500: return 'MODEL_SERVICE_ERROR'
     return {400:'MODEL_INVALID_RESPONSE',401:'MODEL_AUTH_FAILED',402:'MODEL_BALANCE_INSUFFICIENT',
             403:'MODEL_NOT_FOUND',404:'MODEL_NOT_FOUND',429:'MODEL_RATE_LIMITED'}.get(status,'MODEL_UNAVAILABLE')

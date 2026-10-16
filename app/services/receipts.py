@@ -17,7 +17,9 @@ class MutationIn(BaseModel):
 def replay(db, user_id, operation, body, *, require_version=True):
     if settings.cloud and (body.request_key is None or (require_version and body.expected_version is None)):
         raise HTTPException(422, "操作需要 request_key 和 expected_version。")
-    fingerprint = hashlib.sha256(json.dumps(body.model_dump(mode='json'), sort_keys=True).encode()).hexdigest()
+    payload=body.model_dump(mode='json')
+    if 'reward_preview_id' not in body.model_fields_set:payload.pop('reward_preview_id',None)
+    fingerprint = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
     if body.request_key:
         row = db.query(RequestReceipt).filter_by(user_id=user_id, operation=operation,
             request_key=str(body.request_key)).first()

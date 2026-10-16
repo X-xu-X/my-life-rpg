@@ -46,7 +46,7 @@ class IsolatedClient:
         result = run_deadline([sys.executable, '-m', 'app.services.model_runner'],
             {'api_key':self.config.api_key, 'base_url':self.config.base_url,
              'timeout':settings.ai_timeout, 'request':kwargs}, settings.ai_timeout)
-        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=result['content']))])
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=result['content']))],usage=SimpleNamespace(**result['usage']) if result.get('usage') else None)
 
     def close(self):
         pass

@@ -57,6 +57,8 @@ class EventUpdate(BaseModel):
 
 
 class EventOut(BaseModel):
+    saved_on: date | None = None
+    saved_timezone: str | None = None
     record_kind: str | None = None
     id: int
     event_type: str

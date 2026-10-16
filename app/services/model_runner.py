@@ -23,7 +23,7 @@ def main():
         client = OpenAI(api_key=payload['api_key'], base_url=payload['base_url'],
             max_retries=0, timeout=payload['timeout'], http_client=http_client())
         response = client.chat.completions.create(**payload['request'])
-        return {'content':response.choices[0].message.content or ''}
+        return {'content':response.choices[0].message.content or '', 'usage':{'prompt_tokens':response.usage.prompt_tokens,'completion_tokens':response.usage.completion_tokens} if response.usage else None}
     except Exception as exc:
         status = getattr(exc, 'status_code', 0)
         from app.services.model_errors import category

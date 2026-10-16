@@ -1,0 +1,16 @@
+# Optional SMTP_SSL overlay. The password stays in a secret file, not an environment value.
+x-mail: &mail
+  environment:
+    MAIL_HOST: ${MAIL_HOST:?set MAIL_HOST}
+    MAIL_PORT: ${MAIL_PORT:-465}
+    MAIL_FROM: ${MAIL_FROM:?set MAIL_FROM}
+    MAIL_USERNAME: ${MAIL_USERNAME:?set MAIL_USERNAME}
+    MAIL_PASSWORD_FILE: /run/secrets/mail_password
+  secrets: [app_password, credential_keys, mail_password]
+services:
+  api:
+    <<: *mail
+  worker:
+    <<: *mail
+secrets:
+  mail_password: {file: "${SECRETS_DIR:?set SECRETS_DIR}/mail-password"}

@@ -40,6 +40,7 @@ def _event(e: Event) -> dict:
         "occurred_on": e.occurred_on,
         "time_precision": e.time_precision,
         "created_at": _dt(e.created_at),
+        "saved_on":e.saved_on,"saved_timezone":e.saved_timezone,
     }
 
 
@@ -111,7 +112,7 @@ def _collect_legacy(db: Session, user_id: int) -> dict:
     }
 
 
-EXPORT_WORKFLOW_TABLES = ['diary_revisions','review_sessions','review_turns','review_analyses','life_checklists','plan_schedules','plan_occurrences','fact_identities','event_facts','fact_settlements','fact_relations']
+EXPORT_WORKFLOW_TABLES = ['diary_revisions','review_sessions','review_turns','review_analyses','life_checklists','plan_schedules','plan_occurrences','fact_identities','event_facts','fact_settlements','fact_relations','mainlines','reward_previews','mainline_awards','dynamic_candidates','dynamic_awards','ai_preferences']
 
 SAFE_EXPORT_SETTINGS = frozenset({"gamification_modules", "hidden_attributes", "disabled_attributes", "stagnation_checks", "unreal_count"})
 

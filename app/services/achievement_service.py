@@ -18,6 +18,7 @@ from datetime import datetime
 from re import sub as re_sub
 
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 from app.models import Achievement, Challenge, Event, Redemption, User
 from app.services import coin_service
@@ -91,7 +92,7 @@ def _metrics(db: Session, user: User) -> dict[str, int]:
         .filter(Event.user_id == user.id, Event.is_deleted.is_(False), Event.source == "journal", Event.record_kind.is_(None))
         .count()
     )
-    events_total = db.query(Event).filter(Event.user_id == user.id, Event.is_deleted.is_(False)).count()
+    events_total = db.query(Event).filter(Event.user_id == user.id, Event.is_deleted.is_(False),or_(Event.record_kind.is_(None),Event.record_kind=='event')).count()
     challenge_done = (
         db.query(Challenge)
         .filter(
@@ -178,12 +179,16 @@ def check_and_grant(db: Session, user: User) -> list[Achievement]:
 
     返回本次新解锁的成就列表（无则空）。
     """
+    from app.services.transactions import lock_profile
+    from app.models.policies import DynamicAward
+    lock_profile(db,user.id)
+    equivalents={a.equivalence_key for a in db.query(DynamicAward).filter_by(user_id=user.id).all() if a.equivalence_key}
     metrics = _metrics(db, user)
     unlocked = _unlocked_map(db, user)
     newly: list[Achievement] = []
 
     for c in CATALOG:
-        if c["code"] in unlocked:
+        if c["code"] in unlocked or 'fixed:'+c['code'] in equivalents:
             continue
         if int(metrics.get(c["metric"], 0)) < c["target"]:
             continue

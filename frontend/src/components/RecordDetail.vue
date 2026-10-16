@@ -61,7 +61,14 @@ async function remove() {
   catch(e) { error.value=e.message }
   finally { busy.value=false }
 }
-onMounted(()=>{load();document.addEventListener('visibilitychange',visibility);api.getLLMConfig().then(config=>{if(alive&&epoch===accountEpoch)modelConfigured.value=!!((config.primary?.configured&&config.primary?.enabled)||(config.aux?.configured&&config.aux?.enabled)||config.env_fallback?.ready)}).catch(()=>{})})
+onMounted(()=>{
+ load();document.addEventListener('visibilitychange',visibility)
+ Promise.all([api.getLLMConfig(),api.flow('/ai/preferences')]).then(([config,choice])=>{
+  if(!alive||epoch!==accountEpoch)return
+  const personal=!!((config.primary?.configured&&config.primary?.enabled)||(config.aux?.configured&&config.aux?.enabled)||config.env_fallback?.ready)
+  modelConfigured.value=choice.mode==='hosted'?choice.hosted.available:choice.mode==='personal'&&personal
+ }).catch(()=>{})
+})
 onUnmounted(()=>{alive=false;stop();document.removeEventListener('visibilitychange',visibility)})
 </script>
 <template>

@@ -1,0 +1,12 @@
+# Optional overlay. Not included by the base deployment; does not enable the service policy.
+x-hosted: &hosted
+  environment:
+    HOSTED_SECRET_FILE: /run/secrets/hosted_ai
+  secrets: [app_password, credential_keys, hosted_ai]
+services:
+  api:
+    <<: *hosted
+  worker:
+    <<: *hosted
+secrets:
+  hosted_ai: {file: "${SECRETS_DIR:?set SECRETS_DIR}/hosted-ai.json"}

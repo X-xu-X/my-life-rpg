@@ -83,16 +83,18 @@ def save_schedule(body:ScheduleIn,schedule_id:int|None=None,db:Session=Depends(g
 
 
 @router.get('/plan-occurrences')
-def occurrences(day:date|None=None,db:Session=Depends(get_db)):
+def occurrences(day:date|None=None,today:bool=False,db:Session=Depends(get_db)):
     user=get_or_create_default_user(db)
-    if day is None:return {'history':[fields(r) for r in db.query(PlanOccurrence).filter_by(user_id=user.id).order_by(PlanOccurrence.id.desc()).limit(500).all()]}
-    rows=db.query(PlanOccurrence).filter_by(user_id=user.id,local_date=str(day)).all();by_schedule={r.schedule_id:r for r in rows}
+    if day is None and not today:return {'history':[fields(r) for r in db.query(PlanOccurrence).filter_by(user_id=user.id).order_by(PlanOccurrence.id.desc()).limit(500).all()]}
     items=[]
     for row in db.query(PlanSchedule).filter_by(user_id=user.id).all():
-        saved=by_schedule.get(row.id)
-        snapshot=historical(row,day)
-        if saved or snapshot and snapshot['enabled'] and due(snapshot['rule'],day):items.append({'schedule':fields(row),'occurrence':fields(saved) if saved else None})
-    return {'date':str(day),'items':items}
+        selected=local_day(utc_now(),row.rule['timezone']) if today else day
+        snapshot=historical(row,selected)
+        if today and snapshot:selected=local_day(utc_now(),snapshot['rule']['timezone']);snapshot=historical(row,selected)
+        saved=db.query(PlanOccurrence).filter_by(user_id=user.id,schedule_id=row.id,local_date=str(selected)).first()
+        if saved or snapshot and snapshot['enabled'] and due(snapshot['rule'],selected):items.append({'schedule':fields(row),'local_date':str(selected),'occurrence':fields(saved) if saved else None})
+    return {'date':str(day) if day else None,'items':items}
+
 
 
 @router.put('/plan-schedules/{schedule_id}/occurrences/{day}')
@@ -125,8 +127,10 @@ def result(schedule_id:int,day:date,body:ResultIn,db:Session=Depends(get_db)):
                 for job in db.query(AnalysisJob).filter(AnalysisJob.event_id==event.id,AnalysisJob.state.in_(('queued','running'))).all():job.state='superseded';job.lease_token=None
         else:
             event=Event(user_id=user.id,event_type='positive',source='form',record_kind='event',title=schedule.name,content=body.content,
-                occurred_on=str(day),time_precision='date',occurred_at=date_range(day,user.timezone)[0],timezone_at_capture=user.timezone,analysis_intent='later')
+                occurred_on=str(day),time_precision='date',occurred_at=date_range(day,row.schedule_snapshot['timezone'])[0],timezone_at_capture=row.schedule_snapshot['timezone'],analysis_intent='later')
             db.add(event);db.flush()
+            from app.services.time_service import capture_saved_day
+            capture_saved_day(event,user.timezone)
     row.version+=1;row.outcome=body.outcome;row.facts={'content':body.content,'actual':body.actual,'unit':body.unit,'correction_reason':body.reason}
     if event:row.event_id=event.id
     row.history=[*row.history,{'version':row.version,'outcome':row.outcome,'facts':row.facts,'event_id':row.event_id,'at':utc_now().isoformat(),'prior_booking_retained':booked}]

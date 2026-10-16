@@ -43,6 +43,10 @@ class LLMConfig:
     user_id: int | None = None
     config_id: int | None = None
     config_version: int = 0
+    scope: str = 'personal'
+    preference_version: int = 0
+    max_output_tokens: int | None = None
+    secret_fingerprint: str = ''
 
 
 def read_group(db: Session, user_id: int, setting_key: str) -> dict | None:
@@ -73,7 +77,7 @@ def _from_group(group: dict, quality_note: str = "") -> LLMConfig:
         model=str(group["model"]),
         quality_note=quality_note,
         user_id=group.get("user_id"), config_id=group.get("config_id"),
-        config_version=group.get("config_version", 0),
+        config_version=group.get("config_version", 0), preference_version=group.get("preference_version",0),
     )
 
 
@@ -90,8 +94,14 @@ def _env_config() -> LLMConfig | None:
 
 def resolve_llm_config(db: Session, user_id: int, purpose: str) -> LLMConfig:
     """按用户与用途解析 LLM 配置（见模块 docstring 优先级）。"""
+    from app.services import hosted_ai
+    pref=hosted_ai.preference(db,user_id)
+    if pref and pref.mode=='off':raise LLMError('MODEL_DISABLED：你已关闭 AI，原文仍可保存。')
+    if pref and pref.mode=='hosted':return hosted_ai.resolve(db,user_id,pref)
     primary = read_group(db, user_id, SETTING_KEY_PRIMARY)
     aux = read_group(db, user_id, SETTING_KEY_AUX)
+    if primary:primary={**primary,'preference_version':pref.version if pref else 0}
+    if aux:aux={**aux,'preference_version':pref.version if pref else 0}
     if settings.cloud and not (primary or aux):
         raise LLMError("MODEL_NOT_CONFIGURED：原文已保存，分析前请绑定自己的模型。")
 
@@ -138,6 +148,9 @@ def assert_current(db, config):
     from app.models import User
     user=db.query(User).filter_by(id=config.user_id).populate_existing().first()
     if user is None or user.status!='active':raise ValueError('账号已停用。')
+    from app.services import hosted_ai
+    hosted_ai.assert_current(db,config)
+    if config.scope=='hosted':return
     from app.models.access import LLMCredential
     row = db.query(LLMCredential).filter_by(id=config.config_id,user_id=config.user_id).populate_existing().first()
     if row is None or not row.enabled or row.config_version != config.config_version:

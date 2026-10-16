@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "run": 84,
+  "passed": 82,
+  "skipped": [
+    "真实 PostgreSQL 并发用例",
+    "真实 PostgreSQL 导入用例"
+  ],
+  "failures": 0,
+  "errors": 0,
+  "modules": [
+    "tests.test_continuation",
+    "tests.test_trial_p1",
+    "tests.test_next_iteration",
+    "tests.test_v1_11_safety",
+    "tests.test_ops_next"
+  ],
+  "database": "isolated synthetic SQLite; TEST_PG_URL disabled",
+  "supplier": "doubles only",
+  "independent_postgres": "NOT_RUN"
+}

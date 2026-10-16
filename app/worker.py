@@ -2,6 +2,8 @@
 import signal
 import time
 import logging
+import argparse
+import tempfile
 from pathlib import Path
 from app.database import SessionLocal
 from app.services import owned_repository
@@ -37,17 +39,37 @@ def stop(signum, frame):
     stopping = True
 
 
+def validate_local_schema(bind):
+    """Read-only: API startup owns backup/schema updates for local files."""
+    from sqlalchemy import inspect
+    from app.database import Base
+    inspector=inspect(bind)
+    tables=set(inspector.get_table_names())
+    for table in Base.metadata.sorted_tables:
+        if table.name not in tables or not set(table.columns.keys()).issubset({column['name'] for column in inspector.get_columns(table.name)}):
+            raise RuntimeError('本地数据库结构未就绪；请先启动 API 完成备份和结构升级，再启动 worker --local。')
+
+
 def main():
     from app.main import init_db
     from app.config import settings
-    if not settings.cloud:
-        raise RuntimeError("worker 仅在显式迁移的 cloud 模式使用。")
-    init_db()  # cloud 路径只检查配置与迁移版本。
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--local',action='store_true',help='显式运行单实例本地队列；不建表或迁移')
+    args=parser.parse_args()
+    if settings.cloud:
+        if args.local:raise RuntimeError('cloud 部署使用原 worker 命令，不接受 --local。')
+        init_db()  # cloud 路径只检查配置与迁移版本。
+        heartbeat=Path('/tmp/gol-worker-heartbeat')
+    else:
+        if not args.local:raise RuntimeError('本地队列需显式运行 python -m app.worker --local。')
+        from app.database import engine
+        validate_local_schema(engine)
+        heartbeat=Path(tempfile.gettempdir())/'gol-local-worker-heartbeat'
     signal.signal(signal.SIGINT, stop)
     signal.signal(signal.SIGTERM, stop)
     next_maintenance = 0.0
     while not stopping:
-        Path('/tmp/gol-worker-heartbeat').touch()
+        heartbeat.touch()
         if time.monotonic() >= next_maintenance:
             maintain(SessionLocal)
             next_maintenance = time.monotonic() + 60

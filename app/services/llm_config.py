@@ -67,7 +67,7 @@ def read_group(db: Session, user_id: int, setting_key: str) -> dict | None:
         return None
     if not (row.value.get("api_key") and row.value.get("base_url") and row.value.get("model")):
         return None
-    return row.value
+    return {**row.value,"user_id":user_id,"config_id":row.id}
 
 
 def _from_group(group: dict, quality_note: str = "") -> LLMConfig:
@@ -144,6 +144,12 @@ def mask_key(api_key: str) -> str:
 def assert_current(db, config):
     """模型结果写回时在用户锁内复核密钥版本。"""
     if not settings.cloud:
+        if getattr(config,'user_id',None) is None:return
+        from app.services import hosted_ai
+        hosted_ai.assert_current(db,config)
+        if config.config_id is None:return
+        row=db.query(Setting).filter_by(id=config.config_id,user_id=config.user_id).populate_existing().first()
+        if not row or not isinstance(row.value,dict) or not row.value.get('enabled') or row.value.get('config_version',0)!=config.config_version:raise ValueError('本地模型配置已变化。')
         return
     from app.models import User
     user=db.query(User).filter_by(id=config.user_id).populate_existing().first()

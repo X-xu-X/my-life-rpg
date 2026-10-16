@@ -17,7 +17,23 @@ class DateTime(TypeDecorator):
                 value = value.replace(tzinfo=None)
         return value
 
+
     def process_result_value(self, value, dialect):
         if value is not None and settings.cloud:
             return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
         return value
+
+
+class UTCDateTime(DateTime):
+    """New workflow/security clocks are UTC in both modes; legacy Event clocks stay unchanged."""
+    cache_ok = True
+
+    def process_bind_param(self,value,dialect):
+        if value is None:return None
+        if value.tzinfo is None:raise ValueError('任务时间必须带 UTC 偏移。')
+        value=value.astimezone(timezone.utc)
+        return value.replace(tzinfo=None) if dialect.name=='sqlite' else value
+
+    def process_result_value(self,value,dialect):
+        if value is None:return None
+        return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)

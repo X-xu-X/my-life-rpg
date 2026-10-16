@@ -214,6 +214,12 @@ class ContinuationTests(unittest.TestCase):
             self.assertEqual(self.client.post('/api/auth/email/verify',json={'token':token}).status_code,200)
             self.assertEqual(self.client.post('/api/auth/email/verify',json={'token':token}).status_code,400)
             me=self.client.get('/api/auth/me').json();self.assertTrue(me['email_verified'])
+            from fastapi import HTTPException
+            with patch.object(outbox,'send',side_effect=HTTPException(503,'synthetic SMTP failure')):
+                known=self.client.post('/api/auth/email/recover-request',json={'email':'friend@example.test'})
+                unknown=self.client.post('/api/auth/email/recover-request',json={'email':'missing@example.test'})
+                self.assertEqual(known.status_code,200);self.assertEqual(known.json(),unknown.json())
+                self.assertIn('受理不代表投递成功',known.json()['message'])
             self.assertEqual(self.client.post('/api/auth/email/recover-request',json={'email':'friend@example.test'}).status_code,200)
             reset=outbox.outbox[-1]['token']
             result=self.client.post('/api/auth/email/reset-password',json={'token':reset,'new_password':'new-email-test-password'})
@@ -382,6 +388,42 @@ class ContinuationTests(unittest.TestCase):
             with self.assertRaises(HTTPException) as failure:lock_profile(db,user.id)
             self.assertEqual(failure.exception.status_code,401)
             db.rollback()
+
+    def test_explicit_local_worker_schema_and_utc_review_lease(self):
+        from app.config import settings
+        from app.models import Setting
+        from app.models.analysis import AnalysisJob
+        from app.worker import validate_local_schema
+        from sqlalchemy import create_engine,inspect
+        self.register();session=self.session()
+        with self.Session() as db:
+            user_id=db.query(Event).first().user_id
+            db.add(Setting(user_id=user_id,key='llm_primary',value={'enabled':True,'api_key':'synthetic-local-key','base_url':'https://api.deepseek.com','model':'local-fixture','config_version':1}));db.commit()
+        with patch.object(settings,'run_mode','local'):
+            validate_local_schema(self.engine)
+            empty=create_engine('sqlite://')
+            with self.assertRaises(RuntimeError):validate_local_schema(empty)
+            self.assertEqual(inspect(empty).get_table_names(),[]);empty.dispose()
+            with self.Session() as db:
+                job=AnalysisJob(user_id=user_id,event_id=session['diary_id'],event_version=1,operation='review',review_session_id=session['id'],session_version=1,
+                    request_key=str(uuid4()),payload_hash='synthetic',config_version=analysis_jobs.configuration(db,user_id),state='queued')
+                db.add(job);db.commit();job_id=job.id
+            with patch('app.services.diary_review.llm_service.chat_json',return_value={'questions':[],'summary':'本地回顾成功','analysis':[]}):
+                analysis_jobs.process(self.Session,analysis_jobs.claim(self.Session))
+            with self.Session() as db:
+                self.assertEqual(db.get(AnalysisJob,job_id).state,'ready')
+                self.assertEqual(db.query(ReviewAnalysis).one().payload['summary'],'本地回顾成功')
+            # Local lightweight upgrades must enforce the new identity in the DB as well.
+            from app.database import migrate_schema
+            from sqlalchemy import text
+            from sqlalchemy.exc import IntegrityError
+            legacy=create_engine('sqlite://')
+            with legacy.begin() as connection:connection.execute(text('CREATE TABLE events (id INTEGER PRIMARY KEY)'))
+            migrate_schema(legacy)
+            with legacy.begin() as connection:connection.execute(text("INSERT INTO events(id,diary_key) VALUES(1,'synthetic-day')"))
+            with self.assertRaises(IntegrityError):
+                with legacy.begin() as connection:connection.execute(text("INSERT INTO events(id,diary_key) VALUES(2,'synthetic-day')"))
+            legacy.dispose()
 
 
 if __name__=='__main__':unittest.main()

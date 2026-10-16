@@ -38,7 +38,7 @@ record-metrics GET 提供事件/日记的内容覆盖日与实际保存日、最
 
 b008_accounts 增加用户可空唯一验证邮箱/验证时间、EmailToken（仅摘要/用途/版本/过期/单次消费）、SitePolicy、Announcement、AdminAudit。默认保持邀请兼容、邮箱非必填、改密撤销全部会话；管理端可明确选直接注册/邀请/关闭与邮箱门槛。没有邮件服务不能开启强制邮箱。旧账号不被突然锁定，原恢复码兼容；改密/找回撤销旧会话和旧恢复码，返回新恢复码。
 
-API：auth/options、auth/password；auth/email/{register-request,bind-request,verify,recover-request,reset-password}；admin/{overview,users,users/:id/status,announcements,site,audit}。沿用原 Session/Origin/CSRF；邮箱公开验证凭单次随机令牌，不返回原令牌。邮件默认显式 503，只有配置 SMTP_SSL（MAIL_HOST/PORT/FROM/USERNAME/PASSWORD）才尝试投递；测试适配器仅在测试注入。邮件服务真实投递 NOT_RUN。
+API：auth/options、auth/password；auth/email/{register-request,bind-request,verify,recover-request,reset-password}；admin/{overview,users,users/:id/status,announcements,site,audit}。沿用原 Session/Origin/CSRF；邮箱公开验证凭单次随机令牌，不返回原令牌。邮件默认显式 503，只有配置 SMTP_SSL（MAIL_HOST/PORT/FROM/USERNAME/PASSWORD）才尝试投递；测试适配器仅在测试注入。邮件服务真实投递 NOT_RUN。找回请求对不存在的邮箱和投递不确定统一返回受理结果，明确受理不代表投递成功，避免通过 SMTP 错误区分账号是否存在。
 
 owner 映射为本轮管理能力，普通 user 服务端拒绝。管理五区和账号安全拥有独立 Vue 导航/返回，生产无本地改 role 按钮。管理只读账号元数据和操作记录，不提供他人日记/Key、改账/提权/删除接口；不能停用唯一管理人或当前自己。停用撤销认证会话，后台模型写回再次检查账号状态。受控 manage_auth_sessions 标记仅允许已鉴权管理动作撤销目标认证会话，其他业务查询仍绑定管理人本人，不解除日记归属过滤。
 
@@ -94,7 +94,7 @@ D01～D11 继续是产品/运营选择：本批实现可配置策略与独立事
 
 ## 最终验收与证据
 
-- `.venv\Scripts\python.exe -B -m tests.run_continuation_checks`：**84 项运行，82 PASS、2 SKIP、0 FAIL/ERROR**。涵盖 P1/P2～P6、原规则和迁移。两项跳过分别是真实 PG 并发及导入，不计通过。模型和邮件全部替身；另有 SMTP 文件适配改动后的邮件安全定向复验 PASS。
+- `.venv\Scripts\python.exe -B -m tests.run_continuation_checks`：**85 项运行，83 PASS、2 SKIP、0 FAIL/ERROR**。涵盖 P1/P2～P6、原规则和迁移。两项跳过分别是真实 PG 并发及导入，不计通过。模型和邮件全部替身；另有 SMTP 文件适配改动后的邮件安全定向复验 PASS。
 - `npm.cmd --prefix frontend run build`：PASS；ECharts 大块约 545 KB 的既有警告仍在。
 - `node tests/frontend_next.mjs`：PASS，保留账号切换/迟到响应、命名草稿、双击/未知结果恢复与补充队列版本检查。
 - `node tests/browser_continuation.mjs`：**30 PASS**，真实编译 Vue、API mock，日记完整问答/返回恢复、计划未完成锁定、导出下载、邮箱不可发送、管理五区/返回、AI 关闭、候选保存及未配置奖励禁用、候选规则保存、390/1440 布局与长身份。
@@ -135,3 +135,10 @@ D01～D11 继续是产品/运营选择：本批实现可配置策略与独立事
 
 
 阶段代码提交：P2 `45d0d11`、P3 `aeb3601`、P4 `ba0d8dd`、P5 `38fb40b`、P6 `6bccedd`。截图复核另增断言并修正缩放时序，不覆盖原 P1 证据。
+
+
+### 本地队列兼容补验
+
+新回顾在 cloud/local 都使用持久队列。cloud 保持原 compose worker；本地先启动 API，使其按原流程备份并补齐结构，再显式运行 `.venv\Scripts\python.exe -m app.worker --local`（单实例 worker）。只保存/回看不需要 worker，生成辅助问题与回顾需要 worker 持续运行。本地 worker 启动只读检查结构，缺表/列即拒绝，不代替 API 备份/迁移。本地轻量升级另补日记身份与邮箱的唯一索引，旧值保留 NULL；如有重复则安全失败，不合并或删除数据。
+
+任务/新问答/邮箱令牌采用两种模式都明确 UTC 的时间类型；旧 Event/Profile/挑战的本地时间解释保持原样，不改写历史时间。租约不会再因 SQLite 本地返回无偏移时间而比较失败，本地模型组版本也纳入写回快照。定向验证了缺结构拒绝且无自动建表、真实队列 claim/process 的本地 UTC 租约与完整回顾写回；真实本地供应商仍 NOT_RUN。首轮 UTC 类型方法归属错误造成回归失败，修正后完整报告以上述最终结果为准。

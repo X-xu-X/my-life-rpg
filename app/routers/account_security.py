@@ -91,8 +91,12 @@ def recover_email(body:EmailIn,request:Request,db:Session=Depends(get_db)):
     email=mail_service.normalize(body.email)
     if not mail_service.mailer().ready:raise HTTPException(503,'邮件服务未配置，仍可使用恢复码。')
     user=db.query(User).filter_by(email=email,status='active').first()
-    if user and user.email_verified_at:send_token(db,email,'recover',user)
-    return {'status':'accepted','message':'若此邮箱有已验证的可用账号，将发送恢复验证码。'}
+    if user and user.email_verified_at:
+        try:send_token(db,email,'recover',user)
+        except HTTPException as exc:
+            if exc.status_code!=503:raise
+            # Keep account existence private when SMTP delivery is uncertain.
+    return {'status':'accepted','message':'若此邮箱有已验证的可用账号，将尝试投递恢复验证码。受理不代表投递成功；未收到时仍可用恢复码。'}
 
 
 @router.post('/email/reset-password')

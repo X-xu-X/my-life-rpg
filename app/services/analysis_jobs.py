@@ -21,6 +21,11 @@ _claim_lock = threading.Lock()
 
 def configuration(db, user_id):
     result={str(r.id):r.config_version for r in db.query(LLMCredential).filter_by(user_id=user_id).populate_existing().all()}
+    from app.config import settings
+    if not settings.cloud:
+        from app.models import Setting
+        for row in db.query(Setting).filter(Setting.user_id==user_id,Setting.key.in_(('llm_primary','llm_aux'))).populate_existing().all():
+            result[row.key]=row.value.get('config_version',0) if isinstance(row.value,dict) else 0
     from app.models.policies import AIPreference,HostedAI
     pref=db.query(AIPreference).filter_by(user_id=user_id).populate_existing().first()
     if pref:

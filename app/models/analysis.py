@@ -3,7 +3,7 @@ from datetime import date, datetime
 from sqlalchemy import Integer, String, Text, JSON, Date, ForeignKey, UniqueConstraint, Index, text
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
-from app.time_types import DateTime
+from app.time_types import UTCDateTime as DateTime
 from app.services.time_service import utc_now
 
 

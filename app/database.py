@@ -74,3 +74,10 @@ def migrate_schema(engine) -> None:
                         text(f'UPDATE "{table.name}" SET "{column.name}" = :v WHERE "{column.name}" IS NULL'),
                         {"v": default_val},
                     )
+    # create_all does not add uniqueness to old tables. New nullable identities remain NULL
+    # for legacy rows; duplicates, if any, must fail safely rather than be merged or deleted.
+    if engine.dialect.name == 'sqlite':
+        with engine.begin() as conn:
+            for table, column, name in (('events','diary_key','uq_event_diary_key'),('users','email','uq_user_email')):
+                if table in existing_tables:
+                    conn.execute(text(f'CREATE UNIQUE INDEX IF NOT EXISTS "{name}" ON "{table}" ("{column}")'))

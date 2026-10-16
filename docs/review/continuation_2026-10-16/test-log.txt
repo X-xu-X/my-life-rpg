@@ -4,6 +4,30 @@ test_diary_single_original_revisions_replay_and_legacy_unchanged (tests.test_con
 test_disabled_identity_cannot_pass_late_business_lock (tests.test_continuation.ContinuationTests.test_disabled_identity_cannot_pass_late_business_lock) ... ok
 test_dynamic_semantic_dedupe_unconfigured_reward_and_claim_once (tests.test_continuation.ContinuationTests.test_dynamic_semantic_dedupe_unconfigured_reward_and_claim_once) ... ok
 test_email_unavailable_single_use_bind_recovery_and_password_revocation (tests.test_continuation.ContinuationTests.test_email_unavailable_single_use_bind_recovery_and_password_revocation) ... ok
+test_explicit_local_worker_schema_and_utc_review_lease (tests.test_continuation.ContinuationTests.test_explicit_local_worker_schema_and_utc_review_lease) ... [migrate] 已添加缺失列 events.record_kind (VARCHAR(20))
+[migrate] 已添加缺失列 events.diary_key (VARCHAR(80))
+[migrate] 已添加缺失列 events.content_version (INTEGER)
+[migrate] 已添加缺失列 events.client_request_id (VARCHAR(36))
+[migrate] 已添加缺失列 events.analysis_intent (VARCHAR(10))
+[migrate] 已添加缺失列 events.timezone_at_capture (VARCHAR(60))
+[migrate] 已添加缺失列 events.user_id (INTEGER)
+[migrate] 已添加缺失列 events.event_type (VARCHAR(20))
+[migrate] 已添加缺失列 events.category (VARCHAR(50))
+[migrate] 已添加缺失列 events.source (VARCHAR(20))
+[migrate] 已添加缺失列 events.title (VARCHAR(200))
+[migrate] 已添加缺失列 events.params (JSON)
+[migrate] 已添加缺失列 events.content (TEXT)
+[migrate] 已添加缺失列 events.item_id (INTEGER)
+[migrate] 已添加缺失列 events.is_pure (BOOLEAN)
+[migrate] 已添加缺失列 events.is_deleted (BOOLEAN)
+[migrate] 已添加缺失列 events.origin (VARCHAR(20))
+[migrate] 已添加缺失列 events.occurred_at (DATETIME)
+[migrate] 已添加缺失列 events.saved_on (VARCHAR(10))
+[migrate] 已添加缺失列 events.saved_timezone (VARCHAR(60))
+[migrate] 已添加缺失列 events.occurred_on (VARCHAR(10))
+[migrate] 已添加缺失列 events.time_precision (VARCHAR(10))
+[migrate] 已添加缺失列 events.created_at (DATETIME)
+ok
 test_exports_safe_formats_exact_questions_and_named_date_metrics (tests.test_continuation.ContinuationTests.test_exports_safe_formats_exact_questions_and_named_date_metrics) ... ok
 test_fact_relation_guards_second_booking_and_atomic_rollback (tests.test_continuation.ContinuationTests.test_fact_relation_guards_second_booking_and_atomic_rollback) ... ok
 test_hosted_separate_secret_selection_budget_unknown_charge_and_stale_version (tests.test_continuation.ContinuationTests.test_hosted_separate_secret_selection_budget_unknown_charge_and_stale_version) ... ok
@@ -127,6 +151,6 @@ test_frozen_migrations_empty_sqlite_and_repeat (tests.test_ops_next.OpsTests.tes
 test_preflight_preserves_dangling_judgment_35_event_34 (tests.test_ops_next.OpsTests.test_preflight_preserves_dangling_judgment_35_event_34) ... ok
 
 ----------------------------------------------------------------------
-Ran 84 tests in 33.582s
+Ran 85 tests in 33.905s
 
 OK (skipped=2)

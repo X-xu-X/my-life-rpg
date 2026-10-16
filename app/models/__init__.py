@@ -30,7 +30,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-from app.time_types import DateTime
+from app.time_types import DateTime,UTCDateTime
 from app.services.time_service import clock_now
 
 
@@ -51,7 +51,7 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(10), default="user")
     timezone: Mapped[str] = mapped_column(String(60), default="Asia/Shanghai")
     email: Mapped[str | None] = mapped_column(String(254), unique=True, nullable=True)
-    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    email_verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     credentials_version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 

@@ -47,7 +47,11 @@ def create_event(body: EventCreate, db: Session = Depends(get_db)):
     if not body.content.strip() and not body.title.strip():
         raise HTTPException(422, "请填写记录。")
     request_key = str(body.client_request_id) if body.client_request_id else None
-    payload_hash = hashlib.sha256(json.dumps(body.model_dump(mode="json"), sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+    payload = body.model_dump(mode="json")
+    # Keep pre-upgrade pending UUID fingerprints replayable when new fields are absent.
+    for name in ('occurred_on', 'time_precision'):
+        if name not in body.model_fields_set: payload.pop(name, None)
+    payload_hash = hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
     if request_key:
         lock_profile(db, user.id)
         prior = db.query(RequestReceipt).filter_by(user_id=user.id, operation="create_event", request_key=request_key).first()
@@ -91,6 +95,15 @@ def create_event(body: EventCreate, db: Session = Depends(get_db)):
         title = title or "纯享记录"
         category = category or "生活"
 
+    captured_time = stored_time(body.occurred_at, body.timezone)
+    captured_on = body.occurred_on
+    if body.time_precision == 'date':
+        captured_time = date_range(body.occurred_on, body.timezone)[0]  # day-boundary anchor, never a reported clock time
+    elif body.time_precision == 'minute':
+        from app.services.time_service import local_day
+        captured_on = local_day(captured_time, body.timezone)
+        if body.occurred_on and captured_on != body.occurred_on:
+            raise HTTPException(422, '发生日期与时间不一致。')
     event = Event(
         user_id=user.id,
         event_type=event_type,
@@ -101,7 +114,8 @@ def create_event(body: EventCreate, db: Session = Depends(get_db)):
         content=body.content,
         item_id=item_id,  # v1.7：所属打卡项目（可空）
         is_pure=body.is_pure,
-        occurred_at=stored_time(body.occurred_at, body.timezone),
+        occurred_at=captured_time, occurred_on=captured_on.isoformat() if captured_on else None,
+        time_precision=body.time_precision,
         client_request_id=request_key, content_version=1,
         analysis_intent="never" if body.is_pure else body.intent, timezone_at_capture=body.timezone,
     )
@@ -255,6 +269,8 @@ def update_event(event_id: int, body: EventUpdate, db: Session = Depends(get_db)
     data = body.model_dump(exclude_unset=True, exclude={"expected_version"})
     if "occurred_at" in data and data["occurred_at"] is not None:
         data["occurred_at"] = stored_time(data["occurred_at"], event.timezone_at_capture)
+        data['occurred_on'] = None
+        data['time_precision'] = None  # old edit clients never declare precision
     if data.get("item_id") is not None:
         item = db.get(CheckinItem, data["item_id"])
         if item is None or item.user_id != event.user_id:

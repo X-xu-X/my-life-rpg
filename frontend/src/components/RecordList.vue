@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { api } from '../api'
-import { displayTime } from '../session'
+import { displayTime, displayEventTime } from '../session'
 import PageHeader from './ui/PageHeader.vue'
 import RecordPreview from './ui/RecordPreview.vue'
 const rows=ref([]),query=ref(''),filter=ref(''),error=ref('')

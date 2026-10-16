@@ -1,9 +1,9 @@
 """Pydantic 请求/响应模型（API 层数据结构）。"""
-from datetime import datetime
+from datetime import datetime, date
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from app.services.receipts import MutationIn
 
 
@@ -25,9 +25,21 @@ class EventCreate(BaseModel):
     item_id: int | None = Field(None, description="所属打卡项目（v1.7，可空=纯自由记一笔）")
     is_pure: bool = Field(False, description="纯享记录：只记录不加点、不走 AI 判定")
     occurred_at: datetime | None = None
+    occurred_on: date | None = None
+    time_precision: Literal['date', 'minute'] | None = None
     client_request_id: UUID | None = None
     intent: Literal["now", "later", "never"] = "later"
     timezone: str = "Asia/Shanghai"
+
+    @model_validator(mode='after')
+    def validate_precision(self):
+        if self.time_precision == 'date' and (self.occurred_on is None or self.occurred_at is not None):
+            raise ValueError('日期精度需要 occurred_on，不能同时声称精确时间。')
+        if self.time_precision == 'minute' and self.occurred_at is None:
+            raise ValueError('分钟精度需要发生时间。')
+        if self.occurred_on is not None and self.time_precision is None:
+            raise ValueError('请明确发生时间精度。')
+        return self
 
 
 class EventUpdate(BaseModel):
@@ -57,6 +69,8 @@ class EventOut(BaseModel):
     # 注意 EventCreate / EventUpdate **不提供**该字段（不给前端写入口）。
     origin: str | None = None
     occurred_at: datetime | None
+    occurred_on: date | None = None
+    time_precision: str | None = None
     created_at: datetime
     content_version: int = 1
     client_request_id: str | None = None
@@ -145,6 +159,7 @@ class JudgmentResult(BaseModel):
 
 
 class JudgmentOut(BaseModel):
+    model_provenance: dict | None = None
     id: int
     event_id: int
     status: str

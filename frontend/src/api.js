@@ -6,6 +6,9 @@ import { account, accountEpoch, activeRequests, csrf } from './session'
 async function request(path, options = {}) {
   const epoch = accountEpoch
   const controller = new AbortController()
+  const abort=()=>controller.abort()
+  options.signal?.addEventListener('abort',abort,{once:true})
+  if(options.signal?.aborted)controller.abort()
   activeRequests.add(controller)
   try {
     const resp = await fetch(`${BASE}${path}`, {
@@ -22,7 +25,7 @@ async function request(path, options = {}) {
       throw error
     }
     return data
-  } finally { activeRequests.delete(controller) }
+  } finally { options.signal?.removeEventListener('abort',abort);activeRequests.delete(controller) }
 }
 
 async function queueJudgmentRevision(id, operation, detail, version) {
@@ -43,9 +46,9 @@ export const api = {
   neutralBaseline: () => request('/onboarding/neutral', { method: 'POST', body: JSON.stringify({ acknowledge: true }) }),
   checkStreak: () => request('/coins/check-streak', {method:'POST'}),
   submission: (key) => request(`/event-submissions/${key}`),
-  pending: () => request('/pending'),
+  pending: (signal) => request('/pending',{signal}),
   submitJob: (id, body) => request(`/events/${id}/analysis-jobs`, { method: 'POST', body: JSON.stringify(body) }),
-  getJob: (id) => request(`/analysis-jobs/${id}`),
+  getJob: (id,signal) => request(`/analysis-jobs/${id}`,{signal}),
   cancelJob: (id) => request(`/analysis-jobs/${id}/cancel`, { method: 'POST' }),
   getReview: (day, timezone) => request(`/daily-reviews/${day}`+(timezone?'?'+new URLSearchParams({timezone}):'')),
   listReviews: () => request('/daily-reviews'),
@@ -75,7 +78,7 @@ export const api = {
   createEvent: (payload) => request('/events', { method: 'POST', body: JSON.stringify({ client_request_id: crypto.randomUUID(), timezone:account.value?.timezone || 'Asia/Shanghai', ...payload }) }),
   listEvents: (pure) => request(pure !== undefined ? `/events?pure=${pure}` : '/events'),
   records: (params = {}) => request('/events?' + new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined && value !== ''))),
-  getEvent: (id) => request(`/events/${id}`),
+  getEvent: (id,signal) => request(`/events/${id}`,{signal}),
   updateEvent: (id, payload) => request(`/events/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   judgeEvent: async (eventId, clarification) => {
     if (account.value?.mode === 'cloud') {
@@ -107,7 +110,7 @@ export const api = {
   disableItem: (id) => request(`/items/${id}`, { method: 'DELETE' }),
 
   // 判定
-  listJudgments: () => request('/judgments'),
+  listJudgments: (signal) => request('/judgments',{signal}),
   getJudgment: (id) => request(`/judgments/${id}`),
   confirmJudgment: async (id, version) => { const judgment = version === undefined ? await request(`/judgments/${id}`) : {updated_at:version}; return request(`/judgments/${id}/confirm`, { method: 'POST', body: JSON.stringify({expected_version:judgment.updated_at,request_key:crypto.randomUUID()}) }) },
   supplementJudgment: (id, detail, version) => account.value?.mode === 'cloud'
@@ -146,7 +149,7 @@ export const api = {
   getLLMConfig: () => request('/llm-config'),
   putLLMConfig: (payload) =>
     request('/llm-config', { method: 'PUT', body: JSON.stringify(payload) }),
-  testLLMConfig: (group) => request('/llm-config/test', {method:'POST',body:JSON.stringify({group})}),
+  testLLMConfig: (group, expected_config_version) => request('/llm-config/test', {method:'POST',body:JSON.stringify({group,expected_config_version})}),
 
   // 数据导出（文件下载）
   exportData: async (format) => {

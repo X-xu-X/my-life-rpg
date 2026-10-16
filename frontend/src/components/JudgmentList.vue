@@ -354,11 +354,11 @@ onMounted(load)
 
             <!-- v1.7：跨来源合并明细（已与 N 条记录合并，可反驳撤销） -->
             <div v-if="j.merged_with && j.merged_with.length" class="muted" style="font-size: 13px; margin-bottom: 6px; color: #7c5cbf">
-              <span class="tag">已与 {{ j.merged_with.length }} 条记录合并</span>
+              <span class="tag">疑似关联 {{ j.merged_with.length }} 条记录 · 尚未确认</span>
               <div v-for="(m, i) in j.merged_with" :key="i" style="margin-top: 2px">
                 · {{ m.ref }}<template v-if="m.note">：{{ m.note }}</template>
               </div>
-              <div style="margin-top: 2px">如认为不该合并，可点「反驳」撤销。</div>
+              <div style="margin-top: 2px">仅为模型候选，不代表原文或账目已合并；可通过复核说明不同事实。</div>
             </div>
 
             <!-- v1.10 M1：AI 发现型里程碑建议（必须用户点按钮才发放） -->

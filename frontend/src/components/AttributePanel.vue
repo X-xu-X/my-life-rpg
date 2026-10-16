@@ -132,7 +132,7 @@ function renderRadar() {
     tooltip: {},
     radar: {
       indicator: names.map((n, i) => ({ name: `${n} ${Math.round(Number(values[i]) || 0)}`, max: dynMax })),
-      radius: '58%', // 13 轴：收窄半径，给长轴名留空间
+      radius: '47%', // leave room for all thirteen labels on narrow containers
       axisName: { color: chartToken('--text'), fontSize: 13 },
       splitArea: { areaStyle: { color: ['#fafbfe', '#f0f2f8'] } },
     },
@@ -345,7 +345,7 @@ onBeforeUnmount(()=>{
           <h2>能力数值</h2><p class="muted">游戏分数用于观察积累，不是精确的能力测量。每项说明可展开查看。</p>
           <p v-if="!visibleAttrs.length" class="muted">暂无可见属性数据，请查看角色档案与维度设置。</p>
           <div v-for="a in visibleAttrs" :key="a.name" class="attr-bar">
-            <div class="head"><span><b>{{ a.name }}</b> <span v-if="a.tier" class="tier-badge">{{ a.tier }}</span> <span v-if="a.visibility==='disabled'" class="tag">已关闭判定</span></span><span class="attr-value">{{ a.value }} / {{ a.max_value }}</span></div>
+            <div class="head"><span><b>{{ a.name }}</b> <span v-if="a.tier" class="tier-badge">{{ baseline.kind==='neutral'||!baseline.completed ? '未评估基线' : a.tier }}</span> <span v-if="a.visibility==='disabled'" class="tag">已关闭判定</span></span><span class="attr-value">{{ a.value }} / {{ a.max_value }}</span></div>
             <div class="track"><div class="fill" :style="{width:(a.value/a.max_value)*100+'%'}"></div></div>
             <details v-if="a.description"><summary>说明</summary><p class="muted">{{ a.description }}</p></details>
             <div v-if="subHierarchy[a.name]" class="sub-list"><div v-for="child in subHierarchy[a.name]" :key="child.name" class="sub-row"><span>{{ child.name }}</span><span class="attr-value">{{ child.value }} / {{ child.max_value }}</span></div></div>

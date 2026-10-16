@@ -4,6 +4,8 @@ import { api } from '../api'
 import { toast } from '../composables/useToast'
 import { useRedemption } from '../composables/useRedemption'
 import { useExemptionPurchase } from '../composables/useExemptionPurchase'
+import ConfirmDialog from './ui/ConfirmDialog.vue'
+const redeemChoice=ref(null)
 const redemption = useRedemption()
 const exemptionPurchase = useExemptionPurchase()
 
@@ -404,7 +406,7 @@ async function reprice(it) {
   if (res) toast.success(`已重新定价：${it.coin_price} → ${res.coin_price} 币`)
 }
 
-async function redeem(it) {
+async function redeem(it,confirmed=false,source=null) {
   if (redemption.busy.value || anyBusy.value) return
   const recovering = redemption.pending.value?.state === 'unknown'
   if (!recovering && coins.value < it.coin_price) {
@@ -412,9 +414,10 @@ async function redeem(it) {
     return
   }
   const rest = coins.value - it.coin_price
-  if (!recovering && !confirm(`兑换「${it.name}」？\n将消耗 ${it.coin_price} 币，余额将剩 ${rest} 币。`)) return
+  if (!recovering && !confirmed){source?.currentTarget?.focus();redeemChoice.value=it;return}
   const res = await runAction(`redeem-${it.id}`, () => redemption.send(it))
   if (res) {
+    redeemChoice.value=null
     toast.success('兑换已成功，奖励券已保存。')
     segment.value = 'shop'
     // A failed read cannot turn a committed purchase back into an unknown operation.
@@ -813,7 +816,7 @@ onMounted(loadAll)
             <button
               class="btn small primary"
               :disabled="anyBusy || redemption.busy.value || redemption.pending.value?.state === 'unknown' || !!redemption.warning.value || !it.enabled || coins < it.coin_price"
-              @click="redeem(it)"
+              @click="redeem(it,false,$event)"
             >
               <template v-if="isBusy(`redeem-${it.id}`)">兑换中…</template>
               <template v-else>{{ coins < it.coin_price ? '金币不足' : '兑换' }}</template>
@@ -938,5 +941,6 @@ onMounted(loadAll)
         </div>
       </div>
     </template>
+    <ConfirmDialog :open="!!redeemChoice" title="确认兑换奖励" :busy="redemption.busy.value || anyBusy" @cancel="redeemChoice=null" @confirm="redeem(redeemChoice,true)"><template v-if="redeemChoice"><p>{{ redeemChoice.name }}</p><p>花费 {{ redeemChoice.coin_price }} 币 · 兑换后余额 {{ coins-redeemChoice.coin_price }} 币</p><p class="muted">兑换成功会生成奖励券。之后标记兑现不会再次扣币。</p><p v-if="error" class="error" role="alert">{{ error }}</p></template></ConfirmDialog>
   </div>
 </template>

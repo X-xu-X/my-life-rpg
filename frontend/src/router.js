@@ -1,4 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
+import { rememberReturn } from './navigation'
 const HomeView = () => import('./components/HomeView.vue')
 const RecordList = () => import('./components/RecordList.vue')
 const RecordDetail = () => import('./components/RecordDetail.vue')
@@ -16,11 +17,12 @@ const ReviewView = () => import('./components/ReviewView.vue')
 export const router = createRouter({ history: createWebHashHistory(), routes: [
   { path: '/', component: HomeView, meta: { section: 'today' } },
   { path: '/journal', component: RecordList, meta: { section: 'journal' } },
+  { path: '/plans', component: () => import('./components/PlansView.vue'), meta: { section:'plans' } },
   { path: '/events/:id', component: RecordDetail, meta: { section: 'journal' } },
   { path: '/growth', component: AttributePanel, meta: { section: 'growth' } },
   { path: '/reports', component: () => import('./components/ReportHistory.vue'), meta: {section:'growth'} },
   { path: '/me', component: MyView, meta: { section: 'me' } },
-  { path: '/checkin', component: TodayCheckin, meta: { section: 'today' } },
+  { path: '/checkin', component: TodayCheckin, meta: { section: 'plans' } },
   { path: '/pending', component: PendingView, meta: { section: 'today' } },
   { path: '/judgments', component: JudgmentList, meta: { section: 'today' } },
   { path: '/review', component: ReviewView, meta: { section: 'today' } },
@@ -30,3 +32,4 @@ export const router = createRouter({ history: createWebHashHistory(), routes: [
   { path: '/settings', component: SettingsView, meta: { section: 'me' } },
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ] })
+router.afterEach((to,from)=>rememberReturn(router,to,from))

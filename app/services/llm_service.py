@@ -140,6 +140,7 @@ class LLMService:
         temperature: float | None = None,
         json_mode: bool = False,
         config: "LLMConfig | None" = None,
+        max_tokens: int | None = None,
     ) -> str:
         """发起一次对话补全，返回文本内容。
 
@@ -182,6 +183,9 @@ class LLMService:
             "messages": messages,
             "temperature": temp,
         }
+        if max_tokens is not None:
+            limit_key = 'max_completion_tokens' if config and config.base_url.rstrip('/') == 'https://api.openai.com/v1' else 'max_tokens'
+            kwargs[limit_key] = max_tokens
         # 开启 JSON 输出模式，保证结构化结果稳定
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
@@ -189,8 +193,8 @@ class LLMService:
         try:
             resp = client.chat.completions.create(**kwargs)
         except Exception as exc:
-            status = getattr(exc, "status_code", 0)
-            code = getattr(exc, 'safe_code', None) or {401: "MODEL_AUTH_FAILED", 402: "MODEL_BALANCE_INSUFFICIENT", 429: "MODEL_RATE_LIMITED"}.get(status, "MODEL_UNAVAILABLE")
+            from app.services.model_errors import category
+            code = category(exc)
             raise LLMError(code + "：分析失败，原文已保存，请检查模型配置后重试。") from None
         finally:
             if settings.cloud:

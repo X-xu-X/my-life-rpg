@@ -1,0 +1,208 @@
+{
+  "status": "PASS",
+  "checks": [
+    {
+      "name": "five navigation sections",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 360 /",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 360 /plans",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 360 /settings",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 360 /growth",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 360 /challenges",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 390 /",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 390 /plans",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 390 /settings",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 390 /growth",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 390 /challenges",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 768 /",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 768 /plans",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 768 /settings",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 768 /growth",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 768 /challenges",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 1440 /",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 1440 /plans",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 1440 /settings",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 1440 /growth",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 1440 /challenges",
+      "status": "PASS"
+    },
+    {
+      "name": "neutral values never labelled proficient",
+      "status": "PASS"
+    },
+    {
+      "name": "back preserves account and valid source",
+      "status": "PASS"
+    },
+    {
+      "name": "unsaved test disabled",
+      "status": "PASS"
+    },
+    {
+      "name": "save has no supplier request",
+      "status": "PASS"
+    },
+    {
+      "name": "tests saved version only",
+      "status": "PASS"
+    },
+    {
+      "name": "failure shown nearby",
+      "status": "PASS"
+    },
+    {
+      "name": "edited config not marked verified",
+      "status": "PASS"
+    },
+    {
+      "name": "tests saved version only",
+      "status": "PASS"
+    },
+    {
+      "name": "late test result invalid for edited input",
+      "status": "PASS"
+    },
+    {
+      "name": "date-only payload without invented timestamp",
+      "status": "PASS"
+    },
+    {
+      "name": "no-key recording stays independent",
+      "status": "PASS"
+    },
+    {
+      "name": "terminal job stops polling",
+      "status": "PASS"
+    },
+    {
+      "name": "later analysis overrides original never label",
+      "status": "PASS"
+    },
+    {
+      "name": "leaving stops old job polling",
+      "status": "PASS"
+    },
+    {
+      "name": "native modal receives focus",
+      "status": "PASS"
+    },
+    {
+      "name": "keyboard tab stays within modal",
+      "status": "PASS"
+    },
+    {
+      "name": "cancel has no financial effect",
+      "status": "PASS"
+    },
+    {
+      "name": "focus returns to trigger",
+      "status": "PASS"
+    },
+    {
+      "name": "double click produces one confirmed financial request",
+      "status": "PASS"
+    },
+    {
+      "name": "200 percent text remains within viewport",
+      "status": "PASS"
+    },
+    {
+      "name": "no unexpected API",
+      "status": "PASS"
+    },
+    {
+      "name": "no Vue runtime errors",
+      "status": "PASS"
+    }
+  ],
+  "errors": [],
+  "unknown": [],
+  "buildHashes": {
+    "frontend\\dist\\icon.svg": "768f167e44fbf477c23aef28d0b8aa93921635d0f24ad1effaace3caea53799d",
+    "frontend\\dist\\index.html": "039f99f6eac3ec6699d902af50d4eee522f710781e9480909cffada03f9f0e65",
+    "frontend\\dist\\manifest.webmanifest": "f7b1a710e36c41b68bdb3b05203cb0219d6697b555d9f796514b1dff22b7d0c6",
+    "frontend\\dist\\assets\\AnchorsView-DvKmF7G0.js": "7107e1f70a45d3863e70228e90c761fc1366cab836827929fb55384924668c5a",
+    "frontend\\dist\\assets\\AttributePanel-CtpCVHr_.js": "3649050c0106618fc7aac24301bb3bda4f40f1d0039eab7f473f020c9e6c9d9b",
+    "frontend\\dist\\assets\\ChallengeView-CONh_6fq.js": "d1791e8dea62702e201401f0c7bc246267d1c5b1e353fa39e2e2f628c35caf76",
+    "frontend\\dist\\assets\\GoalsView-CUee486i.js": "7c6fe25aa778fea19a741d6017025e04cb0427a7c8fb32ee49b3caadda559c8a",
+    "frontend\\dist\\assets\\HomeView-J1mJJ4cR.js": "4d443573c638b3955a487a05ebf67f8a03beccacca6038214853af787117bc56",
+    "frontend\\dist\\assets\\index-CR7cqiD2.js": "43926717a64420437a5e79dd10671173b45db12dd76f7cd8365eb0c936375212",
+    "frontend\\dist\\assets\\index-nPW1JUpz.css": "0f8cea40d2b0f86abfc494b3ba09722479edf33a3e97abf79b9ea50057331b33",
+    "frontend\\dist\\assets\\ItemManager-OcvSIEId.js": "e8fb610f5fe86ea688d2202d0a01b78d760510933e0e2052d4db83282a5e1c39",
+    "frontend\\dist\\assets\\JudgmentList-CkCwFx1N.js": "c23dfa2fbd19b3f70cfa146a4009bdef218d1e4646fba1ea07754e63c0645dc9",
+    "frontend\\dist\\assets\\MyView-DLFUJq2p.js": "66151fcb5d6d3f225861dcf14a13ed8ad3e284fb13444f50e0e5e193c7f724a8",
+    "frontend\\dist\\assets\\Onboarding-DiPtTi-m.js": "c0f3a2e933418c0545dadcf37aa56412cabe2aea1ac7f937b5898e14215df6d4",
+    "frontend\\dist\\assets\\PageHeader-MUO5Ee_d.js": "577773b92a581a721d9f00b60f4c21fb712fba023f7aed47df4aaa98011588c7",
+    "frontend\\dist\\assets\\PendingView--OUkGHI0.js": "c2ba14452dde8f51d29ecf0996b9b94eccb4a270a4d59bfc1fce2864ece737b2",
+    "frontend\\dist\\assets\\PlansView-DQcM2i_X.js": "63ee339fe68b0872cf720a12ae9c330271955be4be39c81928bce031ba73db39",
+    "frontend\\dist\\assets\\RecordDetail-CEFboWMU.js": "872a88ac3eaa1998e414243edbf578c2848e53d15081ad8a4bcf38ac72462471",
+    "frontend\\dist\\assets\\RecordList-z2g3v1q9.js": "d3dd9224b9cace48292fa764f707e2e3d299c26af2a239d7c83674f38a857592",
+    "frontend\\dist\\assets\\RecordPreview-AT_y5V3f.js": "347639b81c7e4b0e5fe9e5512704e5aeb2d7ae5815114fa6b8326a14698e7d87",
+    "frontend\\dist\\assets\\ReportHistory-Cn4vkn5x.js": "8640b11383c723362b4686f7964a5433ea4cceeeb94db3fe445fc51bad4c1784",
+    "frontend\\dist\\assets\\ReviewView-BuSRMcF3.js": "669a05264e07564ad171e6b254b283f68ca5840e569c04fc66d4267fbba87cfd",
+    "frontend\\dist\\assets\\SettingsView-KWhnzxH2.js": "27e92d1b7b08b05c1fe61228d464f176a531626a174b2246d321fa3b9e515540",
+    "frontend\\dist\\assets\\TodayCheckin-KIeLBHGE.js": "57a4eba2b53f366315631b3a01f2184122691b4dc56f21af26089c9722959d0e"
+  },
+  "limitations": [
+    "Desktop Edge emulated widths; synthetic APIs only"
+  ]
+}

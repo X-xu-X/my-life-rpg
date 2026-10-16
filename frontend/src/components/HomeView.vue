@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { api } from '../api'
-import { localDate, displayTime } from '../session'
+import { localDate, displayTime, displayEventTime } from '../session'
 import RecordComposer from './RecordComposer.vue'
 import PageHeader from './ui/PageHeader.vue'
 import RecordPreview from './ui/RecordPreview.vue'
@@ -25,5 +25,5 @@ onUnmounted(()=>{alive=false;generation++})
   <p v-if="loading" role="status">正在读取今日记录…</p>
   <div v-if="error" class="read-error" role="alert"><p>{{ error }}{{ loaded?' · 显示上次读取的数据，本次未刷新成功。':'' }} 仍可记录原文。</p><button class="btn" :disabled="loading" @click="load">重新读取</button></div>
   <p v-if="loaded && !rows.length && !loading && !error" class="empty-note">今天还没有记录，先留下一句话。</p>
-  <RecordPreview v-for="row in rows" :key="row.id" :title="row.title" :summary="row.content.slice(0,160)" :to="'/events/'+row.id"><time>{{ displayTime(row.occurred_at) }}</time><span>已保存{{ row.analysis_intent==='never'?' · 不分析':'' }}</span></RecordPreview>
+  <RecordPreview v-for="row in rows" :key="row.id" :title="row.title" :summary="row.content.slice(0,160)" :to="'/events/'+row.id"><time>{{ displayEventTime(row) }}</time><span>已保存{{ row.analysis_intent==='never'?' · 不分析':'' }}</span></RecordPreview>
 </div></template>

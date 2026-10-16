@@ -1,5 +1,6 @@
 """个人 BYOK 认证加密和固定供应商出口；不保存明文到普通设置表。"""
 import ipaddress
+import re
 import json
 import secrets
 import socket
@@ -52,8 +53,10 @@ def group_out(row):
 
 
 def read_config(db, user_id):
+    from app.services.model_validation import summary
     rows = {r.group: r for r in db.query(LLMCredential).filter_by(user_id=user_id).all()}
-    return {g: group_out(rows.get(g)) for g in ("primary", "aux")} | {
+    return {g: {**group_out(rows.get(g)), 'source': 'personal',
+                'validation': summary(db, user_id, g, rows[g].config_version if g in rows else 0)} for g in ("primary", "aux")} | {
         "providers": PROVIDERS, "env_fallback": {"ready": False, "model": "", "base_url": ""}}
 
 
@@ -72,7 +75,7 @@ def save_config(db, user_id, body):
     # A ciphertext has one provider identity. Never carry it across an endpoint change.
     if changed_provider and enabled and not fresh_key:
         raise HTTPException(422, "更换供应商并启用时，必须重新填写该供应商的 API Key。")
-    if body.model is not None and (len(body.model) > 100 or not body.model.strip()):
+    if body.model is not None and (not re.fullmatch(r'[^\s\x00-\x1f\x7f]{1,100}', body.model)):
         raise HTTPException(422, "请填写模型名称。")
     encrypted = None
     active = None

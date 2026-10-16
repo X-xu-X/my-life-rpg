@@ -6,11 +6,12 @@ import { account, setAccount, clearAccount, accountEpoch } from './session'
 import AuthView from './components/AuthView.vue'
 import ToastHost from './components/ToastHost.vue'
 import AppIcon from './components/ui/AppIcon.vue'
+import { sectionRoot, returnTarget, beginReturn } from './navigation'
 const loading = ref(true)
 const error = ref('')
 const route = useRoute()
 const router = useRouter()
-const tabs = [{ key:'today', path:'/', label:'今天', icon:'◷' }, { key:'journal', path:'/journal', label:'手账', icon:'▤' }, { key:'growth', path:'/growth', label:'成长', icon:'✧' }, { key:'me', path:'/me', label:'我的', icon:'○' }]
+const tabs = [{ key:'today', path:'/', label:'今天' }, { key:'journal', path:'/journal', label:'手账' }, { key:'plans', path:'/plans', label:'计划' }, { key:'growth', path:'/growth', label:'成长' }, { key:'me', path:'/me', label:'我的' }]
 async function initialize() {
   loading.value = true; error.value = ''
   try { setAccount(await api.me()) }
@@ -35,7 +36,7 @@ onUnmounted(() => window.removeEventListener('gol-auth-lost', lost))
       <header class="mobile-heading"><RouterLink to="/">游戏人生</RouterLink><span class="muted">一页一日</span></header>
       <p v-if="error" class="error" role="alert">{{ error }}</p>
       <nav v-if="route.meta.section === 'growth'" class="section-links" aria-label="成长功能"><RouterLink to="/growth">历史属性</RouterLink><RouterLink to="/challenges">挑战 · 商店 · 成就</RouterLink></nav>
-      <main id="main-content"><RouterView :key="account.id + ':' + route.fullPath" /></main>
+      <main id="main-content"><RouterLink v-if="route.path!==sectionRoot(route)" class="btn page-back" :to="returnTarget(router,route)" @click="beginReturn(returnTarget(router,route))">← 返回上一页</RouterLink><RouterView :key="account.id + ':' + route.fullPath" /></main>
     </div>
     <nav class="mobile-nav" aria-label="主要导航"><RouterLink v-for="tab in tabs" :key="tab.key" :to="tab.path" :class="{selected:route.meta.section === tab.key}" :aria-current="route.meta.section === tab.key ? 'page' : undefined"><AppIcon :name="tab.key" />{{ tab.label }}</RouterLink></nav>
   </div>

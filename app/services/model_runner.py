@@ -26,8 +26,8 @@ def main():
         return {'content':response.choices[0].message.content or ''}
     except Exception as exc:
         status = getattr(exc, 'status_code', 0)
-        return {'error':{401:'MODEL_AUTH_FAILED',402:'MODEL_BALANCE_INSUFFICIENT',
-            429:'MODEL_RATE_LIMITED'}.get(status,'MODEL_UNAVAILABLE'), 'status':status}
+        from app.services.model_errors import category
+        return {'error':category(exc), 'status':status}
     finally:
         if client: client.close()
 

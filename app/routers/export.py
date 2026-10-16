@@ -36,6 +36,8 @@ def _event(e: Event) -> dict:
         "params": e.params,
         "content": e.content,
         "occurred_at": _dt(e.occurred_at),
+        "occurred_on": e.occurred_on,
+        "time_precision": e.time_precision,
         "created_at": _dt(e.created_at),
     }
 

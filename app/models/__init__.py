@@ -197,6 +197,8 @@ class Event(Base):
     # 用户录入的事件永远不可能是挑战来源（EventCreate 不提供该字段）。
     origin: Mapped[str | None] = mapped_column(String(20), nullable=True)
     occurred_at: Mapped[datetime] = mapped_column(DateTime, default=_now)  # 事件发生时间
+    occurred_on: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    time_precision: Mapped[str | None] = mapped_column(String(10), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
 
@@ -220,6 +222,7 @@ class AIJudgment(Base):
     revision_notes: Mapped[list] = mapped_column(JSON, default=list)
     # 跨来源合并明细（v1.7）：[{ref, note}]，与当天/近期记录是同一件事时列出；无合并为 []
     merged_with: Mapped[list] = mapped_column(JSON, default=list)
+    model_provenance: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     # AI 发现型成就建议（v1.10 M1）：{name, reason, state}。
     # state ∈ pending/granted/dismissed；无建议为 {}。
     # **必须用户确认后才发放**（不自动发），所以需要落库以便刷新后仍可操作。

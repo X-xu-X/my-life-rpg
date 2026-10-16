@@ -27,7 +27,7 @@ from app.services import (achievement_service, backup_service, challenge_service
 from app.services.llm_service import LLMError, LLMService
 from app.services.user_service import get_or_create_default_user, ensure_dimensions
 
-CONFIG = SimpleNamespace(quality_note='', model='qa-model')
+CONFIG = SimpleNamespace(quality_note='', model='qa-model', base_url='https://api.deepseek.com', config_version=1, config_id=None)
 RESULT = {'realistic': True, 'affected_attributes': [{'name': '体能', 'delta': 2}],
           'confidence': 1.0, 'summary': '真实测试', 'outcome': 'done'}
 

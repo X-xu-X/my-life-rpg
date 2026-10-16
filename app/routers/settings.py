@@ -71,7 +71,12 @@ def _group_out(db: Session, user_id: int, setting_key: str) -> dict:
     row = db.query(Setting).filter(Setting.user_id == user_id, Setting.key == setting_key).first()
     value = row.value if row and isinstance(row.value, dict) else {}
     key = str(value.get("api_key", "") or "")
+    from app.services.model_validation import summary, snapshot
+    group = 'primary' if setting_key == SETTING_KEY_PRIMARY else 'aux'
+    meta = snapshot(db, user_id, group)
     return {
+        **meta, 'provider_id': meta['provider'], 'source': 'personal',
+        'validation': summary(db, user_id, group, meta['config_version']),
         "enabled": bool(value.get("enabled")),
         "api_key": mask_key(key),  # 掩码回显，绝不返回明文
         "base_url": str(value.get("base_url", "") or ""),
@@ -109,6 +114,11 @@ def put_llm_config(body: LLMConfigIn, db: Session = Depends(get_db)):
     if settings.cloud:
         from app.services.credentials import save_config
         return save_config(db, user.id, body)
+    import re
+    from app.services.transactions import lock_profile
+    lock_profile(db, user.id)
+    if body.model is not None and not re.fullmatch(r'[^\s\x00-\x1f\x7f]{1,100}', body.model):
+        raise HTTPException(422, '请填写准确模型 ID（不能含空格）。')
     setting_key = SETTING_KEY_PRIMARY if body.group == "primary" else SETTING_KEY_AUX
     row = db.query(Setting).filter(Setting.user_id == user.id, Setting.key == setting_key).first()
     old = dict(row.value) if row and isinstance(row.value, dict) else {}
@@ -125,6 +135,7 @@ def put_llm_config(body: LLMConfigIn, db: Session = Depends(get_db)):
         new["model"] = body.model.strip()
     if body.enabled is not None:
         new["enabled"] = body.enabled
+    new['config_version'] = int(old.get('config_version', 0)) + 1
 
     # 口径变化检测：仅 primary（判定模型），且旧值确实存在并被替换
     key_changed = (
@@ -155,18 +166,45 @@ def put_llm_config(body: LLMConfigIn, db: Session = Depends(get_db)):
 
 
 @router.post('/llm-config/test')
-def test_llm_config(body: LLMConfigIn, db: Session = Depends(get_db)):
+def test_llm_config(body: dict, db: Session = Depends(get_db)):
     from app.services import llm_config
     from app.services.llm_service import llm_service, LLMError
     user = get_or_create_default_user(db)
-    key = SETTING_KEY_PRIMARY if body.group == 'primary' else SETTING_KEY_AUX
+    from app.services.model_validation import snapshot, controlled_error
+    from app.services.transactions import lock_profile
+    from app.services.time_service import utc_now
+    group_name = body.get('group')
+    version = body.get('expected_config_version')
+    if set(body) != {'group', 'expected_config_version'} or group_name not in ('primary', 'aux') or type(version) is not int or version < 0:
+        raise HTTPException(422, '请刷新配置，并携带已保存组的 expected_config_version；不接受未保存配置。')
+    # Read version and decrypted configuration under the same short save lock.
+    lock_profile(db, user.id)
+    captured = snapshot(db, user.id, group_name)
+    if captured['config_version'] != version:
+        raise HTTPException(409, '配置已变化，请刷新后测试。')
+    key = SETTING_KEY_PRIMARY if group_name == 'primary' else SETTING_KEY_AUX
     group = llm_config.read_group(db, user.id, key)
     if not group:
         raise HTTPException(422, '请先保存并启用本组配置。')
     config = llm_config._from_group(group)
     db.commit()
+    result = {'status': 'passed', 'group': group_name, **captured,
+              'tested_at': utc_now().isoformat(), 'error_code': None,
+              'message': '聊天连通测试通过；不代表业务 JSON 分析质量或永久可用。', 'retryable': False}
     try:
-        llm_service.chat([{'role':'user','content':'Reply OK.'}], config=config)
-    except LLMError as exc:
-        raise HTTPException(503, str(exc)) from None
-    return {'status':'connected','group':body.group}
+        answer = llm_service.chat([{'role':'user','content':'Reply OK.'}], config=config, max_tokens=8)
+        if not answer.strip(): raise LLMError('MODEL_INVALID_RESPONSE')
+    except Exception as exc:
+        code, message, retryable = controlled_error(exc)
+        result.update(status='failed', error_code=code, message=message, retryable=retryable)
+    result['tested_at'] = utc_now().isoformat()
+    lock_profile(db, user.id)
+    if snapshot(db, user.id, group_name) != captured:
+        db.rollback()
+        raise HTTPException(409, '测试期间配置已变化，旧测试结果已失效。')
+    row = db.query(Setting).filter_by(user_id=user.id, key='llm_validation_' + group_name).first()
+    if row is None:
+        db.add(Setting(user_id=user.id, key='llm_validation_' + group_name, value=result))
+    else: row.value = result
+    db.commit()
+    return result

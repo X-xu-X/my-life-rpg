@@ -43,3 +43,7 @@ export function displayTime(value, dateOnly = false) {
   if (!dateOnly) Object.assign(options, { hour: '2-digit', minute: '2-digit' })
   return new Intl.DateTimeFormat('zh-CN', options).format(date)
 }
+
+export function displayEventTime(event){
+  return event.time_precision==='date'&&event.occurred_on ? event.occurred_on+' · 仅日期' : displayTime(event.occurred_at)
+}

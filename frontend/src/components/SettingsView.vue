@@ -4,6 +4,7 @@ import { api } from '../api'
 import { account } from '../session'
 import { toast } from '../composables/useToast'
 import ItemManager from './ItemManager.vue'
+import ModelSettings from './ModelSettings.vue'
 import PageHeader from './ui/PageHeader.vue'
 
 const directory=[['models','AI 模型'],['data','数据导出'],['items','打卡项目'],['dimensions','属性维度'],['modules','旧扩展开关'],['reports','成长报告']]
@@ -81,117 +82,6 @@ const changedAttrs = computed(() => attributes.value.filter((n) => stateOf(n) !=
 const saveHint = ref('')
 let hintTimer = null
 
-// ============ AI 模型配置（BYOK，v1.4） ============
-const GROUP_META = {
-  primary: {
-    label: '判定模型组',
-    desc: '日记/打卡判定、追问、要素提取、首次引导、长期记忆都走这一组',
-    baseUrlPh: 'https://api.deepseek.com',
-    modelPh: 'deepseek-chat',
-  },
-  aux: {
-    label: '辅助模型组',
-    desc: '周报/月报走这一组；判定组未配置时可使用本组，并标注「判定质量一般」。云端仅支持列出的供应商，使用你自己的密钥。',
-    baseUrlPh: 'https://api.siliconflow.cn',
-    modelPh: '例如免费档模型（OpenAI 兼容端点均可）',
-  },
-}
-
-const llmRaw = ref(null) // 服务端原始配置（掩码回显 + .env 状态）
-const llmForm = ref({
-  primary: { enabled: false, api_key: '', base_url: '', model: '' },
-  aux: { enabled: false, api_key: '', base_url: '', model: '' },
-})
-const llmBusy = ref(false)
-const llmHint = ref('')
-
-const envFallback = computed(() => llmRaw.value?.env_fallback || { ready: false, model: '' })
-const anyConfigured = computed(
-  () => llmRaw.value && (llmRaw.value.primary.configured || llmRaw.value.aux.configured)
-)
-
-async function loadLLMConfig() {
-  try {
-    const data = await api.getLLMConfig()
-    llmRaw.value = data
-    for (const g of ['primary', 'aux']) {
-      const src = data[g] || {}
-      llmForm.value[g] = {
-        provider_id: src.provider_id || 'deepseek',
-        enabled: !!src.enabled,
-        api_key: '', // 掩码安全：不回填明文，留空 = 不改
-        base_url: src.base_url || (account.value?.mode === 'cloud' ? 'https://api.deepseek.com' : ''),
-        model: src.model || '',
-      }
-    }
-  } catch (e) {
-    error.value = e.message
-    toast.error(e.message)
-  }
-}
-
-function keyPlaceholder(group) {
-  const src = llmRaw.value?.[group]
-    if (account.value?.mode === 'cloud' && src?.provider_id !== llmForm.value[group].provider_id) return '更换供应商后，请重新填写该供应商的 Key'
-  return src?.configured ? `已绑定（${src.api_key}），留空则不修改` : 'sk-…'
-}
-
-async function saveLLM(group) {
-  const f = llmForm.value[group]
-  const src = llmRaw.value?.[group] || {}
-  const providerChanged = account.value?.mode === 'cloud' && src.provider_id !== f.provider_id
-  if (f.enabled && !f.api_key.trim() && (!src.configured || providerChanged)) {
-    toast.error('请先填写 API Key')
-    return
-  }
-  if (!f.base_url.trim() || !f.model.trim()) {
-    toast.error('请填写 Base URL 和模型名')
-    return
-  }
-  // 口径变化确认（仅判定组）：模型端点/key 与旧值有差异时弹确认
-  if (group === 'primary' && src.configured) {
-    const changed =
-      (f.api_key.trim() && f.api_key.trim() !== '__KEEP__') ||
-      f.model.trim() !== (src.model || '') ||
-      f.base_url.trim().replace(/\/+$/, '') !== (src.base_url || '').replace(/\/+$/, '')
-    if (changed) {
-      const ok = window.confirm(
-        '更换判定模型后，后续加点口径可能与之前不同（历史数据全部保留；长期记忆会自动注入新模型衔接上下文）。确认更换？'
-      )
-      if (!ok) return
-    }
-  }
-  llmBusy.value = true
-  error.value = ''
-  try {
-    const payload = {
-      group,
-      ...(account.value?.mode === 'cloud' ? {provider_id:f.provider_id} : {}),
-      enabled: f.enabled,
-      base_url: f.base_url.trim(),
-      model: f.model.trim(),
-    }
-    if (f.api_key.trim()) payload.api_key = f.api_key.trim()
-    await api.putLLMConfig(payload)
-    llmHint.value = `已保存「${GROUP_META[group].label}」`
-    clearTimeout(hintTimer)
-    hintTimer = setTimeout(() => (llmHint.value = ''), 2500)
-    await loadLLMConfig()
-    toast.success(`已保存「${GROUP_META[group].label}」`)
-  } catch (e) {
-    error.value = e.message
-    toast.error(e.message)
-  } finally {
-    llmBusy.value = false
-  }
-}
-
-function changeProvider(group) {
-  const form = llmForm.value[group]
-  form.base_url = llmRaw.value.providers[form.provider_id]
-  form.api_key = ''
-}
-
 async function loadBackups() {
   try {
     backups.value = await api.listBackups()
@@ -199,21 +89,6 @@ async function loadBackups() {
     error.value = e.message
     toast.error(e.message)
   }
-}
-
-async function testLLM(group) {
-  if(llmBusy.value) return
-  llmBusy.value=true
-  try { await api.testLLMConfig(group); toast.success('连接成功；测试消耗一次调用额度，供应商可能计费。') }
-  catch(e) { error.value=e.message }
-  finally { llmBusy.value=false }
-}
-async function clearLLM(group) {
-  if(llmBusy.value || !confirm('清除这组密钥并停用？历史建议保留。')) return
-  llmBusy.value=true
-  try { await api.putLLMConfig({group,api_key:'',enabled:false}); await loadLLMConfig(); toast.success('密钥已清除。') }
-  catch(e) { error.value=e.message }
-  finally { llmBusy.value=false }
 }
 
 async function doBackup() {
@@ -280,61 +155,13 @@ async function exportData(format) {
 onMounted(() => {
   load()
   if (account.value?.mode !== 'cloud') loadBackups()
-  loadLLMConfig()
 })
 </script>
 
 <template><div class="settings-page">
   <PageHeader title="设置" description="模型与数据放在前面，其他设置按需展开。" />
   <nav class="settings-directory" aria-label="设置目录"><button v-for="[id,label] in directory" :key="id" type="button" class="btn" @click="locate(id)">{{ label }}</button></nav>
-    <section class="card settings-section" id="settings-models">
-      <h2 tabindex="-1">AI 模型（自带 Key，BYOK）</h2>
-      <p v-if="!anyConfigured && envFallback.ready" class="muted">
-        当前使用服务端默认模型（.env）：{{ envFallback.model }}。可在此绑定你自己的 Key（本地模式可用 OpenAI 兼容端点）。
-      </p>
-      <p v-else-if="!anyConfigured && !envFallback.ready" class="muted" style="color: var(--warn)">
-        尚未配置模型。仍可保存原文，选择分析时再绑定自己的模型。
-      </p>
-      <p class="muted" style="font-size: 13px">
-        判定走「判定模型组」，周报走「辅助模型组」；判定组未启用时自动降级用辅助组并标注「判定质量一般」。云端 Key 加密保存，个人导出不含密钥。分析会把相关原文发送至你选择的供应商，可能产生费用；运营者可接触服务器数据。
-      </p>
-
-      <details v-for="(meta, group) in GROUP_META" :key="group" :open="group==='primary'" class="model-group"><summary>{{ meta.label }} · {{ llmRaw?.[group]?.configured?'已绑定':'未绑定' }} · {{ llmForm[group].enabled?'已启用':'已停用' }}</summary>
-        <div class="action-group" style="align-items: center; justify-content: space-between">
-          <b>{{ meta.label }}</b>
-          <label style="display: flex; align-items: center; gap: 6px; font-size: 13px">
-            <input type="checkbox" v-model="llmForm[group].enabled" style="width: auto" /> 启用
-          </label>
-        </div>
-        <div class="muted" style="font-size: 13px">{{ meta.desc }}</div>
-        <div class="form-grid">
-          <div class="field">
-            <label v-if="account?.mode === 'cloud'">供应商<select v-model="llmForm[group].provider_id" @change="changeProvider(group)"><option value="deepseek">DeepSeek</option><option value="openai">OpenAI</option><option value="siliconflow">SiliconFlow</option></select></label>
-            <label :for="group+'-base-url'">Base URL</label>
-            <input :id="group+'-base-url'" :readonly="account?.mode === 'cloud'" v-model="llmForm[group].base_url" :placeholder="meta.baseUrlPh" />
-          </div>
-          <div class="field">
-            <label :for="group+'-model'">模型名</label>
-            <input :id="group+'-model'" v-model="llmForm[group].model" :placeholder="meta.modelPh" />
-          </div>
-        </div>
-        <div class="field">
-          <label :for="group+'-key'">API Key</label>
-            <p v-if="account?.mode === 'cloud'" class="muted small">密钥仅绑定当前供应商；更换供应商需重新输入，停用后切换会清除旧密钥。旧配置如曾切换供应商，请主动重新绑定。</p>
-          <input :id="group+'-key'" type="password" v-model="llmForm[group].api_key" :placeholder="keyPlaceholder(group)" autocomplete="new-password" />
-        </div>
-        <div class="action-group" style="margin-top: 6px">
-          <button class="btn small primary" :disabled="llmBusy" @click="saveLLM(group)">
-            <template v-if="llmBusy">保存中…</template>
-            <template v-else>保存{{ meta.label }}</template>
-          </button>
-          <button class="btn small" :disabled="llmBusy || !llmRaw?.[group]?.configured" @click="testLLM(group)">测试连接（可能计费）</button>
-          <button class="btn small danger" :disabled="llmBusy || !llmRaw?.[group]?.configured" @click="clearLLM(group)">清除密钥</button>
-        </div>
-      </details>
-
-      <p v-if="llmHint" class="muted" style="color: var(--success); font-size: 13px; margin-top: 6px">✓ {{ llmHint }}</p>
-    </section>
+    <ModelSettings />
     <section class="card settings-section" id="settings-data">
       <h2 tabindex="-1">数据导出（个人数据主权）</h2>
       <p class="muted">JSON 包含个人原文、基线、审计、回顾和经济流水，保留删除记录并排除密码、会话和模型密钥。</p>

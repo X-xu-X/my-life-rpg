@@ -442,7 +442,7 @@ class CloudTests(unittest.TestCase):
             keep=self.client.put('/api/llm-config',json={'group':'primary','api_key':'__KEEP__','model':'qa-new-model'})
             self.assertEqual(keep.status_code,200,keep.text)
             self.assertEqual(model.call_count,0)
-            response=self.client.post('/api/llm-config/test',json={'group':'primary'})
+            response=self.client.post('/api/llm-config/test',json={'group':'primary','expected_config_version':self.client.get('/api/llm-config').json()['primary']['config_version']})
             self.assertEqual(response.status_code,200,response.text)
             self.assertEqual(model.call_count,1)
         with self.Session() as db:

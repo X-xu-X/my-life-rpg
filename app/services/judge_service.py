@@ -11,6 +11,7 @@
 - 全程写 judgment_logs 审计
 """
 from app.services.time_service import clock_now
+from app.services.model_validation import provenance
 import json
 import math
 from datetime import datetime, timedelta
@@ -282,7 +283,11 @@ def _profile_context(db: Session, user_id: int) -> str:
 
 
 def _log(db: Session, judgment_id: int, user_id: int, action: str, detail: str = "", payload: dict | None = None) -> None:
-    """写入一条审计日志。"""
+    """写入一条审计日志，模型来源保存为当次不可变快照。"""
+    payload = dict(payload or {})
+    source = db.query(AIJudgment).filter_by(id=judgment_id, user_id=user_id).first()
+    if source and source.model_provenance:
+        payload['model_provenance'] = dict(source.model_provenance)
     db.add(
         JudgmentLog(
             judgment_id=judgment_id,
@@ -306,7 +311,7 @@ def _ensure_attribute(db: Session, user_id: int, name: str) -> Attribute:
 
 def _event_version(event):
     return (event.content_version, event.event_type, event.source, event.item_id, event.is_pure, event.origin,
-            event.title, event.category, event.content, event.occurred_at,
+            event.title, event.category, event.content, event.occurred_at, event.occurred_on, event.time_precision,
             json.dumps(event.params or {}, sort_keys=True, ensure_ascii=False))
 
 
@@ -591,6 +596,7 @@ def judge_event(db: Session, event: Event, clarification: str = "", *, before_wr
         current.confidence_reason = str(result.get("confidence_reason", ""))
         current.revision_notes = _parse_revision_notes(result.get("revision_notes"))  # v1.6：本次修订说明
         current.merged_with = merged_with  # v1.7
+        current.model_provenance = provenance(config)
         # 重判时只在本次真的给出新建议时覆盖，避免把上一轮还没处理的建议冲掉
         if suggestion:
             current.achievement_suggestion = suggestion
@@ -624,7 +630,7 @@ def judge_event(db: Session, event: Event, clarification: str = "", *, before_wr
             confidence=_parse_confidence(result.get("confidence")),
             confidence_reason=str(result.get("confidence_reason", "")),  # v1.4：置信度说明
             revision_notes=[],  # v1.6：首判无修订
-            merged_with=merged_with,  # v1.7：跨来源合并明细
+            merged_with=merged_with, model_provenance=provenance(config),  # v1.7：跨来源合并明细
             achievement_suggestion=suggestion,  # v1.10：AI 发现型成就建议（可为 {}）
             status="pending",
             final_changes=[],
@@ -847,7 +853,8 @@ def supplement(db: Session, judgment: AIJudgment, detail: str, *, before_write=N
     judgment.confidence = _parse_confidence(result.get("confidence"))
     judgment.confidence_reason = str(result.get("confidence_reason", ""))  # v1.4：补充重判后同步更新
     judgment.revision_notes = _parse_revision_notes(result.get("revision_notes"))  # v1.6：本次修订说明
-    judgment.merged_with = _parse_merged_with(result.get("merged_with"))  # v1.7：跨来源合并明细
+    judgment.merged_with = _parse_merged_with(result.get("merged_with"))  # v1.7
+    judgment.model_provenance = provenance(config)
     judgment.status = "adjusted"
     _log(
         db, judgment.id, user.id, "rejudge",
@@ -932,6 +939,7 @@ def dispute(db: Session, judgment: AIJudgment, detail: str, *, before_write=None
             judgment.status = "adjusted"
         else:
             conclusion = "maintain"  # 无有效调整，保守维持原判
+    judgment.model_provenance = provenance(config)
     if conclusion == "maintain":
         # v1.6：维持原判时也用修订说明承载"维持原判的理由"
         judgment.revision_notes = notes or ([f"维持原判：{explanation}"] if explanation else [])

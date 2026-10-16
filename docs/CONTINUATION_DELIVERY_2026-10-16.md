@@ -98,7 +98,7 @@ D01～D11 继续是产品/运营选择：本批实现可配置策略与独立事
 - `npm.cmd --prefix frontend run build`：PASS；ECharts 大块约 545 KB 的既有警告仍在。
 - `node tests/frontend_next.mjs`：PASS，保留账号切换/迟到响应、命名草稿、双击/未知结果恢复与补充队列版本检查。
 - `node tests/browser_continuation.mjs`：**30 PASS**，真实编译 Vue、API mock，日记完整问答/返回恢复、计划未完成锁定、导出下载、邮箱不可发送、管理五区/返回、AI 关闭、候选保存及未配置奖励禁用、候选规则保存、390/1440 布局与长身份。
-- `P1_EVIDENCE_DIR=docs/review/continuation_2026-10-16/p1-regression node tests/browser_trial_p1.mjs`：**43 PASS**，保留旧 P1 历史报告；最终构建的四档宽度、模型版本反馈、日期精度、任务同步、弹窗/焦点/双击及200%文字回归。
+- `P1_EVIDENCE_DIR=docs/review/continuation_2026-10-16/p1-regression node tests/browser_trial_p1.mjs`：**44 PASS**，含手机雷达图已展开且可见的断言，保留旧 P1 历史报告；最终构建的四档宽度、模型版本反馈、日期精度、任务同步、弹窗/焦点/双击及200%文字回归。
 - `git diff --check`：PASS。源码/日志均未包含真实数据、密钥或邮件验证码。
 
 结果：[后端 JSON](review/continuation_2026-10-16/test-results.json)、[详细日志](review/continuation_2026-10-16/test-log.txt)、[续作浏览器及构建哈希](review/continuation_2026-10-16/browser-results.json)、[P1 浏览器及构建哈希](review/continuation_2026-10-16/p1-regression/browser-results.json)。桌面/手机截图：[晚间日记](review/continuation_2026-10-16/diary-390.png)、[桌面日记](review/continuation_2026-10-16/diary-1440.png)、[计划](review/continuation_2026-10-16/plans-390.png)、[管理账号](review/continuation_2026-10-16/admin-390.png)、[核实候选](review/continuation_2026-10-16/policy-candidate-390.png)。全部是虚构数据，手机尺寸模拟不等于实机。
@@ -132,3 +132,6 @@ D01～D11 继续是产品/运营选择：本批实现可配置策略与独立事
 3. 邮件使用 SMTP_SSL；部署叠加使用 MAIL_PASSWORD_FILE，兼容本地服务端 MAIL_PASSWORD。不要将真实秘密放入文档、浏览器或普通站点设置。HOSTED_SECRET_FILE 与个人加密凭据文件分别保管。新增可选设置见 `.env.production.example` 注释；不需启用这些服务即可使用记录/自配模型。
 4. 回退优先保留新表/列，关闭条件策略并前向修复；旧代码可忽略大部分新增列，但已使用新实体后不应直接降级删除。先获得一致备份并验证恢复；历史原文、问答、账本、结算身份和回执不能丢弃或重新发奖。各新 revision 的 downgrade 明确拒绝自动删历史。
 5. 本批只做本地中文提交；未 push、构建云包、部署、迁移真实数据、开通默认模型、发送真实通知或邮件。工作区原有用户文档不纳入提交。
+
+
+阶段代码提交：P2 `45d0d11`、P3 `aeb3601`、P4 `ba0d8dd`、P5 `38fb40b`、P6 `6bccedd`。截图复核另增断言并修正缩放时序，不覆盖原 P1 证据。

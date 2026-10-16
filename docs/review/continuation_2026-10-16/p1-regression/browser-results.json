@@ -90,6 +90,10 @@
       "status": "PASS"
     },
     {
+      "name": "mobile radar expanded and visible",
+      "status": "PASS"
+    },
+    {
       "name": "back preserves account and valid source",
       "status": "PASS"
     },

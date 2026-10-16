@@ -18,7 +18,7 @@ const account={id:99016,username:'trial_fixture',timezone:'Asia/Shanghai',mode:'
 const record={id:301,title:'部署项目的单件事件',content:'整理了部署流程并完成一次隔离验证。',source:'form',occurred_at:'2026-10-15T16:00:00Z',occurred_on:'2026-10-16',time_precision:'date',created_at:'2026-10-16T06:00:00Z',content_version:1,analysis_intent:'never',is_pure:false}
 const group=()=>({provider_id:'deepseek',enabled:true,configured:true,model:'fixture-chat',base_url:'https://api.deepseek.com',config_version:4,validation:{status:'untested'}})
 const models={primary:group(),aux:{...group(),enabled:false},providers:{deepseek:'https://api.deepseek.com',openai:'https://api.openai.com/v1',siliconflow:'https://api.siliconflow.cn/v1'},env_fallback:{ready:false}}
-let diary=null,review=null;
+let diary=null,review=null,schedule=null,occurrence=null;
 const names=['体能','力量','敏捷','智力','专注','意志','情绪','表达','社交','创造','审美','生活','财富']
 function send(method,params={}){return new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});ws.send(JSON.stringify({id,method,params}))})}
 async function evaluate(expression){const result=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(result.exceptionDetails)throw Error(JSON.stringify(result.exceptionDetails));return result.result.value}
@@ -33,7 +33,12 @@ async function respond(p){
  if(url.origin!==origin){await send('Fetch.failRequest',{requestId:p.requestId,errorReason:'BlockedByClient'});return}
  if(!url.pathname.startsWith('/api/')){await send('Fetch.continueRequest',{requestId:p.requestId});return}
  const route=url.pathname.slice(4),method=p.request.method;let status=200,body
- if(route.startsWith('/life-checklists/'))body={version:0,payload:{enabled:false,entries:{},event_ids:[]}}
+ if(route==='/plan-schedules'&&method==='POST'){const input=JSON.parse(p.request.postData);schedule={id:905,name:input.name,version:1,enabled:true,rule:{frequency:input.frequency,start:input.start},history:[]};body=schedule}
+ else if(route==='/plan-schedules')body=schedule?[schedule]:[]
+ else if(route==='/plan-occurrences')body=url.searchParams.has('day')?{items:schedule?[{schedule,occurrence}]:[]}:{history:occurrence?[occurrence]:[]}
+ else if(route.startsWith('/plan-schedules/905/occurrences/')){const input=JSON.parse(p.request.postData);occurrence={id:906,version:1,local_date:'2026-10-16',outcome:input.outcome,facts:{content:input.content,actual:input.actual,unit:input.unit},schedule_snapshot:{name:schedule.name},history:[]};body=occurrence}
+ else if(route==='/fact-relations')body=[]
+ else if(route.startsWith('/life-checklists/'))body={version:0,payload:{enabled:false,entries:{},event_ids:[]}}
  else if(route==='/diaries/2026-10-16'&&method==='PUT'){const input=JSON.parse(p.request.postData);diary={id:901,content:input.content,content_version:(diary?.content_version||0)+1,occurred_on:'2026-10-16',record_kind:'diary'};body={diary}}
  else if(route==='/diaries/2026-10-16')body={diary,revisions:diary?[{id:1,version:diary.content_version,content:diary.content}]:[],sessions:review?[review]:[]}
  else if(route==='/diaries/2026-10-16/review-sessions'){review={id:902,source_version:diary.content_version,version:1,state:'draft',turns:[],analyses:[],jobs:[],source_changed:false};body=review}
@@ -86,6 +91,13 @@ try{
  await go('/journal');await go('/diary?date=2026-10-16');await wait(`document.body.innerText.includes('已解决')`)
  check('review restored after navigation',await evaluate(`document.querySelector('textarea[aria-label="日记原文"]').value.includes('自己的原文')&&document.body.innerText.includes('部署中最大的困难是什么？')`))
  for(const width of [390,1440]){await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:false});check('diary layout '+width,await evaluate(`document.documentElement.scrollWidth<=innerWidth+1`));await shot('diary-'+width)}
+
+ await go('/plans');await evaluate(`document.querySelector('.plan-agenda details').open=true`);await fill('.plan-agenda form input[required]','每天阅读');await click('保存日程');await wait(`!!document.querySelector('.plan-card')`)
+ check('schedule created in real Vue',schedule.name==='每天阅读')
+ await evaluate(`(()=>{const e=document.querySelector('.plan-card select');e.value='missed';e.dispatchEvent(new Event('change',{bubbles:true}))})()`);await click('确认未完成并锁定');await wait(`document.querySelector('.plan-card').innerText.includes('已锁定')`)
+ check('missed locks inline with no event',occurrence.outcome==='missed'&&!occurrence.event_id)
+ check('missed has no success notice',await evaluate(`![...document.querySelectorAll('.plan-agenda [role=status]')].some(e=>e.textContent.includes('已保存'))`))
+ for(const width of [390,1440]){await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:false});check('plans layout '+width,await evaluate(`document.documentElement.scrollWidth<=innerWidth+1`));await shot('plans-'+width)}
  check('no unexpected API',unknown.length===0);check('no runtime errors',errors.length===0)
  console.log(JSON.stringify({status:'PASS',checks:checks.length}))
 }catch(error){errors.push(String(error));console.error(error);process.exitCode=1}

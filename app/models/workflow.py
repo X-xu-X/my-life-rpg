@@ -64,3 +64,68 @@ class LifeChecklist(Base):
     local_date: Mapped[str] = mapped_column(String(10))
     version: Mapped[int] = mapped_column(Integer, default=0)
     payload: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class PlanSchedule(Base):
+    __tablename__ = 'plan_schedules'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
+    name: Mapped[str] = mapped_column(String(120))
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    rule: Mapped[dict] = mapped_column(JSON)
+    enabled: Mapped[bool] = mapped_column(default=True)
+    history: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
+class PlanOccurrence(Base):
+    __tablename__ = 'plan_occurrences'
+    __table_args__ = (UniqueConstraint('schedule_id','local_date',name='uq_plan_occurrence'),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
+    schedule_id: Mapped[int] = mapped_column(ForeignKey('plan_schedules.id'))
+    local_date: Mapped[str] = mapped_column(String(10))
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    schedule_snapshot: Mapped[dict] = mapped_column(JSON)
+    outcome: Mapped[str] = mapped_column(String(20))
+    facts: Mapped[dict] = mapped_column(JSON)
+    event_id: Mapped[int | None] = mapped_column(ForeignKey('events.id'),nullable=True)
+    history: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
+class FactIdentity(Base):
+    __tablename__ = 'fact_identities'
+    __table_args__ = (UniqueConstraint('user_id','identity_key',name='uq_fact_identity'),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
+    identity_key: Mapped[str] = mapped_column(String(80))
+
+
+class EventFact(Base):
+    __tablename__ = 'event_facts'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
+    event_id: Mapped[int] = mapped_column(ForeignKey('events.id'),unique=True)
+    fact_id: Mapped[int] = mapped_column(ForeignKey('fact_identities.id'))
+
+
+class FactSettlement(Base):
+    __tablename__ = 'fact_settlements'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
+    fact_id: Mapped[int] = mapped_column(ForeignKey('fact_identities.id'),unique=True)
+    judgment_id: Mapped[int] = mapped_column(ForeignKey('ai_judgments.id'),unique=True)
+
+
+class FactRelation(Base):
+    __tablename__ = 'fact_relations'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
+    source_id: Mapped[int] = mapped_column(ForeignKey('events.id'))
+    target_id: Mapped[int] = mapped_column(ForeignKey('events.id'))
+    source_version: Mapped[int] = mapped_column(Integer)
+    target_version: Mapped[int] = mapped_column(Integer)
+    version: Mapped[int] = mapped_column(Integer,default=1)
+    state: Mapped[str] = mapped_column(String(20),default='candidate')
+    reason: Mapped[str] = mapped_column(Text)

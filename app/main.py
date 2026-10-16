@@ -10,7 +10,7 @@ from app.database import Base, engine, migrate_schema
 from app.config import settings
 from app.services.auth_service import current_user
 from app.services import owned_repository
-from app.routers import auth, baseline, analysis, review, diary
+from app.routers import auth, baseline, analysis, review, diary, plans
 from app import models  # noqa: F401  导入以注册所有 ORM 模型到 Base.metadata
 from app.routers import (
     achievements,
@@ -70,6 +70,7 @@ app.include_router(report.router, prefix="/api", tags=["report"], dependencies=[
 app.include_router(analysis.router, prefix="/api", dependencies=[Depends(current_user)])
 app.include_router(review.router, prefix="/api", dependencies=[Depends(current_user)])
 app.include_router(baseline.router, prefix="/api", dependencies=[Depends(current_user)])
+app.include_router(plans.router, prefix='/api', dependencies=[Depends(current_user)])
 app.include_router(diary.router, prefix='/api', dependencies=[Depends(current_user)])
 app.include_router(auth.router, prefix="/api", tags=["auth"])
 

@@ -1,4 +1,5 @@
 <script setup>
+import FactLinks from './FactLinks.vue'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api'
@@ -87,6 +88,7 @@ onUnmounted(()=>{alive=false;stop();document.removeEventListener('visibilitychan
       </template>
       <div v-if="judgment"><p v-if="judgment.model_provenance" class="muted">本次模型：{{ judgment.model_provenance.provider }} / {{ judgment.model_provenance.model }} · 配置 v{{ judgment.model_provenance.config_version }}</p><p>{{ judgment.summary }}</p><p class="muted">AI 自评置信度：{{ Math.round(judgment.confidence * 100) }}%；不代表经过校准的真实概率。</p><ul><li v-for="change in (frozen ? judgment.final_changes : judgment.suggested_changes)" :key="change.name">{{ change.name }} {{ change.delta >= 0 ? '+' : '' }}{{ change.delta }} · {{ change.reason }}</li></ul><details><summary>查看依据</summary><p v-for="(line,index) in judgment.analysis" :key="index">{{ line }}</p></details><button v-if="!frozen && event.origin !== 'challenge'" class="btn" :class="{primary:job?.state!=='needs_input'}" :disabled="busy || judgment.confidence < 0.8 || ['running','queued'].includes(job?.state)" @click="action(()=>api.confirmJudgment(judgment.id,judgment.updated_at),'已确认入账。')">{{ judgment.confidence < 0.8 ? '需补充信息后确认' : '确认入账' }}</button><RouterLink to="/judgments">查看完整判定与审计 →</RouterLink></div>
     </section>
+    <FactLinks :event="event"/>
     <section class="danger-zone"><h2>撤销记录</h2><p class="muted">原文与审计保留；属性按实际流水回滚，已发金币保留。</p><button class="btn danger" :disabled="busy" @click="remove">撤销这条记录</button></section>
   </article>
 </div></template>

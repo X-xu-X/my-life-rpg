@@ -93,5 +93,52 @@ class ContinuationTests(unittest.TestCase):
         self.assertEqual(self.client.get('/api/coins').json()['balance'],before)
         self.assertEqual(self.write('/life-checklists/2026-10-16',{'event_ids':[999999]},1,'PUT').status_code,404)
 
+    def schedule(self,**extra):
+        response=self.write('/plan-schedules',{'name':'运动','frequency':'daily','start':'2026-10-01',**extra})
+        self.assertEqual(response.status_code,200,response.text)
+        return response.json()
+
+    def test_schedule_dates_interval_and_missed_lock_without_event(self):
+        from app.routers.plans import due
+        from datetime import date
+        self.register();schedule=self.schedule(frequency='weekdays',weekdays=[0])
+        self.assertEqual(len(self.client.get('/api/plan-occurrences?day=2026-10-12').json()['items']),1)
+        self.assertEqual(self.client.get('/api/plan-occurrences?day=2026-10-13').json()['items'],[])
+        self.assertTrue(due({'start':'2026-12-30','frequency':'interval','interval':3},date(2027,1,2)))
+        body={'outcome':'missed','schedule_version':1};path=f"/plan-schedules/{schedule['id']}/occurrences/2026-10-12"
+        key=str(uuid4());first=self.write(path,body,0,'PUT',key)
+        self.assertEqual(first.status_code,200,first.text)
+        self.assertEqual(self.write(path,body,0,'PUT',key).json(),first.json())
+        self.assertEqual(self.write(path,{'outcome':'done','content':'偷偷改完成','schedule_version':1},1,'PUT').status_code,409)
+        self.assertEqual(self.client.get('/api/events').json(),[])
+        fixed=self.write(path,{'outcome':'partial','content':'实际运动十分钟','actual':10,'unit':'分钟','schedule_version':1,'correction':True,'reason':'纠正误选'},1,'PUT')
+        self.assertEqual(fixed.status_code,200,fixed.text)
+        self.assertEqual(fixed.json()['facts']['actual'],10)
+        self.assertEqual(len(fixed.json()['history']),2)
+        self.assertEqual(len(self.client.get('/api/events').json()),1)
+
+    def test_fact_relation_guards_second_booking_and_atomic_rollback(self):
+        from app.models import AIJudgment,UserProfile
+        from app.models.workflow import FactSettlement
+        from app.services import judge_service
+        self.register();self.client.post('/api/onboarding/neutral',json={'acknowledge':True})
+        ids=[]
+        for content in ('晨跑','同一次晨跑补充'):
+            response=self.client.post('/api/events',json={'content':content,'record_kind':'event','client_request_id':str(uuid4())})
+            self.assertEqual(response.status_code,200,response.text);ids.append(response.json()['id'])
+        proposal=self.write('/fact-relations',{'source_id':ids[1],'target_id':ids[0],'source_version':1,'target_version':1,'reason':'用户确认同一晨跑'})
+        self.assertEqual(proposal.status_code,200,proposal.text)
+        response=self.write('/fact-relations/'+str(proposal.json()['id'])+'/decision',{'accept':True},1)
+        self.assertEqual(response.status_code,200,response.text)
+        with self.Session() as db:
+            user_id=db.query(Event).first().user_id;db.info['user_id']=user_id
+            first=AIJudgment(user_id=user_id,event_id=ids[0],status='pending',confidence=1,suggested_changes=[],analysis=[])
+            second=AIJudgment(user_id=user_id,event_id=ids[1],status='pending',confidence=1,suggested_changes=[],analysis=[])
+            db.add_all([first,second]);db.commit()
+            judge_service.confirm(db,first)
+            with self.assertRaisesRegex(ValueError,'同一事实'):judge_service.confirm(db,second)
+            self.assertEqual(db.query(FactSettlement).count(),1)
+            self.assertEqual(db.get(AIJudgment,second.id).status,'pending')
+
 
 if __name__=='__main__':unittest.main()

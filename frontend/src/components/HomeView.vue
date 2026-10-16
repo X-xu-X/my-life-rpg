@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { api } from '../api'
 import { localDate, displayTime, displayEventTime } from '../session'
+import PlanAgenda from './PlanAgenda.vue'
 import LifeChecklist from './LifeChecklist.vue'
 import RecordComposer from './RecordComposer.vue'
 import PageHeader from './ui/PageHeader.vue'
@@ -20,7 +21,7 @@ onUnmounted(()=>{alive=false;generation++})
 </script>
 <template><div class="reading-page today-page">
   <PageHeader title="今天" :eyebrow="day" description="留下一件小事，也算今天的一页。" />
-  <RecordComposer @saved="load" /><LifeChecklist/>
+  <RecordComposer @saved="load" /><PlanAgenda today-only/><LifeChecklist/>
   <div class="today-links"><RouterLink to="/pending">待处理 <b v-if="loaded">{{ pending }}</b><span>{{ loaded?'去看看 →':loading?'读取中…':'打开查看 →' }}</span></RouterLink><RouterLink to="/diary">晚间日记<span>写原文与回顾 →</span></RouterLink></div>
   <div class="section-heading"><h2>今日片段</h2><div class="action-group"><button class="btn" :disabled="loading" @click="load">重新读取</button><RouterLink to="/checkin">项目与目标</RouterLink></div></div>
   <p v-if="loading" role="status">正在读取今日记录…</p>

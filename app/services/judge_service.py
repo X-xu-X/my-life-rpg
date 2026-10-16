@@ -740,6 +740,8 @@ def confirm(db: Session, judgment: AIJudgment, *, commit: bool = True) -> AIJudg
     event = db.get(Event, judgment.event_id)
     if event is None or event.is_deleted:
         raise ValueError("事件不存在。")
+    from app.services.facts import claim
+    claim(db,event,judgment)
     raw_changes = judgment.suggested_changes
     normalized = _parse_changes(raw_changes, subdimension_service.child_name_set(db, user))
     changes, exemption_hit = _apply_exemption(db, user, event, normalized)

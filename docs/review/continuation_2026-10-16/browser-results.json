@@ -22,6 +22,26 @@
       "status": "PASS"
     },
     {
+      "name": "schedule created in real Vue",
+      "status": "PASS"
+    },
+    {
+      "name": "missed locks inline with no event",
+      "status": "PASS"
+    },
+    {
+      "name": "missed has no success notice",
+      "status": "PASS"
+    },
+    {
+      "name": "plans layout 390",
+      "status": "PASS"
+    },
+    {
+      "name": "plans layout 1440",
+      "status": "PASS"
+    },
+    {
       "name": "no unexpected API",
       "status": "PASS"
     },

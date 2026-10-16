@@ -3,7 +3,13 @@ from fastapi import HTTPException
 from pydantic import ConfigDict
 from app.services.receipts import MutationIn, replay, record
 from app.services.transactions import lock_profile
-from app.services.owned_repository import get_owned
+def get_owned(db, model, resource_id):
+    from app.services.user_service import get_or_create_default_user
+    user=get_or_create_default_user(db)
+    row=db.get(model,resource_id)
+    if row is None or row.user_id!=user.id:raise HTTPException(404,'资源不存在。')
+    return row
+
 
 
 class WriteIn(MutationIn):

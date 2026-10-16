@@ -2,7 +2,7 @@ import { account, storageKey } from './session'
 const roots={today:'/',journal:'/journal',plans:'/plans',growth:'/growth',me:'/me',admin:'/admin'}
 let returning=null
 export function beginReturn(path){returning={path,owner:account.value?.id}}
-export function sectionRoot(route){return roots[route.meta.section] || '/'}
+export function sectionRoot(route){return route.meta.workspace==='admin'?'/admin':roots[route.meta.section] || '/'}
 function valid(router,path,workspace){
   if(typeof path!=='string'||!path.startsWith('/')||path.startsWith('//')||/[\\\r\n]/.test(path))return false
   const target=router.resolve(path)

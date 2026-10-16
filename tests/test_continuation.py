@@ -168,5 +168,57 @@ class ContinuationTests(unittest.TestCase):
         self.assertEqual(stats['metrics']['diary_content_days']['count'],1)
         self.assertEqual(stats['reward_policy'],'unconfigured')
 
+    def login_owner(self):
+        result=self.client.post('/api/auth/login',json={'username':'owner','password':'test-password-owner'})
+        self.assertEqual(result.status_code,200,result.text)
+        self.client.headers['X-CSRF-Token']=result.json()['csrf_token']
+
+    def test_admin_permissions_registration_switch_disable_and_audit(self):
+        friend=self.register();self.diary(content='朋友隐私原文')
+        self.assertEqual(self.client.get('/api/admin/users').status_code,403)
+        self.login_owner()
+        listed=self.client.get('/api/admin/users').json()
+        self.assertNotIn('朋友隐私',str(listed));self.assertNotIn('password_hash',str(listed))
+        self.assertEqual(self.client.get('/api/diaries/2026-10-16').json()['diary'],None)
+        policy={'site_name':'合成站点','description':'测试','registration':'open','email_required':False,'password_sessions':'all','reason':'隔离测试确认策略'}
+        response=self.write('/admin/site',policy,0,'PUT')
+        self.assertEqual(response.status_code,200,response.text)
+        self.assertEqual(self.client.get('/api/auth/options').json()['registration'],'open')
+        disabled=self.write('/admin/users/'+str(friend['id'])+'/status',{'status':'disabled','reason':'隔离测试停用'},1)
+        self.assertEqual(disabled.status_code,200,disabled.text)
+        self.assertEqual(self.write('/admin/users/'+str(self.owner_id)+'/status',{'status':'disabled','reason':'禁止唯一管理停用'},1).status_code,409)
+        self.assertGreaterEqual(len(self.client.get('/api/admin/audit').json()['items']),2)
+        result=self.client.post('/api/auth/register',json={'username':'direct_friend','password':'direct-test-password'})
+        self.assertEqual(result.status_code,201,result.text)
+        self.client.headers['X-CSRF-Token']=result.json()['csrf_token']
+        self.assertEqual(self.client.get('/api/admin/audit').status_code,403)
+
+    def test_email_unavailable_single_use_bind_recovery_and_password_revocation(self):
+        from app.services import mail_service
+        registered=self.register()
+        with patch.object(mail_service,'mailer',return_value=mail_service.DisabledMailer()):
+            response=self.client.post('/api/auth/email/bind-request',json={'email':'friend@example.test'})
+            self.assertEqual(response.status_code,503)
+        outbox=mail_service.TestMailer()
+        with patch.object(mail_service,'mailer',return_value=outbox):
+            self.assertEqual(self.client.post('/api/auth/email/bind-request',json={'email':'friend@example.test'}).status_code,200)
+            token=outbox.outbox[-1]['token']
+            self.assertEqual(self.client.post('/api/auth/email/verify',json={'token':token}).status_code,200)
+            self.assertEqual(self.client.post('/api/auth/email/verify',json={'token':token}).status_code,400)
+            me=self.client.get('/api/auth/me').json();self.assertTrue(me['email_verified'])
+            self.assertEqual(self.client.post('/api/auth/email/recover-request',json={'email':'friend@example.test'}).status_code,200)
+            reset=outbox.outbox[-1]['token']
+            result=self.client.post('/api/auth/email/reset-password',json={'token':reset,'new_password':'new-email-test-password'})
+            self.assertEqual(result.status_code,200,result.text)
+            self.assertEqual(self.client.get('/api/events').status_code,401)
+            self.assertEqual(self.client.post('/api/auth/email/reset-password',json={'token':reset,'new_password':'second-test-password'}).status_code,400)
+        login=self.client.post('/api/auth/login',json={'username':'friend','password':'new-email-test-password'})
+        self.client.headers['X-CSRF-Token']=login.json()['csrf_token']
+        me=self.client.get('/api/auth/me').json()
+        changed=self.client.post('/api/auth/password',json={'current_password':'new-email-test-password','new_password':'changed-test-password','expected_version':me['credentials_version']})
+        self.assertEqual(changed.status_code,200,changed.text)
+        self.assertTrue(changed.json()['reauthenticate']);self.assertEqual(self.client.get('/api/events').status_code,401)
+        self.assertEqual(self.client.post('/api/auth/recover',json={'recovery_code':registered['recovery_code'],'new_password':'old-code-test-password'}).status_code,400)
+
 
 if __name__=='__main__':unittest.main()

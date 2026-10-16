@@ -17,6 +17,7 @@ def scope_queries(execution):
     statement = execution.statement
     for mapper in Base.registry.mappers:
         model = mapper.class_
+        if model.__tablename__=='auth_sessions' and execution.session.info.get('manage_auth_sessions'):continue
         if hasattr(model, "user_id"):
             statement = statement.options(with_loader_criteria(model,
                 model.user_id == user_id, include_aliases=True))

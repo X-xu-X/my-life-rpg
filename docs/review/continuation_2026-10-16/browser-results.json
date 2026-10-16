@@ -50,6 +50,42 @@
       "status": "PASS"
     },
     {
+      "name": "mail unconfigured never shown as sent",
+      "status": "PASS"
+    },
+    {
+      "name": "admin workspace separate navigation",
+      "status": "PASS"
+    },
+    {
+      "name": "admin real page /admin/users",
+      "status": "PASS"
+    },
+    {
+      "name": "admin real page /admin/announcements",
+      "status": "PASS"
+    },
+    {
+      "name": "admin real page /admin/site",
+      "status": "PASS"
+    },
+    {
+      "name": "admin real page /admin/audit",
+      "status": "PASS"
+    },
+    {
+      "name": "admin security returns to legal admin source",
+      "status": "PASS"
+    },
+    {
+      "name": "admin layout 390",
+      "status": "PASS"
+    },
+    {
+      "name": "admin layout 1440",
+      "status": "PASS"
+    },
+    {
       "name": "no unexpected API",
       "status": "PASS"
     },

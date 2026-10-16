@@ -33,7 +33,13 @@ async function respond(p){
  if(url.origin!==origin){await send('Fetch.failRequest',{requestId:p.requestId,errorReason:'BlockedByClient'});return}
  if(!url.pathname.startsWith('/api/')){await send('Fetch.continueRequest',{requestId:p.requestId});return}
  const route=url.pathname.slice(4),method=p.request.method;let status=200,body
- if(route==='/record-metrics')body={policy_version:'candidate-date-v1',legacy_unclassified:0,metrics:{}}
+ if(route==='/auth/email/bind-request'){status=503;body={detail:'邮件服务未配置，未发送邮件。'}}
+ else if(route==='/admin/overview')body={users:2,active:2,published_announcements:0,site:{site_name:'合成站点',registration:'invite'}}
+ else if(route==='/admin/users')body={items:[{id:1,username:'fixture_member',status:'active',role:'user',version:1,email_verified:false}]}
+ else if(route==='/admin/site')body={version:0,site_name:'合成站点',description:'',registration:'invite',email_required:false,password_sessions:'all'}
+ else if(route==='/admin/announcements')body={items:[]}
+ else if(route==='/admin/audit')body={items:[]}
+ else if(route==='/record-metrics')body={policy_version:'candidate-date-v1',legacy_unclassified:0,metrics:{}}
  else if(route==='/export'){exportCalls++;body={synthetic:true};check('export selection sent',url.searchParams.get('format')==='html')}
  else if(route==='/plan-schedules'&&method==='POST'){const input=JSON.parse(p.request.postData);schedule={id:905,name:input.name,version:1,enabled:true,rule:{frequency:input.frequency,start:input.start},history:[]};body=schedule}
  else if(route==='/plan-schedules')body=schedule?[schedule]:[]
@@ -101,6 +107,12 @@ try{
  check('missed has no success notice',await evaluate(`![...document.querySelectorAll('.plan-agenda [role=status]')].some(e=>e.textContent.includes('已保存'))`))
  for(const width of [390,1440]){await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:false});check('plans layout '+width,await evaluate(`document.documentElement.scrollWidth<=innerWidth+1`));await shot('plans-'+width)}
  await go('/settings');await evaluate(`(()=>{const e=document.querySelector('#settings-data select');e.value='html';e.dispatchEvent(new Event('change',{bubbles:true}))})()`);await click('生成并下载');await wait(`document.body.innerText.includes('文件已生成并开始下载')`);check('real Vue export download',exportCalls===1)
+ await go('/security');await fill('input[type=email]','fixture@example.test');await click('发送绑定验证邮件');await wait(`document.body.innerText.includes('邮件服务未配置，未发送邮件。')`);check('mail unconfigured never shown as sent',await evaluate(`!document.body.innerText.includes('验证邮件已投递')`))
+ account.role='owner';await send('Page.reload');await wait(`location.hash==='#/admin'&&document.body.innerText.includes('管理概览')`)
+ check('admin workspace separate navigation',await evaluate(`document.querySelector('.mobile-nav').innerText.includes('概览')&&!document.querySelector('#new-record')`))
+ for(const route of ['/admin/users','/admin/announcements','/admin/site','/admin/audit']){await go(route);check('admin real page '+route,await evaluate(`!!document.querySelector('#main-content h1')&&!document.querySelector('#new-record')`))}
+ await go('/admin/security');await evaluate(`document.querySelector('.page-back').click()`);await pause(200);check('admin security returns to legal admin source',await evaluate(`location.hash==='#/admin/audit'`))
+ for(const width of [390,1440]){await go('/admin/users');await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:false});check('admin layout '+width,await evaluate(`document.documentElement.scrollWidth<=innerWidth+1`));await shot('admin-'+width)}
  check('no unexpected API' ,unknown.length===0);check('no runtime errors',errors.length===0)
  console.log(JSON.stringify({status:'PASS',checks:checks.length}))
 }catch(error){errors.push(String(error));console.error(error);process.exitCode=1}

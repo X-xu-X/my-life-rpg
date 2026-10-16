@@ -1,4 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
+import { account } from './session'
 import { rememberReturn } from './navigation'
 const HomeView = () => import('./components/HomeView.vue')
 const RecordList = () => import('./components/RecordList.vue')
@@ -21,6 +22,9 @@ export const router = createRouter({ history: createWebHashHistory(), routes: [
   { path: '/events/:id', component: RecordDetail, meta: { section: 'journal' } },
   { path: '/growth', component: AttributePanel, meta: { section: 'growth' } },
   { path: '/reports', component: () => import('./components/ReportHistory.vue'), meta: {section:'growth'} },
+  { path: '/admin/security',component:()=>import('./components/AccountSecurity.vue'),meta:{section:'admin',workspace:'admin'} },
+  { path: '/admin/:tab(overview|users|announcements|site|audit)?',component:()=>import('./components/AdminView.vue'),meta:{section:'admin',workspace:'admin'} },
+  { path: '/security',component:()=>import('./components/AccountSecurity.vue'),meta:{section:'me'} },
   { path: '/me', component: MyView, meta: { section: 'me' } },
   { path: '/checkin', component: TodayCheckin, meta: { section: 'plans' } },
   { path: '/pending', component: PendingView, meta: { section: 'today' } },
@@ -34,3 +38,5 @@ export const router = createRouter({ history: createWebHashHistory(), routes: [
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ] })
 router.afterEach((to,from)=>rememberReturn(router,to,from))
+
+router.beforeEach(to=>{if(!account.value)return;const admin=account.value.role==='owner';if(admin&&to.meta.workspace!=='admin')return '/admin';if(!admin&&to.meta.workspace==='admin')return '/me'})

@@ -33,3 +33,15 @@ API：plan-schedules GET/POST/PUT；plan-occurrences GET（day 查询到期，�
 record-metrics GET 提供事件/日记的内容覆盖日与实际保存日、最长连续覆盖、明确 candidate-date-v1 口径与旧未分类条数；不以条数冒充天数，不启用候选日期奖励。新日记不进入旧 source=journal 奖励计算，旧分类与旧账保留。
 
 验证：P4 新增 HTML/Markdown/CSV 攻击内容、原文/问题/未回答、v3/v4 与日期集合测试通过；续作 7 PASS。既有 cloud 回归 18 PASS、2 PG SKIP（首轮导出查询 Literal 整数兼容失败已修复，新用例复跑通过）；编译 PASS，浏览器累计 14 PASS。独立 PG/真实供应商/实机 NOT_RUN。
+
+## P5 账号、邮箱与独立管理工作区
+
+b008_accounts 增加用户可空唯一验证邮箱/验证时间、EmailToken（仅摘要/用途/版本/过期/单次消费）、SitePolicy、Announcement、AdminAudit。默认保持邀请兼容、邮箱非必填、改密撤销全部会话；管理端可明确选直接注册/邀请/关闭与邮箱门槛。没有邮件服务不能开启强制邮箱。旧账号不被突然锁定，原恢复码兼容；改密/找回撤销旧会话和旧恢复码，返回新恢复码。
+
+API：auth/options、auth/password；auth/email/{register-request,bind-request,verify,recover-request,reset-password}；admin/{overview,users,users/:id/status,announcements,site,audit}。沿用原 Session/Origin/CSRF；邮箱公开验证凭单次随机令牌，不返回原令牌。邮件默认显式 503，只有配置 SMTP_SSL（MAIL_HOST/PORT/FROM/USERNAME/PASSWORD）才尝试投递；测试适配器仅在测试注入。邮件服务真实投递 NOT_RUN。
+
+owner 映射为本轮管理能力，普通 user 服务端拒绝。管理五区和账号安全拥有独立 Vue 导航/返回，生产无本地改 role 按钮。管理只读账号元数据和操作记录，不提供他人日记/Key、改账/提权/删除接口；不能停用唯一管理人或当前自己。停用撤销认证会话，后台模型写回再次检查账号状态。受控 manage_auth_sessions 标记仅允许已鉴权管理动作撤销目标认证会话，其他业务查询仍绑定管理人本人，不解除日记归属过滤。
+
+管理动作有版本/UUID/审计/回执及同事务写入；PG 全局管理 advisory lock 串行唯一管理人和站点策略判断。认证改密/恢复沿用 User 行锁及安全版本/单次令牌语义，不把密码或邮箱令牌明文保存到浏览器恢复缓存/普通写回执。
+
+验证：续作与迁移 11 PASS（包括普通用户直调拒绝、管理不读朋友日记、注册开关、唯一管理人、邮箱不可发送、绑定/找回重放和改密撤销），编译 PASS；真实 Vue 浏览器累计 23 PASS，包括独立管理五区与账号安全返回、未配置邮件反馈和390/1440布局。PG 并发/真实 SMTP/手机实机 NOT_RUN。

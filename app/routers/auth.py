@@ -20,7 +20,8 @@ class LoginIn(BaseModel):
 
 
 class RegisterIn(LoginIn):
-    invite_token: str = Field(min_length=20, max_length=100)
+    invite_token: str | None = Field(None,min_length=20,max_length=100)
+    email_token: str | None = Field(None,min_length=30,max_length=100)
 
 
 class RecoverIn(BaseModel):
@@ -34,7 +35,7 @@ async def me(request: Request, db: Session = Depends(get_db)):
     profile = db.query(UserProfile).filter_by(user_id=user.id).first()
     session = getattr(request.state, "auth_session", None)
     return {"id": user.id, "username": user.username, "role": user.role,
-        "timezone": user.timezone, "mode": settings.run_mode,
+        "timezone": user.timezone, "mode": settings.run_mode, "email":user.email, "email_verified":bool(user.email_verified_at), "credentials_version":user.credentials_version,
         "onboarding_completed": bool(profile and profile.onboarding_completed),
         "csrf_token": session.csrf_secret if session else ""}
 
@@ -42,13 +43,20 @@ async def me(request: Request, db: Session = Depends(get_db)):
 @router.post("/register", status_code=201)
 def register(body: RegisterIn, request: Request, response: Response, db: Session = Depends(get_db)):
     auth.check_origin(request); auth.throttle(request, "register")
-    claimed = db.query(Invitation).filter(Invitation.token_hash == auth.digest(body.invite_token),
-        Invitation.consumed_at.is_(None), Invitation.expires_at > utc_now()).update(
-            {Invitation.consumed_at: utc_now()}, synchronize_session=False)
-    if claimed != 1:
-        db.rollback(); raise HTTPException(400, "邀请无效或注册信息不可用。")
+    from app.services.site_policy import read
+    from app.routers.account_security import valid_token
+    policy=read(db)
+    if policy['registration']=='closed':raise HTTPException(403,'注册已关闭。')
+    if policy['registration']=='invite' or body.invite_token:
+        claimed=db.query(Invitation).filter(Invitation.token_hash==auth.digest(body.invite_token or ''),Invitation.consumed_at.is_(None),Invitation.expires_at>utc_now()).update({Invitation.consumed_at:utc_now()},synchronize_session=False)
+        if claimed!=1:db.rollback();raise HTTPException(400,'邀请无效或注册信息不可用。')
+    email_token=valid_token(db,body.email_token,'register') if body.email_token else None
+    if policy['email_required'] and not (email_token and email_token.verified):raise HTTPException(422,'当前策略需要先验证邮箱。')
+    if email_token and not email_token.verified:raise HTTPException(422,'邮箱尚未验证。')
     try:
         user = auth.initialize_account(db, body.username, body.password)
+        if email_token:
+            user.email=email_token.email;user.email_verified_at=utc_now();email_token.consumed_at=utc_now()
         recovery = auth.new_recovery(db, user)
         session = auth.create_session(db, user, response)
         db.commit()
@@ -95,6 +103,9 @@ def recover(body: RecoverIn, request: Request, db: Session = Depends(get_db)):
     if claimed != 1:
         db.rollback(); raise HTTPException(400, "恢复信息无效。")
     user = db.query(User).filter_by(id=token.user_id).populate_existing().with_for_update().one()
+    if user.status!='active':raise HTTPException(400,'恢复信息无效。')
+    user.credentials_version+=1
+    db.query(RecoveryToken).filter_by(user_id=user.id,consumed_at=None).update({RecoveryToken.consumed_at:utc_now()})
     user.password_hash = auth.PASSWORDS.hash(body.new_password)
     db.query(AuthSession).filter_by(user_id=user.id).update({AuthSession.revoked: True})
     code = auth.new_recovery(db, user)

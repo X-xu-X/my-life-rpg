@@ -135,6 +135,9 @@ def assert_current(db, config):
     """模型结果写回时在用户锁内复核密钥版本。"""
     if not settings.cloud:
         return
+    from app.models import User
+    user=db.query(User).filter_by(id=config.user_id).populate_existing().first()
+    if user is None or user.status!='active':raise ValueError('账号已停用。')
     from app.models.access import LLMCredential
     row = db.query(LLMCredential).filter_by(id=config.config_id,user_id=config.user_id).populate_existing().first()
     if row is None or not row.enabled or row.config_version != config.config_version:

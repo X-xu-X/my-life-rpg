@@ -122,6 +122,8 @@ def process(factory, claimed):
         def validate(session):
             lock_profile(session, user_id)
             current_job = session.query(AnalysisJob).filter_by(id=job_id).populate_existing().with_for_update().one()
+            session.refresh(user)
+            if user.status!='active':raise ValueError('TASK_SUPERSEDED')
             session.refresh(event)
             if (current_job.state != "running" or current_job.lease_token != token or current_job.lease_until < utc_now()
                 or event.is_deleted or event.content_version != current_job.event_version

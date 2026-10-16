@@ -7,9 +7,10 @@ from app.services.time_service import clock_now
 import csv
 import io
 from datetime import datetime, date
+from typing import Literal
 from app import models
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -110,6 +111,8 @@ def _collect_legacy(db: Session, user_id: int) -> dict:
     }
 
 
+EXPORT_WORKFLOW_TABLES = ['diary_revisions','review_sessions','review_turns','review_analyses','life_checklists','plan_schedules','plan_occurrences','fact_identities','event_facts','fact_settlements','fact_relations']
+
 SAFE_EXPORT_SETTINGS = frozenset({"gamification_modules", "hidden_attributes", "disabled_attributes", "stagnation_checks", "unreal_count"})
 
 
@@ -149,33 +152,43 @@ def _collect(db: Session, user_id: int) -> dict:
             row.pop('lease_token', None)
             row.pop('config_version', None)
         tables[model.__tablename__] = rows
-    return {**data, "format_version": 3, "tables": tables}
+    from app.models import workflow
+    for name in EXPORT_WORKFLOW_TABLES:
+        model=next(mapper.class_ for mapper in models.Base.registry.mappers if mapper.local_table.name==name)
+        tables[name]=[_export_row(row) for row in db.query(model).filter_by(user_id=user_id).order_by(model.id).all()]
+    return {**data, "format_version":4,"restore_supported":False,"tables":tables}
 
 
-@router.get("/export")
-def export_data(db: Session = Depends(get_db), format: str = "json"):
-    """导出用户数据。format=json 返回完整数据；format=csv 返回事件 CSV。"""
-    user = get_or_create_default_user(db)
-    data = _collect(db, user.id)
+@router.get('/record-metrics')
+def record_metrics(db:Session=Depends(get_db)):
+    from app.services.record_metrics import metrics
+    return metrics(db,get_or_create_default_user(db))
 
-    if format == "csv":
-        # 仅导出事件列表为 CSV
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(["id", "event_type", "category", "source", "title", "params", "content", "occurred_at", "created_at"])
-        for e in data["events"]:
-            writer.writerow([
-                e["id"], e["event_type"], e["category"], e["source"], e["title"],
-                e["params"], e["content"], e["occurred_at"], e["created_at"],
-            ])
-        csv_text = "\ufeff" + output.getvalue()  # BOM，避免 Excel 中文乱码
-        return Response(
-            content=csv_text,
-            media_type="text/csv; charset=utf-8",
-            headers={"Content-Disposition": "attachment; filename=game_of_life_events.csv"},
-        )
 
-    return data
+@router.get('/export')
+def export_data(db:Session=Depends(get_db),format:Literal['json','csv','markdown','html']='json',
+    kind:Literal['all','event','diary','legacy']='all',start:date|None=None,end:date|None=None,
+    include_questions:bool=True,include_analysis:bool=True,include_deleted:bool=False,
+    include_history:bool=True,include_game:bool=False,schema_version:int=4):
+    user=get_or_create_default_user(db)
+    if schema_version not in (3,4):raise HTTPException(422,'仅支持 JSON v3/v4。')
+    if start and end and start>end:raise HTTPException(422,'日期范围无效。')
+    if format=='json':
+        if kind!='all' or start or end:raise HTTPException(422,'完整 JSON 包含本人全部日期；日期筛选用于可读格式。')
+        data=_collect(db,user.id)
+        if schema_version==3:
+            for name in EXPORT_WORKFLOW_TABLES:data['tables'].pop(name,None)
+            data['format_version']=3
+            data['compatibility_notice']='旧 v3 投影不含 P2 起新增实体，完整保留请使用 v4。'
+        return data
+    if format=='csv' and include_game:raise HTTPException(422,'CSV 不包含游戏表，请选择 JSON/Markdown/HTML。')
+    from app.services.readable_export import select,render
+    rows=select(db,user,kind,start,end,include_deleted,include_history,include_questions,include_analysis)
+    game=_collect(db,user.id)['tables'] if include_game else None
+    content=render(rows,format,game)
+    extension={'csv':'csv','markdown':'md','html':'html'}[format]
+    return Response(content=content,media_type={'csv':'text/csv','markdown':'text/markdown','html':'text/html'}[format],
+        headers={'Content-Disposition':f'attachment; filename=lifexp-records.{extension}','X-Content-Type-Options':'nosniff'})
 
 
 # ============ 备份 ============

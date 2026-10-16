@@ -88,7 +88,7 @@ def _metrics(db: Session, user: User) -> dict[str, int]:
     """一次性算出全部累计指标（避免逐个成就各查一遍）。"""
     journal_total = (
         db.query(Event)
-        .filter(Event.user_id == user.id, Event.is_deleted.is_(False), Event.source == "journal")
+        .filter(Event.user_id == user.id, Event.is_deleted.is_(False), Event.source == "journal", Event.record_kind.is_(None))
         .count()
     )
     events_total = db.query(Event).filter(Event.user_id == user.id, Event.is_deleted.is_(False)).count()

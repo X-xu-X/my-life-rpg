@@ -153,13 +153,13 @@ export const api = {
   testLLMConfig: (group, expected_config_version) => request('/llm-config/test', {method:'POST',body:JSON.stringify({group,expected_config_version})}),
 
   // 数据导出（文件下载）
-  exportData: async (format) => {
+  exportData: async (format,options={}) => {
     const epoch = accountEpoch
     const controller = new AbortController()
     activeRequests.add(controller)
     let blob
     try {
-      const resp = await fetch(`${BASE}/export?format=${format}`, {credentials:'same-origin',signal:controller.signal})
+      const resp = await fetch(`${BASE}/export?${new URLSearchParams({format,...Object.fromEntries(Object.entries(options).filter(([,v])=>v!==''&&v!==undefined))})}`, {credentials:'same-origin',signal:controller.signal})
       if (!resp.ok) throw new Error(`导出失败（${resp.status}）`)
       blob = await resp.blob()
       if(epoch !== accountEpoch) throw new Error('账号已切换，导出已取消。')
@@ -167,7 +167,7 @@ export const api = {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = format === 'csv' ? 'game_of_life_events.csv' : 'game_of_life_data.json'
+    a.download = 'lifexp-records.'+({markdown:'md',html:'html',csv:'csv',json:'json'}[format]||'json')
     a.click()
     URL.revokeObjectURL(url)
   },

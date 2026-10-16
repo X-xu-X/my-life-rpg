@@ -18,7 +18,7 @@ const account={id:99016,username:'trial_fixture',timezone:'Asia/Shanghai',mode:'
 const record={id:301,title:'部署项目的单件事件',content:'整理了部署流程并完成一次隔离验证。',source:'form',occurred_at:'2026-10-15T16:00:00Z',occurred_on:'2026-10-16',time_precision:'date',created_at:'2026-10-16T06:00:00Z',content_version:1,analysis_intent:'never',is_pure:false}
 const group=()=>({provider_id:'deepseek',enabled:true,configured:true,model:'fixture-chat',base_url:'https://api.deepseek.com',config_version:4,validation:{status:'untested'}})
 const models={primary:group(),aux:{...group(),enabled:false},providers:{deepseek:'https://api.deepseek.com',openai:'https://api.openai.com/v1',siliconflow:'https://api.siliconflow.cn/v1'},env_fallback:{ready:false}}
-let diary=null,review=null,schedule=null,occurrence=null;
+let diary=null,review=null,schedule=null,occurrence=null,exportCalls=0;
 const names=['体能','力量','敏捷','智力','专注','意志','情绪','表达','社交','创造','审美','生活','财富']
 function send(method,params={}){return new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});ws.send(JSON.stringify({id,method,params}))})}
 async function evaluate(expression){const result=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(result.exceptionDetails)throw Error(JSON.stringify(result.exceptionDetails));return result.result.value}
@@ -33,7 +33,9 @@ async function respond(p){
  if(url.origin!==origin){await send('Fetch.failRequest',{requestId:p.requestId,errorReason:'BlockedByClient'});return}
  if(!url.pathname.startsWith('/api/')){await send('Fetch.continueRequest',{requestId:p.requestId});return}
  const route=url.pathname.slice(4),method=p.request.method;let status=200,body
- if(route==='/plan-schedules'&&method==='POST'){const input=JSON.parse(p.request.postData);schedule={id:905,name:input.name,version:1,enabled:true,rule:{frequency:input.frequency,start:input.start},history:[]};body=schedule}
+ if(route==='/record-metrics')body={policy_version:'candidate-date-v1',legacy_unclassified:0,metrics:{}}
+ else if(route==='/export'){exportCalls++;body={synthetic:true};check('export selection sent',url.searchParams.get('format')==='html')}
+ else if(route==='/plan-schedules'&&method==='POST'){const input=JSON.parse(p.request.postData);schedule={id:905,name:input.name,version:1,enabled:true,rule:{frequency:input.frequency,start:input.start},history:[]};body=schedule}
  else if(route==='/plan-schedules')body=schedule?[schedule]:[]
  else if(route==='/plan-occurrences')body=url.searchParams.has('day')?{items:schedule?[{schedule,occurrence}]:[]}:{history:occurrence?[occurrence]:[]}
  else if(route.startsWith('/plan-schedules/905/occurrences/')){const input=JSON.parse(p.request.postData);occurrence={id:906,version:1,local_date:'2026-10-16',outcome:input.outcome,facts:{content:input.content,actual:input.actual,unit:input.unit},schedule_snapshot:{name:schedule.name},history:[]};body=occurrence}
@@ -98,7 +100,8 @@ try{
  check('missed locks inline with no event',occurrence.outcome==='missed'&&!occurrence.event_id)
  check('missed has no success notice',await evaluate(`![...document.querySelectorAll('.plan-agenda [role=status]')].some(e=>e.textContent.includes('已保存'))`))
  for(const width of [390,1440]){await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:false});check('plans layout '+width,await evaluate(`document.documentElement.scrollWidth<=innerWidth+1`));await shot('plans-'+width)}
- check('no unexpected API',unknown.length===0);check('no runtime errors',errors.length===0)
+ await go('/settings');await evaluate(`(()=>{const e=document.querySelector('#settings-data select');e.value='html';e.dispatchEvent(new Event('change',{bubbles:true}))})()`);await click('生成并下载');await wait(`document.body.innerText.includes('文件已生成并开始下载')`);check('real Vue export download',exportCalls===1)
+ check('no unexpected API' ,unknown.length===0);check('no runtime errors',errors.length===0)
  console.log(JSON.stringify({status:'PASS',checks:checks.length}))
 }catch(error){errors.push(String(error));console.error(error);process.exitCode=1}
 finally{

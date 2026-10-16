@@ -37,6 +37,10 @@ def preflight(source):
         db.row_factory=sqlite3.Row
         if db.execute('PRAGMA integrity_check').fetchone()[0]!='ok': issues.append({'reason':'INTEGRITY_CHECK_FAILED'})
         actual={r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        from app.routers.export import EXPORT_WORKFLOW_TABLES
+        for name in EXPORT_WORKFLOW_TABLES:
+            if name in actual and db.execute('SELECT COUNT(*) FROM "'+name+'"').fetchone()[0]:
+                issues.append({'table':name,'reason':'UNSUPPORTED_CONTINUATION_DATA','action':'新增问答/事实/规则需完整映射，禁止静默丢弃；本导入器仅支持旧版源库'})
         for table in TABLES:
             if table not in actual:
                 issues.append({'table':table,'reason':'UNSUPPORTED_MISSING_TABLE'});continue
@@ -91,6 +95,10 @@ def apply(data, report, url, source_user, username, approved_hash):
                      'checkin_items','growth_reports','event_derivations','request_receipts'):
             model=MAPPERS[name]
             if db.query(model).filter_by(user_id=target.id).first(): raise ValueError('目标账号已有业务数据，拒绝合并。')
+        from app.routers.export import EXPORT_WORKFLOW_TABLES
+        for name in EXPORT_WORKFLOW_TABLES:
+            model=MAPPERS[name]
+            if db.query(model).filter_by(user_id=target.id).first():raise ValueError('目标账号已有续作业务数据，拒绝合并。')
         profile=db.query(models.UserProfile).filter_by(user_id=target.id).one()
         if profile.onboarding_completed or profile.coins: raise ValueError('目标账号已经建档。')
         db.execute(delete(models.Attribute).where(models.Attribute.user_id==target.id))

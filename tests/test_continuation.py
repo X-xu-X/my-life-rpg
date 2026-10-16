@@ -140,5 +140,33 @@ class ContinuationTests(unittest.TestCase):
             self.assertEqual(db.query(FactSettlement).count(),1)
             self.assertEqual(db.get(AIJudgment,second.id).status,'pending')
 
+    def test_exports_safe_formats_exact_questions_and_named_date_metrics(self):
+        import csv,io
+        self.register();self.configure_model()
+        session=self.session()
+        state=self.run_review(session,{'questions':['确切问题 <script>alert(1)</script>'],'summary':'总结','analysis':['依据']})
+        malicious='=HYPERLINK("evil")\n<script>alert(1)</script>\n```text\n多行中文'
+        self.client.post('/api/events',json={'content':malicious,'title':'=危险公式','record_kind':'event','client_request_id':str(uuid4()),'occurred_on':'2026-10-16','time_precision':'date'})
+        self.client.post('/api/events',json={'content':'第二件事','record_kind':'event','client_request_id':str(uuid4()),'occurred_on':'2026-10-16','time_precision':'date'})
+        data=self.client.get('/api/export').json()
+        self.assertEqual(data['format_version'],4)
+        self.assertIn('review_turns',data['tables']);self.assertIn('fact_settlements',data['tables'])
+        self.assertFalse(data['restore_supported'])
+        legacy=self.client.get('/api/export?schema_version=3').json()
+        self.assertEqual(legacy['format_version'],3);self.assertNotIn('review_turns',legacy['tables'])
+        page=self.client.get('/api/export?format=html').text
+        self.assertIn('&lt;script&gt;',page);self.assertNotIn('<script>',page);self.assertIn('尚未回答',page)
+        markdown=self.client.get('/api/export?format=markdown').text
+        self.assertIn('````text',markdown);self.assertIn('确切问题',markdown)
+        plain=self.client.get('/api/export?format=html&include_questions=false').text
+        self.assertNotIn('确切问题',plain)
+        csv_rows=list(csv.reader(io.StringIO(self.client.get('/api/export?format=csv').text.lstrip('\ufeff'))))
+        formula=next(row for row in csv_rows if 'HYPERLINK' in str(row))
+        self.assertTrue(formula[4].startswith("'="));self.assertTrue(formula[5].startswith("'="))
+        stats=self.client.get('/api/record-metrics').json()
+        self.assertEqual(stats['metrics']['event_content_days']['count'],1)
+        self.assertEqual(stats['metrics']['diary_content_days']['count'],1)
+        self.assertEqual(stats['reward_policy'],'unconfigured')
+
 
 if __name__=='__main__':unittest.main()

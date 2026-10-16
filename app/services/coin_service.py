@@ -145,7 +145,7 @@ def _journal_days(db: Session, user: User) -> int:
     """
     rows = (
         db.query(Event.created_at)
-        .filter(Event.user_id == user.id, Event.is_deleted.is_(False), Event.source == "journal")
+        .filter(Event.user_id == user.id, Event.is_deleted.is_(False), Event.source == "journal", Event.record_kind.is_(None))
         .order_by(Event.created_at.desc())
         .all()
     )

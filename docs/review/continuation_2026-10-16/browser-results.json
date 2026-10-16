@@ -42,6 +42,14 @@
       "status": "PASS"
     },
     {
+      "name": "export selection sent",
+      "status": "PASS"
+    },
+    {
+      "name": "real Vue export download",
+      "status": "PASS"
+    },
+    {
       "name": "no unexpected API",
       "status": "PASS"
     },

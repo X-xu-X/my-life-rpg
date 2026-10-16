@@ -4,6 +4,7 @@ import { api } from '../api'
 import { account } from '../session'
 import { toast } from '../composables/useToast'
 import ItemManager from './ItemManager.vue'
+import ExportControls from './ExportControls.vue'
 import ModelSettings from './ModelSettings.vue'
 import PageHeader from './ui/PageHeader.vue'
 
@@ -162,17 +163,7 @@ onMounted(() => {
   <PageHeader title="设置" description="模型与数据放在前面，其他设置按需展开。" />
   <nav class="settings-directory" aria-label="设置目录"><button v-for="[id,label] in directory" :key="id" type="button" class="btn" @click="locate(id)">{{ label }}</button></nav>
     <ModelSettings />
-    <section class="card settings-section" id="settings-data">
-      <h2 tabindex="-1">数据导出（个人数据主权）</h2>
-      <p class="muted">JSON 包含个人原文、基线、审计、回顾和经济流水，保留删除记录并排除密码、会话和模型密钥。</p>
-      <div class="action-group">
-        <button class="btn primary" :disabled="exporting" @click="exportData('json')">
-          <template v-if="exporting">导出中…</template>
-          <template v-else>导出 JSON（全部数据）</template>
-        </button>
-        <button class="btn" :disabled="exporting" @click="exportData('csv')">导出事件 CSV</button>
-      </div>
-    </section>
+    <ExportControls/>
     <div class="card backup-note">
       <h3>数据备份</h3><p v-if="account?.mode === 'cloud'" class="muted">服务器备份由运营者通过运维命令完成，数据库备份与加密主密钥需要分别保管。</p>
       <p v-if="account?.mode !== 'cloud'" class="muted">每次启动自动备份（保留最近 30 份），也可以手动备份。</p>

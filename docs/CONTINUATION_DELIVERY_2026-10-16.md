@@ -23,3 +23,13 @@ API：plan-schedules GET/POST/PUT；plan-occurrences GET（day 查询到期，�
 原 judge_service.confirm 同事务认领事实唯一身份，再写属性/审计/原回执，不另建结算服务。用户确认同事实后第二次入账被拦截；旧已结算目标显式关联时建立结算保护，不重算旧账。新增成果差额结算仍关闭。
 
 验证：P1/P2/P3 与迁移 18 PASS；真实编译 Vue 累计 12 PASS（新增创建日程、未完成卡内锁定/无事件/无成功提示、390/1440 布局），构建 PASS。SQLite 不能证明 PG 双连接竞争，独立 PG NOT_RUN。
+
+## P4 可读导出与独立日期指标
+
+真实 Markdown、无脚本离线 HTML、扁平 CSV 和完整 JSON v4 已接入设置页，类型/日期、问题回答、分析、撤销、历史版本及游戏附录可选。HTML 转义并设置严格 CSP；Markdown 正文使用按内容动态增长的代码围栏；CSV 防公式注入。问答保留精确题目与回答/跳过/未回答状态，关闭问答时分析快照也不夹带问答。
+
+默认格式保持 JSON，完整新实体使用 format_version=4；schema_version=3 显式返回旧投影并说明不含新实体。完整 JSON 含全部本人日期/游戏数据；筛选范围用于可读格式。CSV 明示一记录一行、问答 JSON 单元格，不含全部游戏表/原稿历史。导出不宣称可直接恢复；旧 SQLite importer 对含续作实体的源库/目标账号安全拒绝，避免静默丢数据。未实现 JSON v4 恢复工具。
+
+record-metrics GET 提供事件/日记的内容覆盖日与实际保存日、最长连续覆盖、明确 candidate-date-v1 口径与旧未分类条数；不以条数冒充天数，不启用候选日期奖励。新日记不进入旧 source=journal 奖励计算，旧分类与旧账保留。
+
+验证：P4 新增 HTML/Markdown/CSV 攻击内容、原文/问题/未回答、v3/v4 与日期集合测试通过；续作 7 PASS。既有 cloud 回归 18 PASS、2 PG SKIP（首轮导出查询 Literal 整数兼容失败已修复，新用例复跑通过）；编译 PASS，浏览器累计 14 PASS。独立 PG/真实供应商/实机 NOT_RUN。

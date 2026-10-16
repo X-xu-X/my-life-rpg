@@ -1,0 +1,38 @@
+{
+  "status": "PASS",
+  "checks": [
+    {
+      "name": "diary original persisted",
+      "status": "PASS"
+    },
+    {
+      "name": "answer separate from original",
+      "status": "PASS"
+    },
+    {
+      "name": "review restored after navigation",
+      "status": "PASS"
+    },
+    {
+      "name": "diary layout 390",
+      "status": "PASS"
+    },
+    {
+      "name": "diary layout 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "no unexpected API",
+      "status": "PASS"
+    },
+    {
+      "name": "no runtime errors",
+      "status": "PASS"
+    }
+  ],
+  "errors": [],
+  "unknown": [],
+  "limitations": [
+    "Compiled Vue; synthetic APIs; no real PG/model/mail/phone"
+  ]
+}

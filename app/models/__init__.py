@@ -174,6 +174,8 @@ class Event(Base):
 
     __tablename__ = "events"
     __table_args__ = (UniqueConstraint("user_id", "client_request_id", name="uq_event_submission"),)
+    record_kind: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    diary_key: Mapped[str | None] = mapped_column(String(80), unique=True, nullable=True)
     content_version: Mapped[int] = mapped_column(Integer, default=1)
     client_request_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     analysis_intent: Mapped[str] = mapped_column(String(10), default="legacy")
@@ -508,3 +510,5 @@ class Exemption(Base):
     used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # 券真正发挥豁免作用的时刻
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
+
+from app.models.workflow import DiaryRevision, ReviewSession, ReviewTurn, ReviewAnalysis, LifeChecklist

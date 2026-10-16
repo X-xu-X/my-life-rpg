@@ -25,6 +25,6 @@ onMounted(()=>load())
   <p v-if="loading" role="status">正在读取记录…</p>
   <div v-if="error" class="read-error" role="alert"><p>{{ error }}{{ loaded?' · 显示上次读取的记录，本次未刷新成功。':'' }}</p><button class="btn" :disabled="loading" @click="load(failedMore)">重新读取</button></div>
   <p v-if="loaded && !rows.length && !loading && !error" class="empty-note">{{ query || filter?'没有找到匹配的记录。':'这里还没有记录。从今天的一句话开始。' }}<button v-if="query || filter" type="button" class="btn" @click="clearSearch">清除搜索与筛选</button></p>
-  <RecordPreview v-for="row in rows" :key="row.id" :to="'/events/'+row.id" :title="row.title" :summary="row.content"><time>{{ displayTime(row.occurred_at || row.created_at,true) }}</time><span>已保存{{ row.analysis_intent==='never'?' · 不分析':'' }}</span></RecordPreview>
+  <RecordPreview v-for="row in rows" :key="row.id" :to="row.record_kind==='diary'?'/diary?date='+row.occurred_on:'/events/'+row.id" :title="row.title" :summary="row.content"><time>{{ displayEventTime(row) }} · {{ row.record_kind==='diary'?'晚间日记':row.record_kind==='event'?'事件':'旧记录 · 类型未分类' }}</time><span>已保存{{ row.analysis_intent==='never'?' · 不分析':'' }}</span></RecordPreview>
   <button v-if="rows.length && !exhausted" class="btn" :disabled="loading" @click="load(true)">{{ loading?'读取中…':'继续回看' }}</button><p v-if="exhausted" class="muted">已经回看到这里。</p>
 </div></template>

@@ -91,7 +91,7 @@ class TrialP1Tests(unittest.TestCase):
         result=self.client.post('/api/events',json=body)
         self.assertEqual(result.status_code,200,result.text)
         original=EventCreate(**body).model_dump(mode='json')
-        original.pop('occurred_on');original.pop('time_precision')
+        original.pop('occurred_on');original.pop('time_precision');original.pop('record_kind')
         expected=hashlib.sha256(json.dumps(original,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
         with self.Session() as db:
             self.assertEqual(db.query(RequestReceipt).filter_by(operation='create_event',request_key=key).one().payload_hash,expected)

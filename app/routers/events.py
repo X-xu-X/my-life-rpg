@@ -49,7 +49,7 @@ def create_event(body: EventCreate, db: Session = Depends(get_db)):
     request_key = str(body.client_request_id) if body.client_request_id else None
     payload = body.model_dump(mode="json")
     # Keep pre-upgrade pending UUID fingerprints replayable when new fields are absent.
-    for name in ('occurred_on', 'time_precision'):
+    for name in ('occurred_on', 'time_precision', 'record_kind'):
         if name not in body.model_fields_set: payload.pop(name, None)
     payload_hash = hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
     if request_key:
@@ -106,7 +106,7 @@ def create_event(body: EventCreate, db: Session = Depends(get_db)):
             raise HTTPException(422, '发生日期与时间不一致。')
     event = Event(
         user_id=user.id,
-        event_type=event_type,
+        event_type=event_type, record_kind=body.record_kind,
         category=category,
         source=body.source,
         title=title,
@@ -193,6 +193,7 @@ def judge(event_id: int, body: JudgeIn, db: Session = Depends(get_db)):
     event = db.get(Event, event_id)
     if event is None or event.is_deleted:
         raise HTTPException(status_code=404, detail="事件不存在")
+    if event.record_kind == 'diary':raise HTTPException(409,'日记请使用回顾会话。')
     try:
         if settings.cloud:
             raise HTTPException(409, "请通过分析任务提交，旧同步入口已关闭。")
@@ -266,6 +267,7 @@ def update_event(event_id: int, body: EventUpdate, db: Session = Depends(get_db)
     db.add(EventDerivation(user_id=event.user_id,event_id=event.id,event_version=event.content_version,
         kind='original_version',payload=jsonable_encoder(EventOut.model_validate(event)),
         provenance={'source':'user_edit'}))
+    if event.record_kind == 'diary':raise HTTPException(409,'请通过晚间日记编辑原稿并保存版本。')
     data = body.model_dump(exclude_unset=True, exclude={"expected_version"})
     if "occurred_at" in data and data["occurred_at"] is not None:
         data["occurred_at"] = stored_time(data["occurred_at"], event.timezone_at_capture)

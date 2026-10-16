@@ -25,6 +25,7 @@ export const router = createRouter({ history: createWebHashHistory(), routes: [
   { path: '/checkin', component: TodayCheckin, meta: { section: 'plans' } },
   { path: '/pending', component: PendingView, meta: { section: 'today' } },
   { path: '/judgments', component: JudgmentList, meta: { section: 'today' } },
+  { path: '/diary', component: () => import('./components/DiaryView.vue'), meta:{section:'today'} },
   { path: '/review', component: ReviewView, meta: { section: 'today' } },
   { path: '/challenges', component: ChallengeView, meta: { section: 'growth' } },
   { path: '/onboarding', component: Onboarding, meta: { section: 'me' } },

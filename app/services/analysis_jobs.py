@@ -45,6 +45,7 @@ def submit(db, user, event, body):
         return existing
     if event.is_deleted or event.content_version != body.event_version:
         raise HTTPException(409, "记录版本已变化。")
+    if event.record_kind == 'diary':raise HTTPException(409,'日记请在晚间日记的回顾会话分析。')
     if event.is_pure or event.origin == "challenge":
         raise HTTPException(409, "纯享记录不分析；挑战请使用挑战页。")
     current = db.query(AIJudgment).filter_by(event_id=event.id).filter(
@@ -145,6 +146,10 @@ def process(factory, claimed):
         try:
             validate(db)
             db.commit()
+            if job.operation == 'review':
+                from app.services.diary_review import generate
+                generate(db,job,validate)
+                return
             if job.operation == "judge":
                 judgment = judge_service.judge_event(db, event, clarification=job.detail,
                     before_write=validate, commit_result=False)

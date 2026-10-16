@@ -19,6 +19,8 @@ class AnalysisJob(Base):
     event_version: Mapped[int] = mapped_column(Integer)
     judgment_id: Mapped[int | None] = mapped_column(ForeignKey("ai_judgments.id"))
     judgment_version: Mapped[str] = mapped_column(String(60), default="")
+    review_session_id: Mapped[int | None] = mapped_column(ForeignKey('review_sessions.id'), nullable=True)
+    session_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
     operation: Mapped[str] = mapped_column(String(20), default="judge")
     request_key: Mapped[str] = mapped_column(String(36))
     payload_hash: Mapped[str] = mapped_column(String(64))

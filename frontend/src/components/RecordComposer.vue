@@ -30,7 +30,7 @@ async function save() {
   busy.value = true; error.value = ''; savedId.value = null
   if (!submitted.value) {
     receiptKey.value = crypto.randomUUID()
-    submitted.value = { content:content.value, source:'form', intent:intent.value,
+    submitted.value = { content:content.value, source:'form',record_kind:'event', intent:intent.value,
       client_request_id:receiptKey.value, timezone:account.value?.timezone || 'Asia/Shanghai',
       ...(occurred.value ? {occurred_at:occurred.value, time_precision:'minute'} : {occurred_on:occurredOn.value,time_precision:'date'}) }
     cache()

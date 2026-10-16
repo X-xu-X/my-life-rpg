@@ -38,6 +38,7 @@ async function queueJudgmentRevision(id, operation, detail, version) {
 }
 
 export const api = {
+  flow: (path,body,method='POST',signal) => request(path,{method:body===undefined?'GET':method,signal,...(body===undefined?{}:{body:JSON.stringify(body)})}),
   me: () => request('/auth/me'),
   login: (body) => request('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
   register: (body) => request('/auth/register', { method: 'POST', body: JSON.stringify(body) }),

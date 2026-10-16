@@ -25,6 +25,7 @@ class EventCreate(BaseModel):
     item_id: int | None = Field(None, description="所属打卡项目（v1.7，可空=纯自由记一笔）")
     is_pure: bool = Field(False, description="纯享记录：只记录不加点、不走 AI 判定")
     occurred_at: datetime | None = None
+    record_kind: Literal['event'] | None = None
     occurred_on: date | None = None
     time_precision: Literal['date', 'minute'] | None = None
     client_request_id: UUID | None = None
@@ -56,6 +57,7 @@ class EventUpdate(BaseModel):
 
 
 class EventOut(BaseModel):
+    record_kind: str | None = None
     id: int
     event_type: str
     category: str

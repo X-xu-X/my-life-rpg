@@ -1,4 +1,5 @@
 <script setup>
+import GoalPlanProgress from './GoalPlanProgress.vue'
 import { ref, onMounted } from 'vue'
 import { api } from '../api'
 import { toast } from '../composables/useToast'
@@ -139,7 +140,7 @@ onMounted(load)
           <b>{{ g.description || g.metric }}</b>
           <span class="tag">{{ STATUS_LABEL[g.status] || g.status }}</span>
         </div>
-        <div class="muted">指标：{{ g.metric }}</div>
+        <div class="muted">指标：{{ g.metric }}</div><GoalPlanProgress :goal-id="g.id"/>
         <div v-if="g.deadline" class="muted">期限：{{ new Date(g.deadline).toLocaleDateString('zh-CN') }}</div>
         <div v-if="g.audit && g.audit.length" class="muted" style="font-size: 13px; margin-top: 4px">
           最近操作：{{ g.audit[g.audit.length - 1].detail }}

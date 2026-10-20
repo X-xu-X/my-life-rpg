@@ -58,7 +58,7 @@ def read_group(db: Session, user_id: int, setting_key: str) -> dict | None:
             group="primary" if setting_key == SETTING_KEY_PRIMARY else "aux").first()
         if not row or not row.enabled or not row.encrypted_key or not row.model:
             return None
-        return {"api_key": decrypt(row), "base_url": PROVIDERS[row.provider_id], "model": row.model,
+        return {"api_key": decrypt(row), "base_url": row.base_url if row.provider_id=='custom' else PROVIDERS[row.provider_id], "model": row.model,
                 "user_id": user_id, "config_id": row.id, "config_version": row.config_version}
     row = db.query(Setting).filter(Setting.user_id == user_id, Setting.key == setting_key).first()
     if row is None or not isinstance(row.value, dict):
@@ -143,6 +143,8 @@ def mask_key(api_key: str) -> str:
 
 def assert_current(db, config):
     """模型结果写回时在用户锁内复核密钥版本。"""
+    from app.services import ai_context
+    ai_context.assert_current(db)
     if not settings.cloud:
         if getattr(config,'user_id',None) is None:return
         from app.services import hosted_ai

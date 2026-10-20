@@ -11,9 +11,9 @@
  */
 import { ref, computed, watch, onMounted } from 'vue'
 import { api } from '../api'
-import { storageKey } from '../session'
+import { storageKey,localDate,account } from '../session'
 import { toast } from '../composables/useToast'
-import EventForm from './EventForm.vue'
+import RecordComposer from './RecordComposer.vue'
 import GoalsView from './GoalsView.vue'
 import ItemManager from './ItemManager.vue'
 
@@ -27,6 +27,7 @@ const error = ref('')
 const hint = ref('')
 let hintTimer = null
 const busy = ref(false)
+const permission = ref('private')
 const showNegative = ref(false)
 
 // 每行的一句话输入（key = item_id）
@@ -137,43 +138,39 @@ function setRow(id, patch) {
 async function submitOne(it) {
   const previous = rowState.value[it.id] || {}
   if (previous.busy) return false
-  const text = (drafts.value[it.id] || '').trim()
+  const text = previous.body?.content || (drafts.value[it.id] || '').trim()
   if (!text) {
     setRow(it.id, { err: '请先写一句话' })
     return false
   }
   setRow(it.id, { busy: true, err: '', ok: false })
   try {
-    let eventId = previous.savedText === text ? previous.eventId : null
+    let eventId = previous.eventId || null
     if (!eventId) {
-      const requestKey=previous.savedText===text && previous.requestKey ? previous.requestKey : crypto.randomUUID()
-      setRow(it.id,{requestKey,savedText:text})
+      const requestKey=previous.requestKey || crypto.randomUUID()
+      const body=previous.body || {client_request_id:requestKey,item_id:it.id,source:'form',content:text,params:{},is_pure:false,record_kind:'event',occurred_on:localDate(),time_precision:'date',timezone:account.value?.timezone||'Asia/Shanghai',intent:permission.value==='allowed'?'now':'never',ai_permission:permission.value}
+      setRow(it.id,{requestKey,savedText:text,body})
       let event
-      if(previous.savedText===text && previous.requestKey){
+      if(previous.requestKey){
         try{event=await api.submission(requestKey)}catch(e){if(e.status!==404)throw e}
       }
-      if(!event) event = await api.createEvent({
-      client_request_id:requestKey,
-      item_id: it.id,
-      source: 'form',
-      content: text,
-      params: {},
-      is_pure: false,
-    })
+      if(!event) event = await api.createEvent(body)
       eventId = event.id
       setRow(it.id, { eventId, savedText: text })
     }
-    const res = await api.judgeEvent(eventId)
-    const okMsg = res.status==='queued' ? '原文已保存，分析已排队（在待处理中查看）' : res.needs_clarify
-      ? '已记录，AI 有疑问（去判定中心补充）'
-      : '已记录并判定'
-    setRow(it.id, { busy: false, ok: true, err: '', eventId: null, savedText: null, requestKey:null })
-    drafts.value = { ...drafts.value, [it.id]: '' }
+    const saved=await api.getEvent(eventId)
+    if(saved.ai_permission==='allowed'){
+      const jobKey=previous.jobKey||crypto.randomUUID();setRow(it.id,{jobKey})
+      await api.submitJob(eventId,{request_key:jobKey,event_version:saved.content_version,operation:'facts'})
+    }
+    const okMsg=saved.ai_permission==='allowed'?'原文已保存，逐事实分析已排队':'原文已保存，仅保存不分析'
+    setRow(it.id, { busy: false, ok: true, err: '', eventId: null, savedText: null, requestKey:null,body:null,jobKey:null })
+    if((drafts.value[it.id]||'').trim()===text)drafts.value = { ...drafts.value, [it.id]: '' }
     await load()
     flash(`「${it.name}」${okMsg}`)
     return true
   } catch (e) {
-    setRow(it.id, { busy: false, err: `${e.message}；记录可能已保存，可重试判定`, ok: false })
+    setRow(it.id, { busy: false, err: `${e.message}；再次提交将恢复原请求，已保存的原文不会重复创建`, ok: false })
     toast.error(`「${it.name}」${e.message}`)
     return false
   }
@@ -207,9 +204,10 @@ onMounted(load)
   <div class="card">
     <h1>项目与目标</h1>
     <p class="muted">
-      每天从这里开始：过一遍今天该做的事，写一句话就各自独立判定；没做完的也可以在下面自由记一笔。
+      过一遍今天该做的事，原文先保存；主动选择分析后，再核对逐事实建议。
       未达标只做如实提示，<b>不会自动扣分</b>。
     </p>
+    <label>本批记录的保存方式<select v-model="permission"><option value="private">仅保存，不分析</option><option value="allowed">保存并允许分析</option></select></label>
 
     <!-- v1.10 P2-1：【规划内】目标任务 + 关联打卡项目子进度（只展示，不自动达成） -->
     <template v-if="activeGoals.length">
@@ -349,12 +347,7 @@ onMounted(load)
   </div>
 
   <!-- ============ v1.10 P2-1：自由记一笔（原「记录事件」页，组件原样复用） ============ -->
-  <EventForm
-    title="自由记一笔"
-    @judged="load"
-    @go-judgments="emit('go-judgments')"
-    @go-items="showPlanning = true"
-  />
+  <RecordComposer @saved="load" />
 
   <!-- ============ v1.10 P2-1：规划设置（折叠；目标 + 打卡项目管理） ============ -->
   <div class="card">

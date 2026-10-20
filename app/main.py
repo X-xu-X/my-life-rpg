@@ -10,7 +10,8 @@ from app.database import Base, engine, migrate_schema
 from app.config import settings
 from app.services.auth_service import current_user
 from app.services import owned_repository
-from app.routers import auth, baseline, analysis, review, diary, plans, admin, account_security, policies
+from app.routers import auth, baseline, analysis, review, diary, plans, admin, account_security, policies,record_permissions
+from app.routers import trial,fact_bundles,care,feedback,timers,reward_quotes,questionnaire,phase
 from app import models  # noqa: F401  导入以注册所有 ORM 模型到 Base.metadata
 from app.routers import (
     achievements,
@@ -68,6 +69,15 @@ app.include_router(report.router, prefix="/api", tags=["report"], dependencies=[
 
 
 app.include_router(analysis.router, prefix="/api", dependencies=[Depends(current_user)])
+app.include_router(record_permissions.router,prefix='/api',dependencies=[Depends(current_user)])
+app.include_router(trial.router,prefix='/api',dependencies=[Depends(current_user)])
+app.include_router(fact_bundles.router,prefix='/api',dependencies=[Depends(current_user)])
+app.include_router(care.router,prefix='/api',dependencies=[Depends(current_user)])
+app.include_router(feedback.router,prefix='/api',dependencies=[Depends(current_user)])
+app.include_router(timers.router,prefix='/api',dependencies=[Depends(current_user)])
+app.include_router(reward_quotes.router,prefix='/api',dependencies=[Depends(current_user)])
+app.include_router(questionnaire.router,prefix='/api',dependencies=[Depends(current_user)])
+app.include_router(phase.router,prefix='/api',dependencies=[Depends(current_user)])
 app.include_router(review.router, prefix="/api", dependencies=[Depends(current_user)])
 app.include_router(baseline.router, prefix="/api", dependencies=[Depends(current_user)])
 app.include_router(plans.router, prefix='/api', dependencies=[Depends(current_user)])

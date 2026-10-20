@@ -15,6 +15,7 @@ class DiaryRevision(Base):
     event_id: Mapped[int] = mapped_column(ForeignKey('events.id'))
     version: Mapped[int] = mapped_column(Integer)
     content: Mapped[str] = mapped_column(Text)
+    correction_reason: Mapped[str | None] = mapped_column(Text,nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
@@ -39,6 +40,9 @@ class ReviewTurn(Base):
     session_id: Mapped[int] = mapped_column(ForeignKey('review_sessions.id'))
     ordinal: Mapped[int] = mapped_column(Integer)
     question: Mapped[str] = mapped_column(Text)
+    ai_sources: Mapped[list | None] = mapped_column(JSON,nullable=True)
+    answer_sources: Mapped[list | None] = mapped_column(JSON,nullable=True)
+    background: Mapped[str | None] = mapped_column(String(64),nullable=True)
     answer: Mapped[str] = mapped_column(Text, default='')
     state: Mapped[str] = mapped_column(String(20), default='unanswered')
     version: Mapped[int] = mapped_column(Integer, default=1)
@@ -71,6 +75,7 @@ class PlanSchedule(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
     name: Mapped[str] = mapped_column(String(120))
+    goal_id: Mapped[int | None] = mapped_column(ForeignKey('goals.id'),nullable=True)
     version: Mapped[int] = mapped_column(Integer, default=1)
     rule: Mapped[dict] = mapped_column(JSON)
     enabled: Mapped[bool] = mapped_column(default=True)

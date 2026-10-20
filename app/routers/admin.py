@@ -1,6 +1,8 @@
 """Owner capability workspace. Only account/operator metadata; no diary/key access."""
 from typing import Literal
-from fastapi import APIRouter,Depends,HTTPException
+from fastapi import APIRouter,Depends,HTTPException,Query
+from datetime import timedelta
+from app.services.time_service import utc_now,local_day,date_range
 from pydantic import Field
 from sqlalchemy import text,func
 from sqlalchemy.orm import Session
@@ -50,15 +52,30 @@ def audit(db,owner,action,target,reason,version):
 
 
 @router.get('/overview')
-def overview(db:Session=Depends(get_db)):
+def overview(db:Session=Depends(get_db),owner=Depends(require_owner)):
+    now=utc_now();start,end=date_range(local_day(now,owner.timezone),owner.timezone)
+    groups={}
+    for role,label in [('user','ordinary'),('owner','administrators')]:
+        query=db.query(User).filter_by(role=role)
+        groups[label]={'total':query.count(),'active':query.filter_by(status='active').count(),
+            'disabled':query.filter_by(status='disabled').count(),
+            'created_today':query.filter(User.created_at>=start,User.created_at<end).count(),
+            'logged_in_7_days':query.filter(User.last_login_at>=now-timedelta(days=7)).count()}
     return {'users':db.query(User).count(),'active':db.query(User).filter_by(status='active').count(),
+        'groups':groups,'timezone':owner.timezone,'as_of':now.isoformat(),
         'published_announcements':db.query(Announcement).filter_by(published=True).count(),'site':read(db)}
 
 
 @router.get('/users')
-def users(offset:int=0,limit:int=50,db:Session=Depends(get_db)):
-    return {'items':[{'id':u.id,'username':u.username,'status':u.status,'role':u.role,'version':u.credentials_version,
-        'email_verified':bool(u.email_verified_at),'created_at':u.created_at.isoformat()} for u in db.query(User).order_by(User.id).offset(max(0,offset)).limit(min(100,max(1,limit))).all()]}
+def users(offset:int=Query(0,ge=0),limit:int=Query(50,ge=1,le=100),q:str=Query('',max_length=50),
+          role:Literal['user','owner']|None=None,status:Literal['active','disabled']|None=None,db:Session=Depends(get_db)):
+    query=db.query(User)
+    if q:query=query.filter(User.username.contains(q,autoescape=True))
+    if role:query=query.filter_by(role=role)
+    if status:query=query.filter_by(status=status)
+    return {'total':query.count(),'items':[{'id':u.id,'username':u.username,'status':u.status,'role':u.role,'version':u.credentials_version,
+        'email_verified':bool(u.email_verified_at),'last_login_at':u.last_login_at.isoformat() if u.last_login_at else None,
+        'created_at':u.created_at.isoformat()} for u in query.order_by(User.id).offset(offset).limit(limit).all()]}
 
 
 @router.post('/users/{user_id}/status')

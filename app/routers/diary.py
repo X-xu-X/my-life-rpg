@@ -1,11 +1,12 @@
 """Explicit diary drafts, resumable review questions and optional no-reward checklist."""
 from datetime import date
+from typing import Literal
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import Field
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import Event
+from app.models import Event,AIJudgment
 from app.models.workflow import DiaryRevision, ReviewSession, ReviewTurn, ReviewAnalysis, LifeChecklist
 from app.models.analysis import AnalysisJob
 from app.services.user_service import get_or_create_default_user
@@ -17,6 +18,8 @@ router = APIRouter()
 
 class DiaryIn(WriteIn):
     content: str = Field(min_length=1, max_length=20000)
+    ai_permission: Literal['private','allowed'] = 'private'
+    correction_reason:str=Field('',max_length=2000)
 
 
 class AnswerIn(WriteIn):
@@ -40,6 +43,7 @@ def get_diary(day: date, db: Session = Depends(get_db)):
     user = get_or_create_default_user(db)
     row = diary_row(db, user, day)
     return {'diary': fields(row) if row else None,
+        'has_bookings':bool(row and db.query(AIJudgment).filter_by(event_id=row.id,status='confirmed').first()),
         'revisions': [fields(r) for r in db.query(DiaryRevision).filter_by(event_id=row.id).order_by(DiaryRevision.version).all()] if row else [],
         'sessions': [fields(r) for r in db.query(ReviewSession).filter_by(diary_id=row.id).order_by(ReviewSession.id.desc()).all()] if row else []}
 
@@ -54,6 +58,7 @@ def put_diary(day: date, body: DiaryIn, db: Session = Depends(get_db)):
     if body.expected_version != (row.content_version if row else 0):
         raise HTTPException(409, '日记已更新，请保留原文并比较最新版本。')
     if row and row.is_deleted: raise HTTPException(409, '此日原稿已撤销，仍保留历史，不新建第二篇。')
+    if row and row.content!=body.content and db.query(AIJudgment).filter_by(event_id=row.id,status='confirmed').first() and not body.correction_reason.strip():raise HTTPException(409,'已有逐事实结算；更正原文需说明原因，原账目保持不变。')
     if not body.content.strip(): raise HTTPException(422, '请先写下原文。')
     if not row:
         row = Event(user_id=user.id, diary_key=f'{user.id}:{day}', record_kind='diary',
@@ -62,11 +67,19 @@ def put_diary(day: date, body: DiaryIn, db: Session = Depends(get_db)):
             timezone_at_capture=user.timezone, analysis_intent='later', content_version=0)
         db.add(row); db.flush()
         from app.services.time_service import capture_saved_day
-        capture_saved_day(row,user.timezone)
+        capture_saved_day(row,user.timezone,db)
+        from app.services.trial_rules import qualify
+        qualify(db,user,row)
     row.content = body.content
+    from app.services import ai_context
+    ai_context.change(db,row,body.ai_permission)
     row.content_version += 1
-    db.add(DiaryRevision(user_id=user.id, event_id=row.id, version=row.content_version, content=row.content))
+    db.add(DiaryRevision(user_id=user.id, event_id=row.id, version=row.content_version, content=row.content,correction_reason=body.correction_reason))
+    for job in db.query(AnalysisJob).filter(AnalysisJob.event_id==row.id,AnalysisJob.state.in_(('queued','running'))).all():
+        job.state='superseded';job.safe_error_code='CONTENT_CHANGED';job.lease_token=None
     db.flush()
+    from app.services.discoveries import discover
+    discover(db,user)
     return finish(db,user,op,body,fingerprint,row,{'diary':fields(row)})
 
 
@@ -78,11 +91,13 @@ def start_session(day: date, body: WriteIn, db: Session = Depends(get_db)):
     if prior is not None: return prior
     diary = diary_row(db,user,day)
     if not diary or diary.is_deleted: raise HTTPException(409,'请先保存当日原文。')
+    from app.services import ai_context
+    ai_context.require(diary)
     if diary.content_version != body.expected_version: raise HTTPException(409,'原文已变化，请重新读取。')
     row = db.query(ReviewSession).filter_by(diary_id=diary.id,source_version=diary.content_version).first()
     if not row:
         start,end=date_range(day,diary.timezone_at_capture)
-        sources=db.query(Event).filter(Event.user_id==user.id,Event.is_deleted.is_(False),Event.occurred_at>=start,Event.occurred_at<end).all()
+        sources=db.query(Event).filter(Event.user_id==user.id,Event.is_deleted.is_(False),Event.ai_permission=='allowed',Event.is_pure.is_(False),Event.occurred_at>=start,Event.occurred_at<end).all()
         row=ReviewSession(user_id=user.id,diary_id=diary.id,source_version=diary.content_version,
             sources=[{'id':e.id,'version':e.content_version,'kind':e.record_kind or 'legacy_unknown','content':e.content} for e in sources])
         db.add(row);db.flush()
@@ -109,9 +124,12 @@ def answer(session_id: int, turn_id: int, body: AnswerIn, db: Session = Depends(
     version(row,body.session_version);version(turn,body.expected_version)
     diary=get_owned(db,Event,row.diary_id)
     if diary.is_deleted or diary.content_version!=row.source_version:raise HTTPException(409,'原文已变化；旧问答保留，请新建回顾。')
+    from app.services import ai_context
+    ai_context.require(diary)
     if turn.state!='unanswered' or db.query(AnalysisJob).filter(AnalysisJob.review_session_id==row.id,AnalysisJob.state.in_(('queued','running'))).first():raise HTTPException(409,'问题已处理或分析中，不能覆盖。')
     if not body.skip and not body.answer.strip():raise HTTPException(422,'填写回答或明确跳过。')
     turn.answer='' if body.skip else body.answer;turn.state='skipped' if body.skip else 'answered';turn.version+=1
+    turn.answer_sources=[{'id':diary.id,'version':diary.content_version,'permission_version':diary.ai_permission_version}]
     row.version+=1;row.state='draft'
     return finish(db,user,op,body,fingerprint,turn,{'version':row.version,'turn':fields(turn)})
 
@@ -126,11 +144,14 @@ def analyze(session_id:int,body:WriteIn,db:Session=Depends(get_db)):
     row=get_owned(db,ReviewSession,session_id);version(row,body.expected_version)
     diary=get_owned(db,Event,row.diary_id)
     if diary.is_deleted or diary.content_version!=row.source_version:raise HTTPException(409,'原文已变化，请新建回顾。')
+    from app.services import ai_context
+    ai_context.require(diary)
     if db.query(AnalysisJob).filter(AnalysisJob.event_id==diary.id,AnalysisJob.state.in_(analysis_jobs.ACTIVE)).first():raise HTTPException(409,'已有活动任务，请等待或取消。')
     from app.services.llm_service import LLMError
     try: llm_config.resolve_llm_config(db,user.id,llm_config.PURPOSE_JUDGE)
     except LLMError as exc: raise HTTPException(422,str(exc)) from None
     job=AnalysisJob(user_id=user.id,event_id=diary.id,event_version=diary.content_version,
+        permission_version=diary.ai_permission_version,
         review_session_id=row.id,session_version=row.version,operation='review',request_key=str(body.request_key),
         payload_hash=hashlib.sha256(json.dumps(body.model_dump(mode='json'),sort_keys=True).encode()).hexdigest(),
         config_version=analysis_jobs.configuration(db,user.id),state='queued')

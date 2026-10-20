@@ -115,7 +115,8 @@ class LLMService:
             if client is None:
                 if len(self._clients) >= 16:
                     self._clients.pop(next(iter(self._clients))).close()
-                client = OpenAI(api_key=config.api_key, base_url=config.base_url, max_retries=0, timeout=settings.ai_timeout)
+                from app.services.credentials import http_client
+                client = OpenAI(api_key=config.api_key, base_url=config.base_url, max_retries=0, timeout=settings.ai_timeout,http_client=http_client(config.base_url))
                 self._clients[key] = client
             return client
         # .env 默认路径（未传 config 时，行为与 v1.3 完全一致）
@@ -156,6 +157,8 @@ class LLMService:
         hosted_usage_id = None
         hosted_factory = None
         try:
+            from app.services import ai_context
+            ai_context.assert_current()
             if settings.cloud:
                 from app.database import SessionLocal
                 from sqlalchemy import text

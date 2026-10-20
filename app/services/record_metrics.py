@@ -14,5 +14,11 @@ def metrics(db,user):
             values={r.occurred_on or str(local_day(r.occurred_at,r.timezone_at_capture)) for r in eligible} if basis=='content' else {r.saved_on for r in eligible}
             ordered=sorted(date.fromisoformat(d) for d in values);longest=run=0;last=None
             for d in ordered:run=run+1 if last and d-last==timedelta(days=1) else 1;longest=max(longest,run);last=d
-            result['metrics'][f'{kind}_{basis}_days']={'count':len(values),'longest_contiguous_days':longest,'dates':sorted(values),'event_ids':[r.id for r in eligible],'unknown_saved_dates':len(selected)-len(eligible) if basis=='saved' else 0}
+            from app.services.time_service import utc_now
+            from app.services import trial_rules
+            today=date.fromisoformat(trial_rules.day(db,user)) if basis=='saved' else local_day(utc_now(),user.timezone)
+            cursor=today if str(today) in values else today-timedelta(days=1)
+            current=0
+            while str(cursor) in values:current+=1;cursor-=timedelta(days=1)
+            result['metrics'][f'{kind}_{basis}_days']={'count':len(values),'current_contiguous_days':current,'longest_contiguous_days':longest,'dates':sorted(values),'event_ids':[r.id for r in eligible],'unknown_saved_dates':len(selected)-len(eligible) if basis=='saved' else 0}
     return result

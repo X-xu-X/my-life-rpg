@@ -5,6 +5,7 @@
 - 长期记忆 = 五类摘要（长期目标/关键经历/性格/偏好/当前状态），存 UserProfile.long_term_memory。
 - 每天自动更新一次（maybe_update_memory 检查间隔），失败不影响主流程。
 """
+from app.services.ai_context import model_context
 from app.services.time_service import clock_now
 import json
 from datetime import datetime, timedelta
@@ -28,7 +29,8 @@ def _get_profile(db: Session, user: User) -> UserProfile | None:
 def get_long_term_memory(db: Session, user_id: int) -> dict:
     """获取长期记忆（解析 JSON），无则空 dict。"""
     profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
-    if not profile or not profile.long_term_memory:
+    from app.services import ai_context
+    if not profile or not profile.long_term_memory or not ai_context.valid(db,profile.memory_sources,user_id):
         return {}
     try:
         return json.loads(profile.long_term_memory)
@@ -53,12 +55,13 @@ def _events_summary(db: Session, user_id: int, days: int = 30, limit: int = 50) 
     return "\n".join(lines)
 
 
+@model_context
 def update_long_term_memory(db: Session, user: User) -> dict | None:
     """用 LLM 把历史事件压缩成五类记忆，存入 profile。失败返回 None（不影响主流程）。"""
     profile = _get_profile(db, user)
     if profile is None:
         return None
-    existing = profile.long_term_memory or ""
+    existing = json.dumps(get_long_term_memory(db,user.id),ensure_ascii=False)
     summary = _events_summary(db, user.id)
     if not summary.strip():
         return None  # 无事件，不更新
@@ -78,6 +81,8 @@ def update_long_term_memory(db: Session, user: User) -> dict | None:
     except Exception:
         db.rollback()
         return None  # 记忆更新失败不影响主流程
+    from app.services import ai_context
+    profile.memory_sources=ai_context.sources()
     profile.long_term_memory = json.dumps(result, ensure_ascii=False)
     profile.memory_updated_at = clock_now()
     db.commit()

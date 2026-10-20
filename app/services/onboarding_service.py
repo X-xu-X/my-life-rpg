@@ -11,6 +11,7 @@
 from sqlalchemy.orm import Session
 
 from app import prompts
+from app.services.ai_context import model_context
 from app.models import Attribute, AttributeHistory, User, UserProfile
 from app.prompts.onboarding import CONFIDENCE_THRESHOLD
 from app.constants import ATTRIBUTE_DIMENSIONS_SET
@@ -51,6 +52,7 @@ def get_status(db: Session) -> dict:
     }
 
 
+@model_context
 def _evaluate(db: Session, profile: UserProfile, conversation: list[dict]) -> dict:
     """让 AI 基于当前问答评估把握度并出题。返回 {questions, hint, confidence}。"""
     # v1.4：走判定模型组（judge）
@@ -173,6 +175,7 @@ def _parse_initial_panel(raw):
 
 
 @rollback_on_error
+@model_context
 def _generate_panel(db: Session, profile: UserProfile, conversation: list[dict]) -> tuple[list, str]:
     """AI 生成初始属性面板，持久化到画像快照与 attributes 表。
 
@@ -261,6 +264,7 @@ def _clamp_initial_coins(raw) -> int:
 
 
 @rollback_on_error
+@model_context
 def supplement_profile(db: Session, detail: str) -> dict:
     """补充长期信息（首次引导后）。AI 客观评估，返回调整建议（待用户确认）。"""
     user = get_or_create_default_user(db)
@@ -281,6 +285,10 @@ def supplement_profile(db: Session, detail: str) -> dict:
         .limit(50)
         .all()
     )
+    from app.models import Event,AIJudgment
+    from app.services import ai_context
+    history_rows=[h for h in history_rows if h.event_id and ai_context.allowed(db.get(Event,h.event_id)) and h.judgment_id and
+        (j:=db.get(AIJudgment,h.judgment_id)) and ai_context.valid(db,j.source_snapshot,user.id)]
     history = [
         {
             "delta": h.delta,
@@ -321,7 +329,8 @@ def supplement_profile(db: Session, detail: str) -> dict:
     profile.basic_profile = bp
 
     # 暂存待确认的调整建议
-    profile.pending_adjustment = {"adjustments": adjustments, "explanation": explanation}
+    db.flush()
+    profile.pending_adjustment = {"adjustments": adjustments, "explanation": explanation,'ai_sources':ai_context.sources(),'background':ai_context.background(db,user.id)}
     db.commit()
 
     return {"adjustments": adjustments, "explanation": explanation}
@@ -339,6 +348,8 @@ def confirm_adjustment(db: Session) -> dict:
     adjustments = judge_service._parse_changes(pending.get("adjustments"))
     if not adjustments:
         return {"applied": [], "message": "没有待确认的调整。"}
+    from app.services import ai_context
+    if not ai_context.valid(db,pending.get('ai_sources'),user.id) or pending.get('background')!=ai_context.background(db,user.id):raise ValueError('建议的许可或背景已变化；旧建议保留，不写入属性。')
 
     applied = []
     for item in adjustments:

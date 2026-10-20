@@ -73,7 +73,7 @@ class CloudTests(unittest.TestCase):
         return result.json()
 
     def save(self, content='今天走了十分钟', key=None, **extra):
-        return self.client.post('/api/events',json={'content':content, 'source':'journal',
+        return self.client.post('/api/events',json={'content':content, 'source':'journal','ai_permission':'private' if extra.get('intent')=='never' or extra.get('is_pure') else 'allowed',
             'client_request_id':key or str(uuid4()), **extra})
 
     def test_auth_session_invitation_recovery_and_csrf(self):
@@ -247,7 +247,7 @@ class CloudTests(unittest.TestCase):
         event = self.save().json()
         with self.Session() as db:
             judgment=m.AIJudgment(user_id=event['user_id'] if 'user_id' in event else self.client.get('/api/auth/me').json()['id'],
-                event_id=event['id'],status='pending',confidence=1,suggested_changes=[{'name':'体能','delta':1}],summary='测试')
+                event_id=event['id'],status='pending',confidence=1,source_snapshot=[{'id':event['id'],'version':1,'permission_version':1}],suggested_changes=[{'name':'体能','delta':1}],summary='测试')
             db.add(judgment);db.commit();jid=judgment.id
         current=self.client.get(f'/api/judgments/{jid}').json()
         body={'request_key':str(uuid4()),'expected_version':current['updated_at']}

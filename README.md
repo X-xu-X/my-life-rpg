@@ -1,5 +1,13 @@
 # 游戏人生（Game of Life）
 
+> **2026-10-18 本地实现交付**：已根据完整任务书开发正式API／Vue／worker及新增迁移；验收、规则与外部NOT_RUN见[完整交付记录](docs/FULL_SYSTEM_DELIVERY_2026-10-18.md)。改动尚在工作区，未推送或部署。`start.bat` 现衔接本地队列；手动启动时先启动API，再运行 `.venv/Scripts/python.exe -m app.worker --local`，否则分析任务会保持排队。下方“当前仅文档”是当天实施前状态。
+
+> **2026-10-18 开发文档已定稿**：用户已认可[第二版完整系统 Demo](docs/prototypes/lifexp-complete-preview-2026-10-18-v2/index.html)。正式范围见[完整系统开发规格](docs/FULL_SYSTEM_DEV_SPEC_2026-10-18.md)，交接使用[Writer 任务书](docs/WRITER_FULL_SYSTEM_2026-10-18.md)；Q1／Q2／Q3 已收束。当前仅文档交付，尚未发送 Writer 或修改正式应用／云端。
+
+> 历史（已由 10 月 18 日规格接续）：2026-10-17 下一轮：[审查补修与情境奖励/计时开发草案](docs/CONTEXT_REWARDS_TIMER_DEV_PLAN_2026-10-17.md)、[Writer 任务书](docs/WRITER_CONTEXT_REWARDS_TIMER_2026-10-17.md)。详细问卷可跳过、通用 AI 助手暂缓；金币试用规则 Q1 已批准，Q3 已确认实际保存日，仅基础娱乐形式 Q2 待答复，文档不表示已经实现或上云。
+
+> 2026-10-16：本轮 [反馈修正开发计划](docs/TRIAL_FIX_DEV_PLAN_2026-10-16.md) 与 [Writer 任务书](docs/WRITER_TRIAL_FIX_2026-10-16.md) 已编写；依据 [完整体验 Demo](docs/prototypes/lifexp-complete-preview-2026-10-16/index.html)。当前仅文档交付，应用实现、待决规则与云端验收分别跟踪。
+
 AI 驱动的个人成长游戏化系统 —— 记录生活事件，AI 依据科学标准判定属性点增减，把现实人生变成一场可量化的 RPG。
 
 > 正式需求与方案文档见 [docs/PRD.md](docs/PRD.md)

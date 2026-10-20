@@ -1,4 +1,6 @@
 <script setup>
+import ReturnPrompt from './ReturnPrompt.vue'
+import TrialRules from './TrialRules.vue'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { api } from '../api'
 import { localDate, displayTime, displayEventTime } from '../session'
@@ -7,6 +9,8 @@ import LifeChecklist from './LifeChecklist.vue'
 import RecordComposer from './RecordComposer.vue'
 import PageHeader from './ui/PageHeader.vue'
 import RecordPreview from './ui/RecordPreview.vue'
+const savedVersion=ref(0)
+async function onSaved(){savedVersion.value++;await load()}
 const rows=ref([]),pending=ref(0),error=ref(''),loading=ref(false),loaded=ref(false)
 const day=localDate()
 let alive=true,generation=0
@@ -21,7 +25,7 @@ onUnmounted(()=>{alive=false;generation++})
 </script>
 <template><div class="reading-page today-page">
   <PageHeader title="今天" :eyebrow="day" description="留下一件小事，也算今天的一页。" />
-  <RecordComposer @saved="load" /><PlanAgenda today-only/><LifeChecklist/>
+  <ReturnPrompt/><RecordComposer @saved="onSaved" /><TrialRules compact :key="savedVersion"/><PlanAgenda today-only @saved="onSaved"/><LifeChecklist @saved="onSaved"/>
   <div class="today-links"><RouterLink to="/pending">待处理 <b v-if="loaded">{{ pending }}</b><span>{{ loaded?'去看看 →':loading?'读取中…':'打开查看 →' }}</span></RouterLink><RouterLink to="/diary">晚间日记<span>写原文与回顾 →</span></RouterLink></div>
   <div class="section-heading"><h2>今日片段</h2><div class="action-group"><button class="btn" :disabled="loading" @click="load">重新读取</button><RouterLink to="/checkin">项目与目标</RouterLink></div></div>
   <p v-if="loading" role="status">正在读取今日记录…</p>

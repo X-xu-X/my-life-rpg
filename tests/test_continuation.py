@@ -18,7 +18,7 @@ class ContinuationTests(unittest.TestCase):
         return self.client.request(method,'/api'+path,json={'request_key':key or str(uuid4()),'expected_version':version,**(body or {})})
 
     def diary(self,day='2026-10-16',content='今天部署了项目。',version=0):
-        response=self.write('/diaries/'+day,{'content':content},version,'PUT')
+        response=self.write('/diaries/'+day,{'content':content,'ai_permission':'allowed'},version,'PUT')
         self.assertEqual(response.status_code,200,response.text)
         return response.json()['diary']
 
@@ -151,7 +151,7 @@ class ContinuationTests(unittest.TestCase):
             self.client.post('/api/events',json={'content':malicious,'title':'=危险公式','record_kind':'event','client_request_id':str(uuid4()),'occurred_on':'2026-10-16','time_precision':'date'})
             self.client.post('/api/events',json={'content':'第二件事','record_kind':'event','client_request_id':str(uuid4()),'occurred_on':'2026-10-16','time_precision':'date'})
         data=self.client.get('/api/export').json()
-        self.assertEqual(data['format_version'],4)
+        self.assertEqual(data['format_version'],5)
         self.assertIn('review_turns',data['tables']);self.assertIn('fact_settlements',data['tables'])
         self.assertFalse(data['restore_supported'])
         legacy=self.client.get('/api/export?schema_version=3').json()
@@ -221,6 +221,8 @@ class ContinuationTests(unittest.TestCase):
                 self.assertEqual(known.status_code,200);self.assertEqual(known.json(),unknown.json())
                 self.assertIn('受理不代表投递成功',known.json()['message'])
             self.assertEqual(self.client.post('/api/auth/email/recover-request',json={'email':'friend@example.test'}).status_code,200)
+            from app.services.mail_queue import deliver_one
+            while deliver_one(self.Session):pass
             reset=outbox.outbox[-1]['token']
             result=self.client.post('/api/auth/email/reset-password',json={'token':reset,'new_password':'new-email-test-password'})
             self.assertEqual(result.status_code,200,result.text)
@@ -242,10 +244,10 @@ class ContinuationTests(unittest.TestCase):
     def test_mainline_synthetic_rule_preview_original_atomic_confirmation(self):
         from app.models import Goal,AIJudgment
         self.register();self.client.post('/api/onboarding/neutral',json={'acknowledge':True})
-        event=self.client.post('/api/events',json={'content':'阅读并整理笔记','record_kind':'event','client_request_id':str(uuid4())}).json()
+        event=self.client.post('/api/events',json={'content':'阅读并整理笔记','record_kind':'event','ai_permission':'allowed','client_request_id':str(uuid4())}).json()
         with self.Session() as db:
             user_id=db.query(Event).first().user_id;goal=Goal(user_id=user_id,description='合成阅读目标');db.add(goal);db.flush();goal_id=goal.id
-            judgment=AIJudgment(user_id=user_id,event_id=event['id'],status='pending',confidence=1,suggested_changes=[{'name':'体能','delta':1,'reason':'合成','evidence':''}],analysis=[]);db.add(judgment);db.commit();judgment_id=judgment.id
+            judgment=AIJudgment(user_id=user_id,event_id=event['id'],status='pending',confidence=1,source_snapshot=[{'id':event['id'],'version':1,'permission_version':event['ai_permission_version']}],suggested_changes=[{'name':'体能','delta':1,'reason':'合成','evidence':''}],analysis=[]);db.add(judgment);db.commit();judgment_id=judgment.id
         mainline=self.write('/mainlines',{'goal_id':goal_id,'active':True}).json()
         body={'mainline_id':mainline['id'],'mainline_version':1,'event_id':event['id'],'event_version':1,'judgment_id':judgment_id,'minutes':15,'result':False,'evidence':'合成测试事实'}
         self.assertEqual(self.write('/reward-previews',body).status_code,409)
@@ -264,8 +266,8 @@ class ContinuationTests(unittest.TestCase):
         self.assertEqual(len(self.client.get('/api/mainlines').json()['previews']),1)
         # A fault after attribute writes cannot leave money, fact claims or preview state committed.
         with self.Session() as db:
-            second=Event(user_id=user_id,event_type='positive',record_kind='event',source='form',content='第二件合成事实');db.add(second);db.flush()
-            second_judgment=AIJudgment(user_id=user_id,event_id=second.id,status='pending',confidence=1,suggested_changes=[{'name':'体能','delta':1,'reason':'合成','evidence':''}],analysis=[]);db.add(second_judgment);db.commit();second_id=second.id;second_jid=second_judgment.id
+            second=Event(user_id=user_id,event_type='positive',record_kind='event',source='form',content='第二件合成事实',ai_permission='allowed');db.add(second);db.flush()
+            second_judgment=AIJudgment(user_id=user_id,event_id=second.id,status='pending',confidence=1,source_snapshot=[{'id':second.id,'version':second.content_version,'permission_version':second.ai_permission_version}],suggested_changes=[{'name':'体能','delta':1,'reason':'合成','evidence':''}],analysis=[]);db.add(second_judgment);db.commit();second_id=second.id;second_jid=second_judgment.id
         second_preview=self.write('/reward-previews',{**body,'event_id':second_id,'judgment_id':second_jid}).json()
         second_payload={'request_key':str(uuid4()),'expected_version':second_preview['snapshot']['judgment_version'],'reward_preview_id':second_preview['id']}
         with patch('app.services.coin_service.grant',side_effect=RuntimeError('synthetic injected money failure')),self.assertRaises(RuntimeError):self.client.post(f'/api/judgments/{second_jid}/confirm',json=second_payload)
@@ -405,7 +407,7 @@ class ContinuationTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):validate_local_schema(empty)
             self.assertEqual(inspect(empty).get_table_names(),[]);empty.dispose()
             with self.Session() as db:
-                job=AnalysisJob(user_id=user_id,event_id=session['diary_id'],event_version=1,operation='review',review_session_id=session['id'],session_version=1,
+                job=AnalysisJob(user_id=user_id,event_id=session['diary_id'],event_version=1,operation='review',review_session_id=session['id'],session_version=1,permission_version=db.get(Event,session['diary_id']).ai_permission_version,
                     request_key=str(uuid4()),payload_hash='synthetic',config_version=analysis_jobs.configuration(db,user_id),state='queued')
                 db.add(job);db.commit();job_id=job.id
             with patch('app.services.diary_review.llm_service.chat_json',return_value={'questions':[],'summary':'本地回顾成功','analysis':[]}):

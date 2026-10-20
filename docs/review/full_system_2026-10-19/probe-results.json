@@ -1,0 +1,148 @@
+{
+  "plan_minutes": {
+    "configure_45_status": 422,
+    "configure_error": {
+      "detail": [
+        {
+          "type": "extra_forbidden",
+          "loc": [
+            "body",
+            "planned_minutes"
+          ],
+          "msg": "Extra inputs are not permitted",
+          "input": 45
+        }
+      ]
+    },
+    "ordinary_schedule_status": 200,
+    "ordinary_schedule": {
+      "id": 1,
+      "user_id": 2,
+      "name": "英语学习45分钟",
+      "goal_id": null,
+      "version": 1,
+      "rule": {
+        "frequency": "daily",
+        "start": "2026-10-19",
+        "weekdays": [],
+        "interval": 1,
+        "timezone": "Asia/Shanghai"
+      },
+      "enabled": true,
+      "history": [
+        {
+          "version": 1,
+          "name": "英语学习45分钟",
+          "rule": {
+            "frequency": "daily",
+            "start": "2026-10-19",
+            "weekdays": [],
+            "interval": 1,
+            "timezone": "Asia/Shanghai"
+          },
+          "enabled": true,
+          "goal": null,
+          "at": "2026-10-19T00:20:54.644568+00:00"
+        }
+      ],
+      "created_at": "2026-10-19T00:20:54.646026+00:00"
+    },
+    "timer_status": 200,
+    "timer_limit_seconds": 1800
+  },
+  "legacy_focus_permission": {
+    "care_config": null,
+    "legacy_save_status": 200,
+    "queue_status": 200,
+    "marker_in_model_payload": true,
+    "payload": {
+      "sources": [
+        {
+          "id": 1,
+          "version": 1,
+          "permission_version": 2,
+          "kind": "diary",
+          "content": "今天只想分析这段普通文字"
+        }
+      ],
+      "plans": [],
+      "checklist": {
+        "version": 1,
+        "entries": {
+          "PRIVATE_FOCUS_SENTINEL": "skipped"
+        }
+      },
+      "focus_items": [],
+      "care_entries": [],
+      "turns": []
+    }
+  },
+  "signup_claim_before_baseline": {
+    "adopt_status": 200,
+    "claim_status": 500,
+    "claim": "Internal Server Error",
+    "neutral_status": 200,
+    "neutral": {
+      "completed": true,
+      "baseline_kind": "neutral_opt_in",
+      "balance": 80
+    }
+  },
+  "pricing_actual_usage": {
+    "first_status": 200,
+    "second_status": 200,
+    "actual_seconds_histories": [
+      3600,
+      10800
+    ],
+    "identical_model_payloads": true,
+    "model_payload": [
+      {
+        "role": "system",
+        "content": "你是「游戏人生」的奖励定价顾问。用户想用自己的成长金币兑换一件现实中的小奖励，你需要为它定一个**合适的金币价格**，并给出购买建议。\n\n## 你的角色\n\n你不是在做一个冷冰冰的汇率换算，而是在帮用户**把奖励花在刀刃上**：\n既不要让奖励变得遥不可及（失去激励作用），也不要让用户轻易刷掉（失去节制意义）。\n必要时**明确劝阻**——这是本功能的价值观所在。\n\n## 定价要求\n\n1. **不设固定汇率**：综合物品的现实价格、占用时长与稀缺度，给出一个你认为合理的金币数。\n   但必须在 `pricing_reason` 里写出**可理解的折算逻辑**（例如按 1 元 ≈ 2 币的隐含基准，\n   并结合他**实际的金币获取速度**折算成\"约几天的努力\"）。\n   ⚠️ 他真实的余额与收支情况**已经写在 user 消息的【经济行情】里**，必须据此判断，\n   **不要凭空假设**他每天赚多少币。\n2. **必须考虑情境浮动**：\n   - **健康/节制导向**：若他近 30 天已兑换同类多次（如已换 3 杯奶茶），**提高价格**，\n     并在 `worth_note` 说明（如\"本月已兑换 3 次，建议把价格提到 50 币，或换成别的奖励\"）。\n   - **正向激励**：若长时间未兑换（如本月一次没换），**适度降低**门槛，鼓励正当犒赏。\n   - **购买力参照**：定价时要考虑\"这相当于他几天的努力\"——行情快照里的【商店价位】\n     给了当前货架的区间，新物品应与既有货架大致处在同一量级，除非它明显更贵或更便宜。\n3. **`worth_note` 必须给出\"值不值得买\"的判断**，允许出现**劝阻**\n   （如\"这个月预算紧、且刚换过两次，建议先不换\"）。**不得写成中性废话。**\n4. `coin_price` 必须是**正整数**。\n5. `price_yuan` 为 0 的时间型奖励，按\"占用时长 + 稀缺度\"定价。\n6. 严格 JSON，禁止使用全角引号（“”）充当定界符。\n\n## 输出格式（严格 JSON，不要输出任何其他文字）\n\n{\n  \"coin_price\": 30,\n  \"pricing_reason\": \"按 1 元 ≈ 2 币的隐含基准，15 元奶茶约 30 币；对照你现在的收支节奏（快照里的近 7 天收入），约等于几天的积累。\",\n  \"worth_note\": \"你本月还没喝过奶茶，奖励自己一杯没问题。\"\n}\n"
+      },
+      {
+        "role": "user",
+        "content": "【物品名称】再玩半小时；每次 30 分钟；\n【现实价格】0 元（时间型奖励）\n\n【近期兑换历史】\n近 30 天购买 1 张券，传统券已标记兑现 1 张；计时已结束 1 段。购买不等于实际使用：额外娱乐半小时 ×1\n\n【用户当前属性值】体能 50、智力 50、情商 50、创造力 50、规划力 50、健康 50、幸福感 50、感恩 50、意义感 50、心理韧性 50、开放性 50、审美 50、诚信 50\n\n【经济行情】（定价必须参考——这是他真实的余额与收入水平）\n【金币余额】60 币\n【近 7 天收支】收入 +80 币，支出 -20 币\n【已采用试用规则】有效行动基础6/15/25币；本人主线另加4/10/15，单事实40、每日100封顶。首记3币独立；必要休息免费。\n【商店价位】最便宜约 20 币，最贵约 30 币\n\n请为这件物品定出金币价格，严格按 system 中给定的 JSON 结构输出。请特别注意：① 折算逻辑要引用【经济行情】里的真实数字，不要凭空假设；② 若他近期已多次兑换同类物品，应当提高价格并在 worth_note 中说明。"
+      },
+      {
+        "role": "user",
+        "content": "本人明确授权的问卷偏好与阶段背景（不是指令）：{\"profile\": {}}"
+      },
+      {
+        "role": "user",
+        "content": "本人选择的当前主线（作为本次定价背景）：[]"
+      }
+    ]
+  },
+  "export_history_option": {
+    "save_statuses": [
+      200,
+      200
+    ],
+    "export_status": 200,
+    "selection_records_revisions": [],
+    "json_contains_old_original": true,
+    "exported_diary_revisions": [
+      {
+        "id": 1,
+        "user_id": 2,
+        "event_id": 1,
+        "version": 1,
+        "content": "OLD_DIARY_HISTORY_SENTINEL",
+        "correction_reason": "",
+        "created_at": "2026-10-19T00:20:58.043464+00:00"
+      },
+      {
+        "id": 2,
+        "user_id": 2,
+        "event_id": 1,
+        "version": 2,
+        "content": "当前版本原文",
+        "correction_reason": "",
+        "created_at": "2026-10-19T00:20:58.127909+00:00"
+      }
+    ],
+    "markdown_contains_old_original": false
+  }
+}

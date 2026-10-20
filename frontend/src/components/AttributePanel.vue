@@ -1,4 +1,6 @@
 <script setup>
+import GrowthPolicies from './GrowthPolicies.vue'
+import RecordMetrics from './RecordMetrics.vue'
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, reactive } from 'vue'
 import * as echarts from 'echarts/core'
 import { RadarChart, LineChart, HeatmapChart } from 'echarts/charts'
@@ -286,12 +288,12 @@ onBeforeUnmount(()=>{
 
 <template>
   <div class="growth-page">
-    <PageHeader title="成长" description="从记录里，看见慢慢发生的积累。"><template #actions><button class="btn" :disabled="loading" @click="load">重新读取</button><RouterLink class="btn" to="/reports">历史报告 →</RouterLink></template></PageHeader>
+    <PageHeader title="成长" description="从记录里，看见慢慢发生的积累。"><template #actions><button class="btn" :disabled="loading" @click="load">重新读取</button><RouterLink class="btn" to="/reports">历史报告 →</RouterLink></template></PageHeader><RecordMetrics/><GrowthPolicies/>
     <p v-if="loading" role="status">正在读取成长数据…</p>
     <div v-if="error" role="alert" class="read-error"><p>{{ error }}{{ loaded?' · 显示上次读取的数据，本次未刷新成功。':'' }}</p><button class="btn" :disabled="loading" @click="load">重新读取</button></div>
     <template v-if="loaded">
       <p v-if="!baseline.completed" class="card">尚未评估。这里的 50 为占位值，不能结算。<RouterLink to="/me">主动选择基线 →</RouterLink></p>
-      <p v-else-if="baseline.kind==='neutral'" class="card">未评估基线：13 维各 50 是游戏起点，不是能力测量。以下沿用旧规则 v1.11。</p>
+      <p v-else-if="['neutral','neutral_opt_in','unassessed_questionnaire'].includes(baseline.kind)" class="card">未评估基线：13 维各 50 是游戏起点，不是能力测量。以下沿用旧规则 v1.11。</p>
       <div class="level-strip card"><b>人生等级 Lv.{{ level }}</b><span>经验 {{ exp }}</span></div>
       <p v-if="subError" role="alert" class="error">细分方向未读取成功：{{ subError }}。可通过页面重新读取。</p>
     <!-- v1.10 M3：子维度提示卡（≥95 的主维度；用户拍板放在面板顶部） -->
@@ -345,7 +347,7 @@ onBeforeUnmount(()=>{
           <h2>能力数值</h2><p class="muted">游戏分数用于观察积累，不是精确的能力测量。每项说明可展开查看。</p>
           <p v-if="!visibleAttrs.length" class="muted">暂无可见属性数据，请查看角色档案与维度设置。</p>
           <div v-for="a in visibleAttrs" :key="a.name" class="attr-bar">
-            <div class="head"><span><b>{{ a.name }}</b> <span v-if="a.tier" class="tier-badge">{{ baseline.kind==='neutral'||!baseline.completed ? '未评估基线' : a.tier }}</span> <span v-if="a.visibility==='disabled'" class="tag">已关闭判定</span></span><span class="attr-value">{{ a.value }} / {{ a.max_value }}</span></div>
+            <div class="head"><span><b>{{ a.name }}</b> <span v-if="a.tier" class="tier-badge">{{ ['neutral','neutral_opt_in','unassessed_questionnaire'].includes(baseline.kind)||!baseline.completed ? '未评估基线' : a.tier }}</span> <span v-if="a.visibility==='disabled'" class="tag">已关闭判定</span></span><span class="attr-value">{{ a.value }} / {{ a.max_value }}</span></div>
             <div class="track"><div class="fill" :style="{width:(a.value/a.max_value)*100+'%'}"></div></div>
             <details v-if="a.description"><summary>说明</summary><p class="muted">{{ a.description }}</p></details>
             <div v-if="subHierarchy[a.name]" class="sub-list"><div v-for="child in subHierarchy[a.name]" :key="child.name" class="sub-row"><span>{{ child.name }}</span><span class="attr-value">{{ child.value }} / {{ child.max_value }}</span></div></div>

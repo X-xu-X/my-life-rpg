@@ -112,6 +112,10 @@ def save_mainline(body:MainlineIn,mainline_id:int|None=None,db:Session=Depends(g
     user=get_or_create_default_user(db);op=f'mainline:{mainline_id or "create"}';fp,prior=begin(db,user,op,body,create=mainline_id is None)
     if prior is not None:return prior
     goal=get_owned(db,Goal,body.goal_id);row=get_owned(db,Mainline,mainline_id) if mainline_id else None
+    if goal.status!='active' and body.active:raise HTTPException(409,'请选进行中的本人目标。')
+    if body.active:
+        for other in db.query(Mainline).filter_by(user_id=user.id,active=True).all():
+            if not row or other.id!=row.id:other.active=False;other.version+=1
     if row:version(row,body.expected_version)
     current=economy.latest(db,'mainline')
     if body.active and (not row or not row.active) and current and current.enabled and db.query(Mainline).filter_by(user_id=user.id,active=True).count()>=current.payload['max_active']:raise HTTPException(409,'达到已确认主线数量上限。')
@@ -131,7 +135,18 @@ def preview(body:PreviewIn,db:Session=Depends(get_db)):
 @router.get('/dynamic-candidates')
 def candidates(db:Session=Depends(get_db)):
     user=get_or_create_default_user(db);rule=economy.latest(db,'dynamic')
-    return {'items':[fields(r) for r in db.query(DynamicCandidate).filter_by(user_id=user.id).order_by(DynamicCandidate.id.desc()).all()],'rule':fields(rule) if rule else None}
+    from app.services import discoveries,trial_rules
+    config=trial_rules.account(db,user)
+    return {'items':[{**fields(r),'trial_terms':discoveries.terms(r) if config and config.enabled else None} for r in db.query(DynamicCandidate).filter_by(user_id=user.id).order_by(DynamicCandidate.id.desc()).all()],'rule':fields(rule) if rule else None}
+
+
+@router.post('/discoveries/refresh')
+def refresh_candidates(body:WriteIn,db:Session=Depends(get_db)):
+    from app.services.discoveries import discover
+    user=get_or_create_default_user(db);fp,prior=begin(db,user,'discover-refresh',body,create=True)
+    if prior is not None:return prior
+    discover(db,user)
+    return finish(db,user,'discover-refresh',body,fp,user,{'status':'refreshed'})
 
 
 @router.post('/dynamic-candidates')
@@ -152,7 +167,11 @@ def candidate_decision(candidate_id:int,body:CandidateDecision,db:Session=Depend
     if prior is not None:return prior
     row=get_owned(db,DynamicCandidate,candidate_id);version(row,body.expected_version)
     if row.state!='candidate':raise HTTPException(409,'候选已处理。')
-    if body.action=='claim':economy.claim_dynamic(db,user,row)
+    if body.action=='claim':
+        from app.services import discoveries,trial_rules
+        config=trial_rules.account(db,user)
+        if config and config.enabled and discoveries.terms(row):discoveries.claim(db,user,row)
+        else:economy.claim_dynamic(db,user,row)
     else:
         row.evidence=economy.verify(db,user,row.criteria);row.version+=1
         if body.action=='ignore':row.state='ignored'

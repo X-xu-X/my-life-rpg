@@ -4,7 +4,7 @@ from fastapi import APIRouter,Depends,HTTPException
 from pydantic import BaseModel,Field,model_validator
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import Event,AIJudgment
+from app.models import Event,AIJudgment,Goal
 from app.models.analysis import AnalysisJob
 from app.models.workflow import PlanSchedule,PlanOccurrence,FactRelation
 from app.services.user_service import get_or_create_default_user
@@ -16,7 +16,9 @@ router=APIRouter()
 
 class ScheduleIn(WriteIn):
     name:str=Field(min_length=1,max_length=120)
-    frequency:Literal['daily','weekdays','interval']
+    frequency:Literal['daily','workdays','weekends','weekdays','interval','once','manual']
+    goal_id:int|None=None
+    planned_minutes:int=Field(30,ge=1,le=1440,strict=True)
     start:date
     weekdays:list[int]=Field(default_factory=list,max_length=7)
     interval:int=Field(1,ge=1,le=366)
@@ -37,6 +39,7 @@ class ResultIn(WriteIn):
     event_version:int|None=None
     correction:bool=False
     reason:str=Field('',max_length=2000)
+    ai_permission:Literal['private','allowed']='private'
 
 
 class RelationIn(WriteIn):
@@ -55,15 +58,28 @@ def historical(row,day):
     return next((item for item in reversed(row.history) if item['rule']['start']<=str(day)),None)
 
 
+def timing_snapshot(row,day):
+    snapshot=historical(row,day)
+    if not snapshot and not row.history and row.rule['start']<=str(day):
+        snapshot={'version':row.version,'name':row.name,'rule':row.rule,'enabled':row.enabled}
+    return snapshot
+
+
 def due(rule,day):
     start=date.fromisoformat(rule['start'])
-    return day>=start and (rule['frequency']=='daily' or rule['frequency']=='weekdays' and day.weekday() in rule['weekdays'] or rule['frequency']=='interval' and (day-start).days%rule['interval']==0)
+    freq=rule['frequency']
+    return day>=start and (freq=='daily' or freq=='workdays' and day.weekday()<5 or freq=='weekends' and day.weekday()>=5 or freq=='once' and day==start or freq=='weekdays' and day.weekday() in rule['weekdays'] or freq=='interval' and (day-start).days%rule['interval']==0)
 
 
 @router.get('/plan-schedules')
 def schedules(db:Session=Depends(get_db)):
     user=get_or_create_default_user(db)
-    return [fields(r) for r in db.query(PlanSchedule).filter_by(user_id=user.id).order_by(PlanSchedule.id).all()]
+    rows=[]
+    for row in db.query(PlanSchedule).filter_by(user_id=user.id).order_by(PlanSchedule.id).all():
+        selected=local_day(utc_now(),row.rule.get('timezone',user.timezone));snapshot=timing_snapshot(row,selected)
+        timing={'name':snapshot['name'],'planned_minutes':snapshot['rule'].get('planned_minutes',30),'version':snapshot['version'],'enabled':snapshot['enabled']} if snapshot else None
+        rows.append({**fields(row),'timing':timing})
+    return rows
 
 
 @router.post('/plan-schedules')
@@ -73,11 +89,23 @@ def save_schedule(body:ScheduleIn,schedule_id:int|None=None,db:Session=Depends(g
     if prior is not None:return prior
     row=get_owned(db,PlanSchedule,schedule_id) if schedule_id else None
     if row:version(row,body.expected_version)
-    rule=body.model_dump(mode='json',include={'frequency','start','weekdays','interval'})
+    goal=get_owned(db,Goal,body.goal_id) if body.goal_id else None
+    if goal and goal.status!='active':raise HTTPException(409,'请选择仍在进行的本人目标。')
+    rule=body.model_dump(mode='json',include={'frequency','start','weekdays','interval','planned_minutes'})
+    if row and 'planned_minutes' not in body.model_fields_set:rule['planned_minutes']=row.rule.get('planned_minutes',30)
     rule['timezone']=user.timezone
     if row and body.start<local_day(utc_now(),user.timezone):raise HTTPException(422,'周期修改需明确今天或未来的生效日，历史安排保留。')
     if not row:row=PlanSchedule(user_id=user.id,name=body.name,rule=rule,version=0,history=[]);db.add(row)
-    row.history=[*row.history,{'version':row.version+1,'name':body.name,'rule':rule,'enabled':body.enabled,'at':utc_now().isoformat()}]
+    elif not row.history:
+        # Preserve the only known legacy settings before a future rule replaces them.
+        # This is a captured baseline, not a reconstruction of unknown past edits.
+        old_goal=db.query(Goal).filter_by(id=row.goal_id,user_id=user.id).first() if row.goal_id else None
+        row.history=[{'version':row.version,'name':row.name,'rule':dict(row.rule),'enabled':row.enabled,
+            'goal':{'id':old_goal.id,'title':old_goal.description,'updated_at':old_goal.updated_at.isoformat()} if old_goal else None,
+            'at':utc_now().isoformat(),'legacy_baseline':True}]
+    row.goal_id=body.goal_id
+    row.history=[*row.history,{'version':row.version+1,'name':body.name,'rule':rule,'enabled':body.enabled,
+        'goal':{'id':goal.id,'title':goal.description,'updated_at':goal.updated_at.isoformat()} if goal else None,'at':utc_now().isoformat()}]
     row.name=body.name;row.rule=rule;row.enabled=body.enabled;row.version+=1;db.flush()
     return finish(db,user,op,body,fp,row,fields(row))
 
@@ -92,7 +120,7 @@ def occurrences(day:date|None=None,today:bool=False,db:Session=Depends(get_db)):
         snapshot=historical(row,selected)
         if today and snapshot:selected=local_day(utc_now(),snapshot['rule']['timezone']);snapshot=historical(row,selected)
         saved=db.query(PlanOccurrence).filter_by(user_id=user.id,schedule_id=row.id,local_date=str(selected)).first()
-        if saved or snapshot and snapshot['enabled'] and due(snapshot['rule'],selected):items.append({'schedule':fields(row),'local_date':str(selected),'occurrence':fields(saved) if saved else None})
+        if saved or snapshot and snapshot['enabled'] and due(snapshot['rule'],selected):items.append({'schedule':fields(row),'schedule_snapshot':saved.schedule_snapshot if saved else snapshot,'local_date':str(selected),'occurrence':fields(saved) if saved else None})
     return {'date':str(day) if day else None,'items':items}
 
 
@@ -123,19 +151,30 @@ def result(schedule_id:int,day:date,body:ResultIn,db:Session=Depends(get_db)):
             event=old_event
             if not booked:
                 event.content=body.content;event.content_version+=1
+                from app.services import ai_context
+                ai_context.change(db,event,body.ai_permission)
                 for judgment in db.query(AIJudgment).filter(AIJudgment.event_id==event.id,AIJudgment.status.in_(('pending','adjusted'))).all():judgment.status='invalidated'
                 for job in db.query(AnalysisJob).filter(AnalysisJob.event_id==event.id,AnalysisJob.state.in_(('queued','running'))).all():job.state='superseded';job.lease_token=None
         else:
             event=Event(user_id=user.id,event_type='positive',source='form',record_kind='event',title=schedule.name,content=body.content,
-                occurred_on=str(day),time_precision='date',occurred_at=date_range(day,row.schedule_snapshot['timezone'])[0],timezone_at_capture=row.schedule_snapshot['timezone'],analysis_intent='later')
+                occurred_on=str(day),time_precision='date',occurred_at=date_range(day,row.schedule_snapshot['timezone'])[0],timezone_at_capture=row.schedule_snapshot['timezone'],analysis_intent='now' if body.ai_permission=='allowed' else 'never',ai_permission=body.ai_permission)
             db.add(event);db.flush()
             from app.services.time_service import capture_saved_day
-            capture_saved_day(event,user.timezone)
+            capture_saved_day(event,user.timezone,db)
+            from app.services.trial_rules import qualify
+            qualify(db,user,event)
     row.version+=1;row.outcome=body.outcome;row.facts={'content':body.content,'actual':body.actual,'unit':body.unit,'correction_reason':body.reason}
     if event:row.event_id=event.id
     row.history=[*row.history,{'version':row.version,'outcome':row.outcome,'facts':row.facts,'event_id':row.event_id,'at':utc_now().isoformat(),'prior_booking_retained':booked}]
     db.flush()
     return finish(db,user,op,body,fp,row,fields(row))
+
+
+@router.get('/goals/{goal_id}/plan-progress')
+def goal_progress(goal_id:int,db:Session=Depends(get_db)):
+    goal=get_owned(db,Goal,goal_id)
+    rows=[r for r in db.query(PlanOccurrence).filter_by(user_id=goal.user_id).order_by(PlanOccurrence.id.desc()).all() if (r.schedule_snapshot.get('goal') or {}).get('id')==goal.id]
+    return {'goal_id':goal.id,'items':[fields(r) for r in rows],'done':sum(r.outcome=='done' for r in rows),'partial':sum(r.outcome=='partial' for r in rows),'missed':sum(r.outcome=='missed' for r in rows),'percentage':None}
 
 
 @router.get('/fact-relations')

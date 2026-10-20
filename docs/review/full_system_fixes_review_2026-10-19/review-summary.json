@@ -1,0 +1,52 @@
+{
+  "review_date": "2026-10-19",
+  "scope": "N01-N05 repair review",
+  "backend": {
+    "status": "PASS",
+    "run": 127,
+    "passed": 125,
+    "skipped": [
+      "test_pg_concurrent_redemption_and_int64_balance (tests.test_next_iteration.CloudTests.test_pg_concurrent_redemption_and_int64_balance): 真实 PostgreSQL 并发用例",
+      "test_pg_import_synthetic_legacy40_atomic_mapping (tests.test_next_iteration.CloudTests.test_pg_import_synthetic_legacy40_atomic_mapping): 真实 PostgreSQL 导入用例"
+    ],
+    "failures": [],
+    "errors": [],
+    "database": "synthetic SQLite; no application lifespan or real data",
+    "real_postgres": "NOT_RUN",
+    "real_supplier": "NOT_RUN",
+    "real_mail": "NOT_RUN"
+  },
+  "browser": {
+    "status": "PASS",
+    "checks": 82
+  },
+  "original_five_reproductions": "PASS after updated plan start contract",
+  "additional_boundary": "legacy history=[] future-effective edit loses today timing snapshot",
+  "source_comparison": {
+    "reference_sha256": {
+      "checked": 4,
+      "mismatches": []
+    },
+    "source_sha256": {
+      "checked": 128,
+      "mismatches": []
+    },
+    "documents_sha256": {
+      "checked": 6,
+      "mismatches": []
+    },
+    "evidence_sha256": {
+      "checked": 4,
+      "mismatches": []
+    },
+    "review_source_unchanged": {
+      "checked": 229,
+      "changed": []
+    }
+  },
+  "real_postgres": "NOT_RUN",
+  "real_model": "NOT_RUN",
+  "real_mail": "NOT_RUN",
+  "real_phone": "NOT_RUN",
+  "real_legacy_data": "NOT_RUN"
+}

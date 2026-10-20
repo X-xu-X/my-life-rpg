@@ -1,0 +1,282 @@
+{
+  "date": "2026-10-19",
+  "baseline_head": "ec5259b07c3b8ab761497bc260da29dc97cbbb64",
+  "task": "FULL_SYSTEM_REVIEW_2026-10-19 N01-N05",
+  "state": "local repairs and synthetic acceptance; uncommitted, not pushed or deployed",
+  "backend": {
+    "status": "PASS",
+    "run": 127,
+    "passed": 125,
+    "skipped": [
+      "test_pg_concurrent_redemption_and_int64_balance (tests.test_next_iteration.CloudTests.test_pg_concurrent_redemption_and_int64_balance): 真实 PostgreSQL 并发用例",
+      "test_pg_import_synthetic_legacy40_atomic_mapping (tests.test_next_iteration.CloudTests.test_pg_import_synthetic_legacy40_atomic_mapping): 真实 PostgreSQL 导入用例"
+    ],
+    "failures": [],
+    "errors": [],
+    "database": "synthetic SQLite; no application lifespan or real data",
+    "real_postgres": "NOT_RUN",
+    "real_supplier": "NOT_RUN",
+    "real_mail": "NOT_RUN"
+  },
+  "browser": {
+    "checks": 82,
+    "status": "PASS",
+    "build_hashes_match": true,
+    "all_four_download_hashes_match": true
+  },
+  "migration_head": "b024_fact_notes",
+  "new_migrations_this_repair": 0,
+  "reference_sha256": {
+    "docs\\review\\full_system_2026-10-18\\implementation-manifest.json": "52a0db7e947e0697f6cbc32b915d6a05460f3fc36a2598658f32daa1676f01e8",
+    "docs/FULL_SYSTEM_REVIEW_2026-10-19.md": "de765321684c8b3bbdac0064efc325460b3f853e3382940ffe12ec059420bbe9",
+    "docs/review/full_system_2026-10-19/source-comparison.json": "0fbaeaa7f8672cf93216e21baa11862650974888b4352d04c162eb3827949737",
+    "docs/review/full_system_2026-10-19/probe-results.json": "c7287e2ecee6cdb73387fbfdc4e31d466acd5c88356dff00f95cf856c8249d29"
+  },
+  "changed_source_count": 22,
+  "changed_from_oct18_manifest": {
+    "app/prompts/shop.py": {
+      "previous": null,
+      "current": "d211a28bfbf17a81db86bb892b50be6a9a5a3ef8d75563765a085328a38c4413",
+      "note": "Existing tracked prompt was not listed in the Oct18 implementation manifest; original HEAD SHA256 recorded separately.",
+      "head_sha256": "44755960b7432531fb880a262bc76f7c63c614627ce20af9ab42f6315a8c79ea"
+    },
+    "app/routers/export.py": {
+      "previous": "2167bd0653ece3f80b66a1bfabff7171546a7f6d05d877b9c1f9e235b073db0d",
+      "current": "cc28bd6670863b6d78e0e8f8d4f3d8fe0c2819258da94b833b265bd347e48783"
+    },
+    "app/routers/phase.py": {
+      "previous": "d9fd8aed85d04040ff46117ed4d5313ac1351ef06dcb0aeab3db1f40d621fdf0",
+      "current": "508233a4b374b07eb334ae160f72bd1e7ad2179cfceabd18e1cf45f3d60a3fab"
+    },
+    "app/routers/plans.py": {
+      "previous": "007c4f175114611f63537a7b5133271325391fb171225ea4cfab7d3f1cb1d4ec",
+      "current": "0353070aa9d19d697795cbdd8bdaccaceb9597c1596a775579df51555594ae3e"
+    },
+    "app/routers/reward_quotes.py": {
+      "previous": "7545bbc6276a61bee0405923e76f316aedbc99d4fa672216f59ac6bc90b16738",
+      "current": "0dc0af63df7ffdc8a12030e3fc898b327eaa5896bd14d624c1ffbac62307bb40"
+    },
+    "app/routers/timers.py": {
+      "previous": "ba0349974be6f112e56ca6031093cd8faa5ed97d3d45b1ca8616a92e155a4d42",
+      "current": "507932fb3e897f7d05b37bf8375f623aba5c222fb9145c7e8aeaf1c30c27725e"
+    },
+    "app/routers/trial.py": {
+      "previous": "ab81733f574ad0bd8719f2d335488279eacf664162e97264fefedbeb0d06509e",
+      "current": "9d310f7a918f2d63fb9a089dd7bb5c886dcdb3e94e9da78ef0408ca2a4b08f2b"
+    },
+    "app/services/coin_service.py": {
+      "previous": "829190de27a9bf7751f2dcffbf7fe18d9ca71f1e343ac6e1074f5ebbafc04bc0",
+      "current": "3e86146ce56fc81a3fc6c9b48cc3524958184e73df7e8328b1ebcc40500fb9dd"
+    },
+    "app/services/discoveries.py": {
+      "previous": "1d4507e1ecc7ca35e7f8c582bbefd3e08168e63fcc606f02f86de72183963440",
+      "current": "a063e564a16a7a44a9d051df195e586ab988ec608433d83878f8131f4a538e73"
+    },
+    "app/services/fact_analysis.py": {
+      "previous": "974c6cf4296e250fb6eda105e06c21eb4ceca1b86b00dcb91ff6aa3f7bbff0e9",
+      "current": "d4579e15d3b66181b3f03b2e63382f81ca7b1dd94500a0f113245fcdea078ff4"
+    },
+    "app/services/readable_export.py": {
+      "previous": "c09f7d780a7abefbab0fc71e19bf7e1e5f8060a9760cb339b7f1e22471d06af9",
+      "current": "9e40733bbccc82ffbd4c60e4a39b585aa22f9c165391873282162d49060958eb"
+    },
+    "app/services/receipts.py": {
+      "previous": "d6589c99ce60e8325ae38882f4827369a1b21e62c57262cbf14a901cdfa7eac7",
+      "current": "978652a6bfd413d5f30758e0d7197875c06269470ae319a9e6153b3f0ce44e49"
+    },
+    "app/services/review_context.py": {
+      "previous": "5b69660674064fdab01f2acff0e43650526c4d3b8d1c98da0f5ab93625269384",
+      "current": "7b155706431f1ee69926f1a18a50854ad71bb830ef4a103a83765b2b96e30745"
+    },
+    "app/services/shop_service.py": {
+      "previous": "7c5c73122cdb13f838f834ed326294e15cd4107ba5083c139f63a1280a9dfee0",
+      "current": "8017f799a1e3cc6d2bbd4d73f9978a725ccbf8c8aa87eadfa50da7eaab0c8fef"
+    },
+    "app/services/timers.py": {
+      "previous": "5c55157fe7cf1f9ee9d32fe9a965a5a264bac93480a0097d8351d0d326504c66",
+      "current": "89b59357d5a86044c091d750e88755a4198f0253921c8ecb74e7930e61073c08"
+    },
+    "frontend/src/components/PlanAgenda.vue": {
+      "previous": "f6f0aa21f949766aa7169be626bc31cbd62b137cfb825124ad036cec76af2f59",
+      "current": "f7ad44a30a6ec36d023da3bcef63fe50a08a9049c7e3bf616cae558848eeb58c"
+    },
+    "frontend/src/components/TimerView.vue": {
+      "previous": "727e32b44a9b9a95327376e47323756445d799dd349001bec9489be0cdbfbe57",
+      "current": "ef16f909224fccc9bd6832f53c0a9940aa570ce1f8e804bcae4f900d394a34ea"
+    },
+    "frontend/src/components/TrialRules.vue": {
+      "previous": "af3b7f04251d1ef8119a8eb79291bbadcc24cdb15dd14c622c735dc62c3f5f59",
+      "current": "f77b5538e947a75088c68b6f92e98f774bff09b5f7a585b381733fdf3a05576e"
+    },
+    "tests/browser_full_system.mjs": {
+      "previous": "f0bd1cbc5a8e57f281172670ac29ba6763c2f0a69c4aa16f14d6572f940ff921",
+      "current": "88a222364b3a124fd879cae4bd03f2805a2c84f96ee16199175f4ad52b7b1024"
+    },
+    "tests/run_full_system_checks.py": {
+      "previous": "f0d3928b269bb33a40f085a40163daea5107c64176764813032f461ea55d5ed9",
+      "current": "36bf9f7524f90534f3ec2960b4013a3e38fefa0ef6e781d5582aff28ca6ba765"
+    },
+    "tests/test_full_system.py": {
+      "previous": "a47f0717ddc5ab915f9a9a4a33a07df8882ca8b99cdbb6737d24cde4afea525e",
+      "current": "7e6026786f12d251ac2707f3e337143d3ad80ed916b9ede33010fc2e138114bf"
+    },
+    "tests/test_review_repairs.py": {
+      "previous": null,
+      "current": "2e25217a902032aa708748dbff26db0683114c67acb93b4c8591bdee22d057d3"
+    }
+  },
+  "source_sha256": {
+    "alembic/versions/b010_review_repairs.py": "c7451c9b043ffbe671088eca83344d56341967792e61ed5772d2a84140b7dcde",
+    "alembic/versions/b011_record_permissions.py": "b2d7d485a60d8558403ca04643abb5ede63f84dfeea818cecc5fa28ec14ffb6f",
+    "alembic/versions/b012_fact_actions.py": "8d0cbb3da4c88447a67901367ad326c2c569d985def997a93fb2d9669a26e0fb",
+    "alembic/versions/b013_care_feedback.py": "bbd9038e6e5951350559e0f4b53cde78109a0e9ee7d910aa4e60da2b7d16fbd9",
+    "alembic/versions/b014_rewards_timers.py": "280766fcccf7ca243e27b9f55a61c82502914971cf9db817bddf865ea90ac5ba",
+    "alembic/versions/b015_profiles_calendar.py": "07824bcc3839be570ff8339bf6c8caeb7e457313e7a042a505e94528377068d9",
+    "alembic/versions/b016_custom_endpoints.py": "d7a2da1f79467e76c9bf4e3c870ae17b47242bde467074dd03ae4b76b53fda74",
+    "alembic/versions/b017_report_previews.py": "a5e97fe51a4720e5a9eecfb401209b3160b4c1c5733b62e9c0af80cdc623d411",
+    "alembic/versions/b018_job_sources.py": "556c792819b3a067b7a67cb45bd9ddf554a6f1efdaef7d0eedba25183001e242",
+    "alembic/versions/b019_phase_suggestions.py": "783cfac6df51c49f537e4d1283d92165d61cafd1988440ca1d0eea00bfd59ce2",
+    "alembic/versions/b020_derived_sources.py": "15514f7312bae6bccf8bfdf70d87114c5e3fb4b50127e3a768129af955a21434",
+    "alembic/versions/b021_future_timezone.py": "ea64b6b64f42fed4c3bf5b8d8a5b51f96e552d62f88e116e53be29572a086df8",
+    "alembic/versions/b022_focus_sources.py": "fc2ac7990c9a2bd4010e96e36f2c2b932d3b44f48c4dbc16f32c2ce948372b28",
+    "alembic/versions/b023_diary_corrections.py": "07fc86ecad9e0358912f5a49b5142515d191ecfc60bce2a269845bfc99c1e2a2",
+    "alembic/versions/b024_fact_notes.py": "8d11805ebe23dec8cdba630fbb30b71eef305a959879c381c8005b46d9c7a958",
+    "app/local_worker_launcher.py": "f51d93b93305b652d8c04880fd64982c085aff0d6c243f7506d0cc5cc1b570b0",
+    "app/main.py": "071ad3b31f406e6304eeff705af5a61244406a3f39cf2a1ea1596d568e7c234c",
+    "app/models/__init__.py": "12187ff73e6f4fe19411fe13b4a9f86de809fe6f31c0ad10e1d3831d424b5620",
+    "app/models/access.py": "7aaa8a97e32ed28a10d24acad9bd6bc451d73716abddbaafaf37c21989296126",
+    "app/models/accounts.py": "9ff15f41602de4b4c6bb8833f89f99506f7e1517317ee2e77118fd3d7c7e18b3",
+    "app/models/analysis.py": "c3aa8abf7b3fa32158d1e389dd31d7583dee97343bceba7acff1f87bb1e40d57",
+    "app/models/full_system.py": "417fb2fafde153301b0e2fad52401b9ad932a90fef8a9cbad4dbc248b9500776",
+    "app/models/workflow.py": "3281d15006fa26dbd7ef70b04c21b2b77b89e59dc0f828056acf2e7bf380f207",
+    "app/prompts/shop.py": "d211a28bfbf17a81db86bb892b50be6a9a5a3ef8d75563765a085328a38c4413",
+    "app/routers/account_security.py": "5e42f722a52fcdfb974a802c755c7e896f1d1e468d86b2d9caa9e3287bd3f1d3",
+    "app/routers/admin.py": "c0ec54f5d4ee218a2a9f4b29587e0505835f14ca0e7f388e997cb4be40b8c8f7",
+    "app/routers/analysis.py": "da2d6555107afbd1f751dd39fb2b6648e7148df0e0ac98b78f09efd607cc03fc",
+    "app/routers/care.py": "6f3a32d11d93408f2843f084ba4b5c05cb134f69bee40bc613c02b668aaf73f6",
+    "app/routers/diary.py": "d1817063a05677548bd8a320df0ca170bd5cc04c69efc6b2b7665ddd5d7a5076",
+    "app/routers/events.py": "32ddc7d8a0e03d1b640874c95fb3f7077a8a94ded938429a7087ea3ffa5b61fd",
+    "app/routers/export.py": "cc28bd6670863b6d78e0e8f8d4f3d8fe0c2819258da94b833b265bd347e48783",
+    "app/routers/fact_bundles.py": "c09d7e4fdeaa2314ec210ceddb2f8faf41a3b433447afd7bd8ff82502de66e7a",
+    "app/routers/feedback.py": "660968bebdfb7c77ed587606b20d0eb92326e937da42e39def047e62df196dde",
+    "app/routers/judgments.py": "4a19a0f89e4b2a6012eca1c8fefad5d797d98f29c82cd55b83b9cc519d33c4e6",
+    "app/routers/onboarding.py": "fe9600a26d2e5ab924d9c837223933bec9279f4fc33512eaaf6d565f7f4b058a",
+    "app/routers/phase.py": "508233a4b374b07eb334ae160f72bd1e7ad2179cfceabd18e1cf45f3d60a3fab",
+    "app/routers/plans.py": "0353070aa9d19d697795cbdd8bdaccaceb9597c1596a775579df51555594ae3e",
+    "app/routers/policies.py": "44782bba3d7dfd6d44e6663bbf07ac651fad44e7dd6553a6b6c2716539f5a26b",
+    "app/routers/questionnaire.py": "3d469117ea4d8ef4b289f3d2d221781a46d778244ba271a1f87c7c09f3920d8c",
+    "app/routers/record_permissions.py": "c48dfb8cb7ab336d88a2d035a9c1448211cb6760dc4e3e83d72c1cd7d8e7fd44",
+    "app/routers/report.py": "76138506dea99e096497dcc1c70f3b9427968f1bc1a76d49b6d7337db8963361",
+    "app/routers/reward_quotes.py": "0dc0af63df7ffdc8a12030e3fc898b327eaa5896bd14d624c1ffbac62307bb40",
+    "app/routers/shop.py": "144aff2d1b9123964c3f24cebcd0b43f99191ba4b16749da805b09d9794c68bd",
+    "app/routers/timers.py": "507932fb3e897f7d05b37bf8375f623aba5c222fb9145c7e8aeaf1c30c27725e",
+    "app/routers/trial.py": "9d310f7a918f2d63fb9a089dd7bb5c886dcdb3e94e9da78ef0408ca2a4b08f2b",
+    "app/schemas/__init__.py": "47f5a296e3841067ea829cae54b319bbfe4b4bac8606b891ee0017bc91218d57",
+    "app/services/achievement_service.py": "caf7b2b69a34adc5b5d0381b5c5d7721762acfa1591774012bb962b74a51a689",
+    "app/services/ai_context.py": "dd4b88a54dcfd9a1889f305bc53b5ebad4979cc97faae50fb5b5633ae8c3c71e",
+    "app/services/analysis_jobs.py": "c4e6e3f7ce00dcd79c862bd86410f9dda84771c8087881d37ffec1f7d871ad11",
+    "app/services/auth_service.py": "d853d44576a1f72c4490a0300f06da92b6de99c6e3a0133cff1bdbdd00be2a0a",
+    "app/services/challenge_service.py": "45484e8a1d44cd13ad72d9b44a54bd74da05b2a419d73177a19ef387936a01ed",
+    "app/services/coin_service.py": "3e86146ce56fc81a3fc6c9b48cc3524958184e73df7e8328b1ebcc40500fb9dd",
+    "app/services/credentials.py": "d183c3f29f29bcd4d563db1b420dd823cab1a8d3184a9e777085fb6ff2bb8934",
+    "app/services/diary_review.py": "09eab497f2cd401bbcd1d6702c234932908252027abc5c44e73605200b847973",
+    "app/services/discoveries.py": "a063e564a16a7a44a9d051df195e586ab988ec608433d83878f8131f4a538e73",
+    "app/services/economy_service.py": "23a5aff349be4fbfdf97e30e77a37e7484db7567526cb49f74a693c567544b51",
+    "app/services/exemption_service.py": "0e0cd2789f3ef03eb3e8e2ba0cffaeefc5736bec7ac542951a11fc1ff115b335",
+    "app/services/fact_analysis.py": "d4579e15d3b66181b3f03b2e63382f81ca7b1dd94500a0f113245fcdea078ff4",
+    "app/services/facts.py": "9e23435f8b1ddb378a805f70ba15d190a048c8dc52f302551bb3fd7cdd247304",
+    "app/services/judge_service.py": "80493ea511eb2360c7e2abe71bbbb0c575c5a26c60d3e20d4b1ecd39b2ad5819",
+    "app/services/llm_config.py": "8452889a10a434a0267d843d56f9cc1b992bb24898f1cdc73aa8611692a63665",
+    "app/services/llm_service.py": "ed798b019e502a27d6a2bb0a43ae778c14e8ac970880027fb7ef9171c9b0a21b",
+    "app/services/mail_queue.py": "2b3fdac0bd4a579ee1abcffe01771d91c3a9f314be6022302f69cf92f362aaa0",
+    "app/services/memory_service.py": "8aef979ccef70d5ee7160a3ee47b6089b7eaa872a2eb93fd9e889c5084c21115",
+    "app/services/model_runner.py": "059c39d569833309afe7e4267d41637cc0535c9e674b52a963ffc944d0ae0794",
+    "app/services/model_validation.py": "34ef4cb6c13296f53aed2511425997977a1d4dd2c8f49d92d54dfa167c0ccb36",
+    "app/services/onboarding_service.py": "e0c4b26e64fcb76ba90925b85323c366f793a694f97b37ad8bf1861bbb19dce6",
+    "app/services/owned_repository.py": "dbc79ba892174216254d5be7c483dbe276f7a34c5898368ff5246b06b25d721b",
+    "app/services/question_catalog.py": "3c87f1842e421166a16d8bdbef2334693c75383e40013019297868fdb70b36cd",
+    "app/services/readable_export.py": "9e40733bbccc82ffbd4c60e4a39b585aa22f9c165391873282162d49060958eb",
+    "app/services/receipts.py": "978652a6bfd413d5f30758e0d7197875c06269470ae319a9e6153b3f0ce44e49",
+    "app/services/record_metrics.py": "fd06cf5e14207bb0145a1b6b588d2803aaa720a5271af5b8460612405f67c9f5",
+    "app/services/review_context.py": "7b155706431f1ee69926f1a18a50854ad71bb830ef4a103a83765b2b96e30745",
+    "app/services/shop_service.py": "8017f799a1e3cc6d2bbd4d73f9978a725ccbf8c8aa87eadfa50da7eaab0c8fef",
+    "app/services/subdimension_service.py": "563a39826b4bcb17383bf5f638ff747beedd2ea32d91e10651e43c8246d76127",
+    "app/services/time_service.py": "c56707bd9df9ffa21662373e17259332ad8c5d3b8948e30d0d475c9c29817668",
+    "app/services/timers.py": "89b59357d5a86044c091d750e88755a4198f0253921c8ecb74e7930e61073c08",
+    "app/services/trial_rules.py": "49eb43b88a9f3048282bf50b54ffb0b4070ed0cbc88b59e35214a4f13a2ad4bf",
+    "app/services/workflow_common.py": "befa0c50cc7aa0c02fb460a866e4b0cc50d5431ef2d96649b0cdb80402399875",
+    "app/worker.py": "61890b0357bf42f399546d5e28016ecbbf5423dc7484836d1fd1703a5d2d9e85",
+    "frontend/src/components/AccountSecurity.vue": "41c64b3b118b1fb5ebbf7aa248dd72600e104a70af90f0551a0f7aa68026f08e",
+    "frontend/src/components/AdminView.vue": "f0d681efd211fe1b6a89869499a6c7acc6e9eef1b5e114040fb7fcff0e626670",
+    "frontend/src/components/AnchorsView.vue": "c617e9a618d1b9afaac2b94e4cc7fe3c42558e426d88a02b2666b38f228f0d37",
+    "frontend/src/components/AttributePanel.vue": "6c14b1c372f15445bf0ca962ebab6205917980791b68084951bc2c3aac3b40f2",
+    "frontend/src/components/CareSettings.vue": "857be7fd3c7dbee1645c8fb61626e717ae04f4564dc00f0368977754bc3da9bc",
+    "frontend/src/components/ChallengeView.vue": "35eee730c5c52ddbfde42422aa9f1d8169cb359f82e2161cf8573a1de2f9190e",
+    "frontend/src/components/DiaryView.vue": "2202a94052d63b5efed5152398434237143d3ab2e9e4e9509883e491273842c5",
+    "frontend/src/components/EventPicker.vue": "6f7e7d6520c750f276dbd949e82c8d7e61c6afb35e9085d7e54df1f25a42fb4c",
+    "frontend/src/components/ExportControls.vue": "2c44544caaf2d5119a528052bc1443c1cc04ba66779cc4c67d0330d0b43c9bd8",
+    "frontend/src/components/FactAnalysis.vue": "d0335d5b77042b00cec59e59db3197b6ce8105157b7496c1532af1f131eadfec",
+    "frontend/src/components/FactLinks.vue": "557efa5a484a7689e071ea7ce8133ddfaa634d82bc55378fffa640b0f14f4c9e",
+    "frontend/src/components/FeedbackView.vue": "ca08fe430445abaa074e889a8f387adda01d37b077af83ef24f7a3c4fc1a96fc",
+    "frontend/src/components/GoalPlanProgress.vue": "067f8e8e790eb49028a41b623b7e4cef5485f96f0e08340e389646557b4a60f7",
+    "frontend/src/components/GoalsView.vue": "5e08c022e647de8f73d0618e65a10346f25b5ff0b4e20cc08c388fa9106203c2",
+    "frontend/src/components/GrowthPolicies.vue": "75055178fe0199ad919ecdafa43e9be715208739b1441c81a9d5b5b5d540639e",
+    "frontend/src/components/HolidayEditor.vue": "38c5ad2eb9fd912219ebe007efc48085a7400a775653233bdb3fa2366dbf667d",
+    "frontend/src/components/HomeView.vue": "6dfd560f87fe898fedbfa2c0c54a02f85a5808865501abdb935e074f4eb279bd",
+    "frontend/src/components/LifeChecklist.vue": "f0383a285b9abebaa9eeb5a97b1418a79a68551c369b3365dc6fef13ea4b8ae0",
+    "frontend/src/components/ModelSettings.vue": "36b1117806ecce8aa0d3da55c587f3947fb842e768435d8fd7f10c499b846f6a",
+    "frontend/src/components/MyView.vue": "825d63f5f950508e92694b7b0bf1fdc5bd89b9424a2251c81db4346f37c7bf7b",
+    "frontend/src/components/PhaseView.vue": "d13120d12835adec30e90d0891f3363e191402e99adcefb9f125cafc94d04ae4",
+    "frontend/src/components/PlanAgenda.vue": "f7ad44a30a6ec36d023da3bcef63fe50a08a9049c7e3bf616cae558848eeb58c",
+    "frontend/src/components/QuestionnaireView.vue": "ae7e9b140e80cbfd6f9aceb2029a926696afb1a47250d1db512ff3b0bc5639e2",
+    "frontend/src/components/RecordComposer.vue": "e98c7d413eb86ddbf04251270a19fc4efe92a2134820cb3998cbd719098359e4",
+    "frontend/src/components/RecordDetail.vue": "da6317a461245291fdefc360242b5d4c1a74b9aa3a349fcac07358e29006eae7",
+    "frontend/src/components/RecordMetrics.vue": "e33bfd49f5daeee08bcc4a565f2a7b6d35d87ead42dc53a688cf66bc9815dd69",
+    "frontend/src/components/RecordPermission.vue": "fcb845447c25f11a9b9078ce1525dab4045c3ff5341240da29dedc703259ad80",
+    "frontend/src/components/ReportHistory.vue": "20aff0a43bafce840f2a6d9063d36fb3c0f22bcd260cf128e9f0faff32f737de",
+    "frontend/src/components/ReturnPrompt.vue": "956936f243c7a58d4bb0c3d5374eccbd6441a406c7af38e66644606472e12de5",
+    "frontend/src/components/RewardShop.vue": "95716b4543c2371352578509d6c2a9f52acf4ea485ca07c3009996e95693a907",
+    "frontend/src/components/SettingsView.vue": "ddf1004abc99b3f6dba5e58cae00b06df2699cfb9d7b0c9fab517caae1eabe93",
+    "frontend/src/components/TimerView.vue": "ef16f909224fccc9bd6832f53c0a9940aa570ce1f8e804bcae4f900d394a34ea",
+    "frontend/src/components/TodayCheckin.vue": "da92c10a5884828a9738879e24a0e1114659bbc2aa35a76612b27df9f51bf3ac",
+    "frontend/src/components/TrialRules.vue": "f77b5538e947a75088c68b6f92e98f774bff09b5f7a585b381733fdf3a05576e",
+    "frontend/src/components/ui/ConfirmDialog.vue": "5f46f6e26d2f74437ece0acfc9ed152af57b158fbab935710eeeb47817f24464",
+    "frontend/src/composables/useWorkflowWrite.js": "f14530cc64242b52e2193567d2bf974e114bfe6d9a885070f856c4f0c51b052d",
+    "frontend/src/router.js": "fc0938b3cde1b4cfd59b3aa0aa4d101d9c0b3f4c9545638689e6e837ee5cf032",
+    "ops/import-sqlite.py": "73976e69fa139c12f5c6f72ce28b8360c97bb2078a99e0fd47f86dbb14c6c9b1",
+    "start.bat": "686e11c36ebf60ad0f682a1e682f26ac7aa9233dd4ff328ec6e8d93d0b8c0ddd",
+    "tests/browser_full_system.mjs": "88a222364b3a124fd879cae4bd03f2805a2c84f96ee16199175f4ad52b7b1024",
+    "tests/run_full_system_checks.py": "36bf9f7524f90534f3ec2960b4013a3e38fefa0ef6e781d5582aff28ca6ba765",
+    "tests/test_continuation.py": "74d6e11d596a6401850f9fa08ae97d7a7a30bf4299b32182e11a4e96d1a7f4e4",
+    "tests/test_full_system.py": "7e6026786f12d251ac2707f3e337143d3ad80ed916b9ede33010fc2e138114bf",
+    "tests/test_next_iteration.py": "e138a64c96c8ca2c9d95d7d1b53560d562e9c704ce5717caa925eb8b892c3a86",
+    "tests/test_ops_next.py": "ef86b95c4889fd1c52cf7df41a69f21268072880ec60eae794313f6ec1781549",
+    "tests/test_review_repairs.py": "2e25217a902032aa708748dbff26db0683114c67acb93b4c8591bdee22d057d3",
+    "tests/test_trial_p1.py": "13ab415d28caaaaf81c6c4e228f03ec90aba5df648acdc641140d0a53321c6b7",
+    "tests/test_v1_11_safety.py": "f631e37f6f33343e90f3e099748257f910d84f1626c287501ed99bc18a88bf31"
+  },
+  "documents_sha256": {
+    "docs/FULL_SYSTEM_FIXES_DELIVERY_2026-10-19.md": "0266ced1ad00b90f09f34f01dfd7eb9be2a96b475d3614be72506c02717c474f",
+    "docs/FULL_SYSTEM_DELIVERY_2026-10-18.md": "b703338370fb5f0100006e5d4483b3acd6f4d7e45b4f537f51345ebc776b81f4",
+    "docs/DECISIONS.md": "303d2e5389a89a808e293b1ac9385b0afce1bcdc100c1b3bf82484d3b01eb956",
+    "docs/PRD.md": "1fd05e349e345f395990623291a1d5c33c141bb5ac99d2cbfcf762ef6625a8cd",
+    "docs/learning/CODE_GUIDE.md": "cf5fa6cf34525e85234571415cee59c51d7fe2d904dc43967f95c3545d7a858e",
+    "docs/learning/BUSINESS_ROADMAP.md": "dba0da172d83f12d34f0314233550105ad789f0719d37fa0246800f8c4db5451"
+  },
+  "evidence_sha256": {
+    "docs\\review\\full_system_fixes_2026-10-19\\backend-results.json": "9a3a9f674befa61ea8ffa389547b6b7786bb31ce33b8cf8b6fbe7bb5d3a5dbbc",
+    "docs\\review\\full_system_fixes_2026-10-19\\backend-tests.log": "db5d3f459950085410fe4bfeaabc90044f716eba4e8d2d9c45ec5a4bf96cc408",
+    "docs\\review\\full_system_fixes_2026-10-19\\frontend-build.log": "8b275b7ec67429d57a3651a90b8d3f576bfe23552a63fbf1e4db076d19f55ee1",
+    "docs\\review\\full_system_fixes_2026-10-19\\browser-results.json": "a851d6143e0631e2592bb8d34e689c22df2528362e9ea4fcb0b1e849d9dd6e70"
+  },
+  "real_postgres": "NOT_RUN",
+  "real_model": "NOT_RUN",
+  "real_smtp": "NOT_RUN",
+  "real_phone": "NOT_RUN",
+  "real_legacy_database": "NOT_RUN",
+  "static_checks": {
+    "python_compileall": "PASS",
+    "node_check_browser_harness": "PASS",
+    "git_diff_check": "PASS; informational CRLF conversion warnings only"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "source_sha256": {
+    "checked": 128,
+    "mismatches": []
+  },
+  "reference_sha256": {
+    "checked": 3,
+    "mismatches": []
+  },
+  "documents_sha256": {
+    "checked": 3,
+    "mismatches": []
+  },
+  "evidence_sha256": {
+    "checked": 3,
+    "mismatches": []
+  },
+  "changes_since_previous_review": [
+    "app\\routers\\plans.py",
+    "tests\\test_review_repairs.py"
+  ],
+  "review_source_unchanged": {
+    "checked": 229,
+    "changed": []
+  }
+}

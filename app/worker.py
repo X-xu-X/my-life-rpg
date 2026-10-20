@@ -70,6 +70,11 @@ def main():
     next_maintenance = 0.0
     while not stopping:
         heartbeat.touch()
+        from app.services.mail_queue import deliver_one
+        try:
+            deliver_one(SessionLocal)
+        except Exception as exc:
+            logging.getLogger(__name__).warning('mail worker failed: %s',type(exc).__name__)
         if time.monotonic() >= next_maintenance:
             maintain(SessionLocal)
             next_maintenance = time.monotonic() + 60

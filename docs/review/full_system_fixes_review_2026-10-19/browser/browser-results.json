@@ -1,0 +1,398 @@
+{
+  "status": "PASS",
+  "checks": [
+    {
+      "name": "five navigation sections",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 390 /",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 390 /plans",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 390 /diary",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 390 /care",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 390 /onboarding",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 390 /timers",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 390 /phase",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 390 /growth",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 390 /settings",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 390 /feedback",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 390 /security",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 390 /challenges",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 390 /journal",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 390 /checkin",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 390 /reports",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 1440 /",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 1440 /plans",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 1440 /diary",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 1440 /care",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 1440 /onboarding",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 1440 /timers",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 1440 /phase",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 1440 /growth",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 1440 /settings",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 1440 /feedback",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 1440 /security",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 1440 /challenges",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 1440 /journal",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 1440 /checkin",
+      "status": "PASS"
+    },
+    {
+      "name": "layout 1440 /reports",
+      "status": "PASS"
+    },
+    {
+      "name": "unbuilt first record shows baseline route and preserves qualification",
+      "status": "PASS"
+    },
+    {
+      "name": "private raw save requires explicit permission",
+      "status": "PASS"
+    },
+    {
+      "name": "private save succeeds without model",
+      "status": "PASS"
+    },
+    {
+      "name": "diary defaults to private",
+      "status": "PASS"
+    },
+    {
+      "name": "private diary creates no question or fact job",
+      "status": "PASS"
+    },
+    {
+      "name": "next day starts with its own empty plan draft",
+      "status": "PASS"
+    },
+    {
+      "name": "plan A to B to A restores A",
+      "status": "PASS"
+    },
+    {
+      "name": "late plan response cannot overwrite a newer date",
+      "status": "PASS"
+    },
+    {
+      "name": "plan B draft remains isolated after race",
+      "status": "PASS"
+    },
+    {
+      "name": "missed plan locks without inventing facts",
+      "status": "PASS"
+    },
+    {
+      "name": "plan draft restores after leaving the page",
+      "status": "PASS"
+    },
+    {
+      "name": "plan form saves 45 minute duration",
+      "status": "PASS"
+    },
+    {
+      "name": "plan start sends configured minutes and source version",
+      "status": "PASS"
+    },
+    {
+      "name": "plan configured duration starts 2700 seconds",
+      "status": "PASS"
+    },
+    {
+      "name": "active plan keeps duration after plan changes and remount",
+      "status": "PASS"
+    },
+    {
+      "name": "eight care projects persist",
+      "status": "PASS"
+    },
+    {
+      "name": "care projects survive remount",
+      "status": "PASS"
+    },
+    {
+      "name": "questionnaire autosaves skipped answers without AI",
+      "status": "PASS"
+    },
+    {
+      "name": "skipped questionnaire restores",
+      "status": "PASS"
+    },
+    {
+      "name": "first voucher has 25 minutes",
+      "status": "PASS"
+    },
+    {
+      "name": "new voucher starts with all 30 minutes",
+      "status": "PASS"
+    },
+    {
+      "name": "new session clears previous actual-time draft",
+      "status": "PASS"
+    },
+    {
+      "name": "timer pauses durably",
+      "status": "PASS"
+    },
+    {
+      "name": "paused timer restores",
+      "status": "PASS"
+    },
+    {
+      "name": "related supplement saved separately",
+      "status": "PASS"
+    },
+    {
+      "name": "closed permission retains read-only fact history",
+      "status": "PASS"
+    },
+    {
+      "name": "closed permission retains read-only paired answers",
+      "status": "PASS"
+    },
+    {
+      "name": "failed price keeps content draft",
+      "status": "PASS"
+    },
+    {
+      "name": "failed price creates no product",
+      "status": "PASS"
+    },
+    {
+      "name": "open dialog has a unique accessible title",
+      "status": "PASS"
+    },
+    {
+      "name": "financial modal receives focus",
+      "status": "PASS"
+    },
+    {
+      "name": "cancel changes no balance",
+      "status": "PASS"
+    },
+    {
+      "name": "confirmed redemption sends one request",
+      "status": "PASS"
+    },
+    {
+      "name": "feedback retains plain text",
+      "status": "PASS"
+    },
+    {
+      "name": "reduced viewport input remains reachable",
+      "status": "PASS"
+    },
+    {
+      "name": "real browser download json",
+      "status": "PASS"
+    },
+    {
+      "name": "real browser download markdown",
+      "status": "PASS"
+    },
+    {
+      "name": "real browser download html",
+      "status": "PASS"
+    },
+    {
+      "name": "real browser download csv",
+      "status": "PASS"
+    },
+    {
+      "name": "all export formats send history disabled",
+      "status": "PASS"
+    },
+    {
+      "name": "settings at 200 percent text width",
+      "status": "PASS"
+    },
+    {
+      "name": "admin layout /admin",
+      "status": "PASS"
+    },
+    {
+      "name": "admin layout /admin/users",
+      "status": "PASS"
+    },
+    {
+      "name": "admin layout /admin/announcements",
+      "status": "PASS"
+    },
+    {
+      "name": "admin layout /admin/site",
+      "status": "PASS"
+    },
+    {
+      "name": "admin layout /admin/audit",
+      "status": "PASS"
+    },
+    {
+      "name": "admin layout /admin/feedback",
+      "status": "PASS"
+    },
+    {
+      "name": "admin layout /admin/security",
+      "status": "PASS"
+    },
+    {
+      "name": "admin workspace has no ordinary diary navigation",
+      "status": "PASS"
+    },
+    {
+      "name": "no unexpected API",
+      "status": "PASS"
+    },
+    {
+      "name": "no Vue runtime errors",
+      "status": "PASS"
+    }
+  ],
+  "errors": [],
+  "unknown": [],
+  "buildHashes": {
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\icon.svg": "768f167e44fbf477c23aef28d0b8aa93921635d0f24ad1effaace3caea53799d",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\index.html": "5787d84ecf2c2c034d2f9803b400ed6c9a5db152f26f39fd9571060baf795170",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\manifest.webmanifest": "f7b1a710e36c41b68bdb3b05203cb0219d6697b555d9f796514b1dff22b7d0c6",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\AccountSecurity-DOM6wvBY.js": "c4d9189297aff03946963753986fc4554261e04edaca49a8026314a534ba0414",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\AdminView-DDouxJK1.js": "0a98c78df0d2ef6849bd2179d3eedc03d9254bb3ff07b6650f956c630c562052",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\AnchorsView-DFfIebpX.js": "a7e79f274c1fb1e72b89081d4b94a5f95593ee060ab7209332be2916a3ed072e",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\AnnouncementsView-BHJoVf2b.js": "2c5edf9fcefdaa492c650584c8d4f5bc39c7331c0d5d11c6a5388bf23aeef72c",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\AttributePanel-BCQhL0Mk.js": "5a0990c24ea17a334e231bed0e2395385b4ef17dd31d8e7c9868ad91a135c059",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\CareSettings-dpa8xk-J.js": "3c6ed4fe88e84798c4e09594650ba99e5b99c454702d77e729c388574a0c6306",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\ChallengeView-Cnv-Kk2j.js": "68d7e9015937fb0f5c1b2fdbb73136b0941b4ee57f76d814985b995b2f19828c",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\ConfirmDialog-D6QRv4UW.js": "8746f2fee6a89146db3b3a159b985eceb2f4cf8e0c01168f1e688aa52d238cdd",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\DiaryView-DkNKpPZP.js": "d5380bab350e2dfe8b4d536a6059a7f5d63440f6653c4188314c07926ba693c7",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\EventPicker-D8Pjn0eC.js": "18436b4cc89545e4b73320d8cd090565ff44f53e41c7512e53ea1d25a39e12a5",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\FactAnalysis-BU3ILjTn.js": "52746fcf79006aaee92158ec69c15f115d707e31f7a012ad3b8fc09fbc6505a3",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\FeedbackView-Clr9EWbk.js": "e61028484f12a174d83302aedeb89923fcedaae4f9772b21ac1d562b315884e7",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\GoalsView-D93bekuX.js": "fc6a78ebf4169542845dc25289eddf990bc8629b6453e7aaa356dcc9537dde48",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\GrowthPolicies-kPv3PKy5.js": "65c603bea951e05291593c5d07b6c9a6e51c4058b551ae6e34aecd7be61357ed",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\HomeView-DmIHS_43.js": "fa79655358d58976e5f740af0514d373b5bc10aa36ce5b836892372729bba507",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\index--qMTEqK0.js": "15bd25785697b9ec32adb999478bb81713e5d3203822c7244249ea3809374e8f",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\index-DTVDJDBR.css": "d5ddec4113d088de81e996d58d945358efbb0e81a32987774f27b918c0ee2d2b",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\ItemManager-Br-h9hBY.js": "e476430ac4cb63703960b9de111654aa504c5111afdaad3db70d49dae07e14b7",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\JudgmentList-Q2RvgjkH.js": "8b00f67311f80f822d68f64f0fe794d4de31bdb3cb5888aa68a8d9a6d6c40483",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\MyView-_PP-N4Tf.js": "159015c9cdbe3716834792ec4e239d8a8025c4a436b2c3e0ea134e8b415e11f4",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\PageHeader-BrZG7fyu.js": "3537eab9645cb3cc70da9310d7f59135ea13c7ce8d4a27a4211194bdabafcc6a",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\PendingView-BgA-RPxW.js": "04df220ceb24ba353dbda60dad2ce0194493d8d90162b2c6ded253573801e6c4",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\PhaseView-BAmNbBHL.js": "c7ca8e5abdcd3e6ce58e3e0b757735723b4abd1ceaf8b5e8eca58620a8c853cc",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\PlanAgenda-CrcPrqxa.js": "0da44b07a7430a3d588fd5f692382bd9c0de7c040b2b0b2bab5871a6b896c1b0",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\PlansView-84ATore6.js": "d4f809066f06d5a1e8c904a89c3dcd660b36ce0254051e57f16fde6487d1d128",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\QuestionnaireView-BDVnCSC8.js": "9dfcdfc97b36f8ec11f68301413332120e1a781c4cabe5645729f7cdb648a0f5",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\RecordComposer-DdgxyIus.js": "af1df2f93cde06431f34dafdd6693f22e01489f40b8cef1fa9013d8adf3b52d3",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\RecordDetail-6RepMfWL.js": "d375a836eecb85bfa6b66aa45afe32645176470e32655f9947e38b588c22aa84",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\RecordList-DBCJTrrl.js": "cc5919c08cbe13f6c95c4658962326ee38886a7bdca8ba510a4cf0d003f7f28f",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\RecordPreview-B4votjIc.js": "cdca3a2f581f40c6510ed3a1fcf207839b4e7a320ecac90177abaa67f430eb29",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\ReportHistory-BTFFyMTY.js": "22a7e4bf73f7aa7aedf497cf943d50f2e4fcec8a02a613e1642ac2beecd9aad8",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\ReviewView-CIgvK2JM.js": "4361f8ca15f6462ec60c2d18f25c48c814a7808023537c240d21f5f287461445",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\SettingsView-ZwSBSX6t.js": "76328223901e2701599cdeec3d45703c26bd77f97c3c3aabd1f86723adf8efc5",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\TimerView-C2J4mL2I.js": "a5be35f0687e70aa8059e268e09b52fdadb6a7462a69d8a9f1bed0bcd0baec49",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\TodayCheckin-B1LEqphs.js": "eec59d256bac533bc6b4f0baac65e72c6d2569c9c7ac4110ce74bf092713207a",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\TrialRules-Db4Pr7Pz.js": "6e799cf549346e3b7e8226b817b5fc10f3ad5ad875339a3d56d3a1853056ae1c",
+    "docs\\review\\full_system_fixes_review_2026-10-19\\frontend-dist\\assets\\useWorkflowWrite-Pszz70UH.js": "bcc04990d2ad3bf01a11c6d476abb6c012f2b6907e01d742e0d17d5e9e5ff3bb"
+  },
+  "exportHashes": {
+    "lifexp-records.json": {
+      "response": "e60afac316c0f9703ac0a1eb7aac54f1d0b9a4b1fe4c86f6d15acc829ea3417d",
+      "download": "e60afac316c0f9703ac0a1eb7aac54f1d0b9a4b1fe4c86f6d15acc829ea3417d"
+    },
+    "lifexp-records.md": {
+      "response": "80afead75d011a41701c2f680bcb25ba2a1ca640fe9e818745bf27a19f262fbe",
+      "download": "80afead75d011a41701c2f680bcb25ba2a1ca640fe9e818745bf27a19f262fbe"
+    },
+    "lifexp-records.html": {
+      "response": "97d027e43750e258ed308c6d43819ff0c9c23a7fdbf2f8bad1fb4bd9b0132e7f",
+      "download": "97d027e43750e258ed308c6d43819ff0c9c23a7fdbf2f8bad1fb4bd9b0132e7f"
+    },
+    "lifexp-records.csv": {
+      "response": "c3bcb997d001ada29a24a2679cfb60dcd733e2337fdd34c1d099d5c08cd15d75",
+      "download": "c3bcb997d001ada29a24a2679cfb60dcd733e2337fdd34c1d099d5c08cd15d75"
+    }
+  },
+  "limitations": [
+    "Desktop Edge emulated widths; synthetic APIs only"
+  ]
+}

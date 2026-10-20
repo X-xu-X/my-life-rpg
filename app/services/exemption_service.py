@@ -14,6 +14,7 @@
 3. **允许跨零点**（用户 2026-09-30 拍板）：`end_time <= start_time` 表示区间延到次日。
 """
 
+from app.services.ai_context import model_context
 from app.services.time_service import clock_now
 from datetime import date as _date
 from datetime import datetime, time as _time
@@ -243,8 +244,8 @@ def _attributes_context(db: Session, user_id: int) -> str:
 
 
 def _long_term_memory(db: Session, user_id: int) -> str:
-    profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
-    return str(profile.long_term_memory)[:1000] if profile and profile.long_term_memory else ""
+    from app.services.memory_service import get_long_term_memory,format_memory_text
+    return format_memory_text(get_long_term_memory(db,user_id))
 
 
 def _recent_events(db: Session, user: User, days: int = 7, limit: int = 12) -> str:
@@ -335,6 +336,7 @@ def _apply_extra_penalty(db: Session, user: User, row: Exemption) -> dict | None
     return {"name": name, "delta": actual, "value_after": after}
 
 
+@model_context
 def buy(
     db: Session,
     user: User,
@@ -375,7 +377,7 @@ def buy(
         economy_context=economy_service.snapshot(db, user),
         dimension_list="、".join(sorted(ATTRIBUTE_DIMENSIONS_SET)),
     )
-    config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_AUX)
+    config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_JUDGE)
     captured_zone = user.timezone
     db.commit()  # Release read transaction before waiting for the supplier.
     priced = _parse_pricing(llm_service.chat_json(messages, config=config))

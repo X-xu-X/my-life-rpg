@@ -60,12 +60,14 @@ def submit(db, user, event, body):
         return existing
     if event.is_deleted or event.content_version != body.event_version:
         raise HTTPException(409, "记录版本已变化。")
-    if event.record_kind == 'diary':raise HTTPException(409,'日记请在晚间日记的回顾会话分析。')
+    from app.services import ai_context
+    ai_context.require(event)
+    if event.record_kind == 'diary' and body.operation!='facts':raise HTTPException(409,'日记请使用逐事实分析或独立回顾。')
     if event.is_pure or event.origin == "challenge":
         raise HTTPException(409, "纯享记录不分析；挑战请使用挑战页。")
     current = db.query(AIJudgment).filter_by(event_id=event.id).filter(
         AIJudgment.status.in_(("pending", "adjusted", "confirmed"))).order_by(AIJudgment.id.desc()).first()
-    if current and current.status == "confirmed":
+    if current and current.status == "confirmed" and body.operation!='facts':
         raise HTTPException(409, "已入账结果冻结。")
     if body.operation in ("supplement", "dispute") and not current:
         raise HTTPException(409, "请先分析记录，再补充或复核。")
@@ -83,7 +85,7 @@ def submit(db, user, event, body):
         raise HTTPException(409, "问题已变化，请读取最新问题后保留回答并重新提交。")
     if body.question_job_id is not None and (not latest or body.question_job_id != latest.id):
         raise HTTPException(409, "该问题已有新的回答或分析，请读取最新结果。")
-    if current and (body.detail.strip() or body.judgment_version is not None):
+    if current and body.operation!='facts' and (body.detail.strip() or body.judgment_version is not None):
         try: matches = datetime.fromisoformat(body.judgment_version or '') == current.updated_at
         except ValueError: matches = False
         if not matches: raise HTTPException(409, "判定已更新，请读取最新结果后重新提交。")
@@ -92,7 +94,8 @@ def submit(db, user, event, body):
     except LLMError as exc:
         raise HTTPException(422, str(exc)) from None
     job = AnalysisJob(user_id=user.id, event_id=event.id, event_version=event.content_version,
-        judgment_id=current.id if current else None, judgment_version=judgment_version(current),
+        permission_version=event.ai_permission_version,
+        judgment_id=current.id if current and body.operation!='facts' else None, judgment_version=judgment_version(current) if body.operation!='facts' else '',
         request_key=key, payload_hash=fingerprint, operation=body.operation, detail=body.detail,
         config_version=configuration(db, user.id), state="queued")
     db.add(job)
@@ -130,6 +133,7 @@ def process(factory, claimed):
     with factory() as db:
         user = db.get(User, user_id)
         db.info["user_id"] = user_id
+        db.info['analysis_job_id']=job_id
         USER_ZONE.set(user.timezone)
         job = db.get(AnalysisJob, job_id)
         event = db.get(Event, job.event_id)
@@ -142,6 +146,7 @@ def process(factory, claimed):
             session.refresh(event)
             if (current_job.state != "running" or current_job.lease_token != token or current_job.lease_until < utc_now()
                 or event.is_deleted or event.content_version != current_job.event_version
+                or event.ai_permission!='allowed' or event.ai_permission_version!=current_job.permission_version
                 or configuration(session, user_id) != current_job.config_version):
                 raise ValueError("TASK_SUPERSEDED")
             current_judgment = session.get(AIJudgment, current_job.judgment_id) if current_job.judgment_id else None
@@ -165,6 +170,10 @@ def process(factory, claimed):
             db.commit()
             if job.operation == 'review':
                 from app.services.diary_review import generate
+                generate(db,job,validate)
+                return
+            if job.operation=='facts':
+                from app.services.fact_analysis import generate
                 generate(db,job,validate)
                 return
             if job.operation == "judge":

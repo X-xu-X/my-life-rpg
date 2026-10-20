@@ -177,6 +177,10 @@ def confirm(judgment_id: int, db: Session = Depends(get_db), body: ConfirmIn = C
         raise HTTPException(404, "事件不存在")
     if event.origin == "challenge":
         raise HTTPException(409, "挑战判定请在挑战页结算。")
+    if event.economy_version:
+        raise HTTPException(409,'此事实采用试用规则，请通过逐事实预览确认，避免旧固定金币叠加。')
+    from app.services import ai_context
+    if not ai_context.valid(db,judgment.source_snapshot,user.id):raise HTTPException(409,'建议缺少有效许可或来源已有变化；旧分析保留，请明确授权后重新分析。')
     try:
         from app.services import economy
         selected=economy.prepare(db,user,body.reward_preview_id,judgment,event) if body.reward_preview_id is not None else None

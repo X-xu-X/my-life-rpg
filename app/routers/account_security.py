@@ -90,12 +90,10 @@ def recover_email(body:EmailIn,request:Request,db:Session=Depends(get_db)):
     auth.check_origin(request);auth.throttle(request,'email-recover')
     email=mail_service.normalize(body.email)
     if not mail_service.mailer().ready:raise HTTPException(503,'邮件服务未配置，仍可使用恢复码。')
-    user=db.query(User).filter_by(email=email,status='active').first()
-    if user and user.email_verified_at:
-        try:send_token(db,email,'recover',user)
-        except HTTPException as exc:
-            if exc.status_code!=503:raise
-            # Keep account existence private when SMTP delivery is uncertain.
+    # Identical durable acceptance path. Never resolve account or contact SMTP here.
+    from app.models.accounts import MailDelivery
+    db.add(MailDelivery(email=email,purpose='recover',expires_at=utc_now()+timedelta(minutes=30)))
+    db.commit()
     return {'status':'accepted','message':'若此邮箱有已验证的可用账号，将尝试投递恢复验证码。受理不代表投递成功；未收到时仍可用恢复码。'}
 
 
@@ -124,3 +122,23 @@ def change_password(body:PasswordIn,request:Request,response:Response,db:Session
     recovery=auth.new_recovery(db,user);db.commit()
     if all_sessions:response.delete_cookie(auth.COOKIE,path='/',secure=True,httponly=True,samesite='lax')
     return {'status':'changed','recovery_code':recovery,'reauthenticate':all_sessions,'credentials_version':user.credentials_version}
+
+
+@router.get('/sessions')
+def sessions(request:Request,db:Session=Depends(get_db),user=Depends(auth.current_user)):
+    current=getattr(request.state,'auth_session',None)
+    return {'items':[{'id':s.id,'created_at':s.created_at,'last_seen':s.last_seen,'expires_at':s.expires_at,'current':bool(current and current.id==s.id)}
+        for s in db.query(AuthSession).filter(AuthSession.user_id==user.id,AuthSession.revoked.is_(False),AuthSession.expires_at>utc_now()).order_by(AuthSession.id.desc()).limit(100).all()]}
+
+class RevokeIn(BaseModel):
+    expected_version:int
+
+@router.post('/sessions/revoke-others')
+def revoke_others(body:RevokeIn,request:Request,db:Session=Depends(get_db),user=Depends(auth.current_user)):
+    db.refresh(user,with_for_update=True)
+    if user.credentials_version!=body.expected_version:raise HTTPException(409,'安全版本已变化，请刷新。')
+    current=getattr(request.state,'auth_session',None)
+    query=db.query(AuthSession).filter_by(user_id=user.id,revoked=False)
+    if current:query=query.filter(AuthSession.id!=current.id)
+    count=query.update({AuthSession.revoked:True});db.commit()
+    return {'revoked':count,'status':'revoked'}

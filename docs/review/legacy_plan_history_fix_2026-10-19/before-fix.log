@@ -1,0 +1,15 @@
+test_R01_legacy_empty_history_future_edit_preserves_today_and_receipt (tests.test_review_repairs.ReviewRepairTests.test_R01_legacy_empty_history_future_edit_preserves_today_and_receipt) ... FAIL
+
+======================================================================
+FAIL: test_R01_legacy_empty_history_future_edit_preserves_today_and_receipt (tests.test_review_repairs.ReviewRepairTests.test_R01_legacy_empty_history_future_edit_preserves_today_and_receipt)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\tests\test_review_repairs.py", line 168, in test_R01_legacy_empty_history_future_edit_preserves_today_and_receipt
+    self.assertIsNotNone(listed['timing'],'future edit must preserve the legacy plan effective today')
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: unexpectedly None : future edit must preserve the legacy plan effective today
+
+----------------------------------------------------------------------
+Ran 1 test in 0.904s
+
+FAILED (failures=1)

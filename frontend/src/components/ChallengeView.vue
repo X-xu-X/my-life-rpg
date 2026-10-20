@@ -1,4 +1,5 @@
 <script setup>
+import RewardShop from './RewardShop.vue'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { api } from '../api'
 import { toast } from '../composables/useToast'
@@ -776,59 +777,7 @@ onMounted(loadAll)
     <!-- 商店区                                                        -->
     <!-- ============================================================ -->
     <template v-else>
-      <div class="card">
-        <h3>想要的东西</h3>
-        <div class="form-grid">
-        <div class="field">
-            <label for="challengeview-field-1">名称</label>
-            <input id="challengeview-field-1" v-model="newItem.name" placeholder="例如：一杯手冲咖啡" :disabled="pricingBusy" />
-          </div>
-          <div class="field">
-            <label for="challengeview-field-2">现实价格（元）</label>
-            <input id="challengeview-field-2" v-model="newItem.price_yuan" placeholder="例如：25（时间型奖励可填 0）" :disabled="pricingBusy" />
-          </div>
-        </div>
-        <button class="btn primary" :disabled="pricingBusy" @click="addItem">
-          <template v-if="pricingBusy"><span class="spinner"></span>AI 正在为它定价…</template>
-          <template v-else>+ 添加我想要的东西</template>
-        </button>
-      </div>
-
-      <div class="card">
-        <h3>奖励商店</h3>
-        <p v-if="shopItems.length === 0" class="muted">暂无物品。</p>
-        <div v-for="it in shopItems" :key="it.id" class="judgment-item" :class="{ finished: !it.enabled }">
-          <div class="action-group" style="align-items: center; margin-bottom: 6px">
-            <b>{{ it.name }}</b>
-            <span class="tag">
-              {{ it.price_yuan ? it.price_yuan + ' 元' : '时间型' }}
-            </span>
-            <span class="reward">{{ it.coin_price }} 币</span>
-            <span v-if="!it.enabled" class="tag">已停用</span>
-          </div>
-          <div v-if="it.pricing_reason" class="muted pricing-reason">
-            <b>定价理由：</b>{{ it.pricing_reason }}
-          </div>
-          <div v-if="it.worth_note" class="worth-note" :class="{ warn: /建议|不换|缓|别|控制|节制|先不/.test(it.worth_note) }">
-            <b>值不值得买：</b>{{ it.worth_note }}
-          </div>
-          <div class="action-group" style="margin-top: 8px">
-            <button
-              class="btn small primary"
-              :disabled="anyBusy || redemption.busy.value || redemption.pending.value?.state === 'unknown' || !!redemption.warning.value || !it.enabled || coins < it.coin_price"
-              @click="redeem(it,false,$event)"
-            >
-              <template v-if="isBusy(`redeem-${it.id}`)">兑换中…</template>
-              <template v-else>{{ coins < it.coin_price ? '金币不足' : '兑换' }}</template>
-            </button>
-            <button class="btn small" :disabled="anyBusy" @click="reprice(it)">
-              <template v-if="isBusy(`reprice-${it.id}`)"><span class="spinner"></span>定价中…</template>
-              <template v-else>AI 重新定价</template>
-            </button>
-            <button class="btn small" :disabled="anyBusy" @click="changePrice(it)">改价</button>
-          </div>
-        </div>
-      </div>
+      <RewardShop/>
 
       <!-- 豁免券（v1.10 M2）：时段券，绝不做万能券 -->
       <div class="card">

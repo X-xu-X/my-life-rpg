@@ -62,7 +62,7 @@ class SafetyTests(unittest.TestCase):
 
     def event(self, **kw):
         data = dict(user_id=self.user.id, event_type='positive', title='唯一删除标记',
-                    content='真实运动', category='运动', source='journal', occurred_at=datetime.now())
+                    content='真实运动', ai_permission='allowed', category='运动', source='journal', occurred_at=datetime.now())
         data.update(kw)
         row = m.Event(**data)
         self.db.add(row); self.db.commit()
@@ -70,7 +70,7 @@ class SafetyTests(unittest.TestCase):
 
     def judgment(self, event=None, confidence=1, changes=None):
         event = event or self.event()
-        row = m.AIJudgment(event_id=event.id, user_id=self.user.id, confidence=confidence,
+        row = m.AIJudgment(event_id=event.id, user_id=self.user.id, confidence=confidence,source_snapshot=[{'id':event.id,'version':event.content_version,'permission_version':event.ai_permission_version}],
             suggested_changes=changes if changes is not None else RESULT['affected_attributes'], status='pending')
         self.db.add(row); self.db.commit()
         return row
@@ -574,7 +574,7 @@ class ConcurrencyAndBackupTests(unittest.TestCase):
 
     def test_parallel_first_judgment_leaves_one_current_row(self):
         with self.Session() as db:
-            e=m.Event(user_id=self.uid,event_type='positive',content='并发首判')
+            e=m.Event(user_id=self.uid,event_type='positive',content='并发首判',ai_permission='allowed')
             db.add(e);db.commit();eid=e.id
         barrier=threading.Barrier(2)
         def llm(*args,**kwargs):

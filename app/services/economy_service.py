@@ -71,6 +71,9 @@ def snapshot(db: Session, user: User) -> str:
     lines.append(
         f"【日常赚币】记录事件 +{coin_service.EVENT_CONFIRM_REWARD} 币/条；{journal_rules}"
     )
+    from app.services import trial_rules
+    config=trial_rules.account(db,user)
+    if config and config.enabled:lines[-1]='【已采用试用规则】有效行动基础6/15/25币；本人主线另加4/10/15，单事实40、每日100封顶。首记3币独立；必要休息免费。'
 
     rng = shop_price_range(db, user)
     if rng is not None:

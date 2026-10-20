@@ -1,0 +1,443 @@
+{
+  "status": "PASS",
+  "validatedAt": "2026-10-18T01:17:18.876Z",
+  "scope": "Fictional standalone local preview; no real models, accounts, databases, production, or Writer dispatch. Not a backend/concurrency/real-phone acceptance test.",
+  "checks": [
+    {
+      "name": "first paid voucher retains exactly 25 minutes after a five-minute session",
+      "pass": true
+    },
+    {
+      "name": "new purchase start confirmation explicitly identifies the second full voucher",
+      "pass": true
+    },
+    {
+      "name": "second voucher starts from 30 minutes with new elapsed time and does not reuse first remainder",
+      "pass": true
+    },
+    {
+      "name": "choosing another voucher while a session exists asks to finish instead of silently opening old timer",
+      "pass": true
+    },
+    {
+      "name": "second voucher identity and full starting allowance survive reload",
+      "pass": true
+    },
+    {
+      "name": "settling the second voucher changes only its own remaining balance",
+      "pass": true
+    },
+    {
+      "name": "explicitly selecting old voucher resumes its 25 minutes with elapsed reset",
+      "pass": true
+    },
+    {
+      "name": "users create their own mainline instead of switching between fixed presets",
+      "pass": true
+    },
+    {
+      "name": "custom plan stores user goal and multiple chosen weekdays",
+      "pass": true
+    },
+    {
+      "name": "chosen Monday includes custom plan",
+      "pass": true
+    },
+    {
+      "name": "Tuesday excludes custom Monday Wednesday plan",
+      "pass": true
+    },
+    {
+      "name": "future interval plan does not appear before anchor and goal is optional",
+      "pass": true
+    },
+    {
+      "name": "interval is counted from user selected anchor",
+      "pass": true
+    },
+    {
+      "name": "one-off plan appears on its own date",
+      "pass": true
+    },
+    {
+      "name": "one-off plan stays in all plans but does not carry over",
+      "pass": true
+    },
+    {
+      "name": "event flow has no effort tier or relevance input",
+      "pass": true
+    },
+    {
+      "name": "analysis proposes relationship with the user-created mainline",
+      "pass": true
+    },
+    {
+      "name": "correcting mistaken relevance removes mainline bonus without losing original",
+      "pass": true
+    },
+    {
+      "name": "insufficient event details request relevant clarification instead of inventing rewards",
+      "pass": true
+    },
+    {
+      "name": "buying power preference is no longer an everyday settings input",
+      "pass": true
+    },
+    {
+      "name": "questionnaire reward preference is retained and shown in settings summary",
+      "pass": true
+    },
+    {
+      "name": "new reward asks for the desired reward and does not ask the user to set coin price",
+      "pass": true
+    },
+    {
+      "name": "empty reward cannot request pricing or add a product",
+      "pass": true
+    },
+    {
+      "name": "AI price proposal has a reason and does not add a product before confirmation",
+      "pass": true
+    },
+    {
+      "name": "returning from a proposal retains user input",
+      "pass": true
+    },
+    {
+      "name": "changing reward duration generates a new price proposal",
+      "pass": true
+    },
+    {
+      "name": "cancelled proposal does not add reward and draft survives reload",
+      "pass": true
+    },
+    {
+      "name": "accepted AI price and its source survive reload with reward duration",
+      "pass": true
+    },
+    {
+      "name": "AI-priced timed reward purchases and starts its own 45-minute entitlement",
+      "pass": true
+    },
+    {
+      "name": "item reward gets suggested coin price from optional real price without charging or saving",
+      "pass": true
+    },
+    {
+      "name": "pricing preview explains stage adjustment and includes questionnaire and recent income context",
+      "pass": true
+    },
+    {
+      "name": "mobile custom schedule dialog fits viewport",
+      "pass": true
+    },
+    {
+      "name": "mobile desired reward form fits viewport",
+      "pass": true
+    },
+    {
+      "name": "mobile AI pricing proposal and confirmation fit viewport",
+      "pass": true
+    },
+    {
+      "name": "initial standalone preview has five user navigation entries and locked free allowance",
+      "pass": true
+    },
+    {
+      "name": "first original saves without a model or coin settlement and unlocks 30 free minutes",
+      "pass": true
+    },
+    {
+      "name": "first-record sign-in can be claimed once",
+      "pass": true
+    },
+    {
+      "name": "middle mainline proposal decomposes 15 plus 10 and does not settle yet",
+      "pass": true
+    },
+    {
+      "name": "confirm replaces legacy flat award and records one fact award",
+      "pass": true
+    },
+    {
+      "name": "free entertainment starts without purchasing a voucher or deducting coins",
+      "pass": true
+    },
+    {
+      "name": "time spent reading the start confirmation is not counted as entertainment",
+      "pass": true
+    },
+    {
+      "name": "paused timer restores across reload",
+      "pass": true
+    },
+    {
+      "name": "exception analysis shows advice without modifying time or balance",
+      "pass": true
+    },
+    {
+      "name": "explicit correction retains explanation and audit but does not settle",
+      "pass": true
+    },
+    {
+      "name": "end consumes actual free time and grants a small punctuality award once",
+      "pass": true
+    },
+    {
+      "name": "plan timer ending asks for actual completion instead of automatically awarding",
+      "pass": true
+    },
+    {
+      "name": "linking a completed timer to an existing settled event does not reward twice",
+      "pass": true
+    },
+    {
+      "name": "missed confirmation stays in its card with no modal",
+      "pass": true
+    },
+    {
+      "name": "confirmed missed outcome is locked and does not create an event or reward",
+      "pass": true
+    },
+    {
+      "name": "Monday has scheduled run",
+      "pass": true
+    },
+    {
+      "name": "Tuesday does not carry overdue Monday run",
+      "pass": true
+    },
+    {
+      "name": "new day has its own event draft",
+      "pass": true
+    },
+    {
+      "name": "returning to Monday restores its draft",
+      "pass": true
+    },
+    {
+      "name": "backdated content preserves actual saved day and does not add a new saved day",
+      "pass": true
+    },
+    {
+      "name": "diary preserves original, exact AI question and corresponding answer separately",
+      "pass": true
+    },
+    {
+      "name": "opening an older diary does not apply today's unsaved draft",
+      "pass": true
+    },
+    {
+      "name": "returning to today restores that diary's own draft",
+      "pass": true
+    },
+    {
+      "name": "verified milestone shares one claim identity",
+      "pass": true
+    },
+    {
+      "name": "30-day diary candidate is discovered from actual saved-day sample evidence",
+      "pass": true
+    },
+    {
+      "name": "paid entertainment purchase deducts once and retains separate usage entitlement",
+      "pass": true
+    },
+    {
+      "name": "unused paid voucher survives refresh at its original price",
+      "pass": true
+    },
+    {
+      "name": "detailed questionnaire stores answered and skipped as different states and restores progress",
+      "pass": true
+    },
+    {
+      "name": "existing baseline questionnaire does not re-award startup funds",
+      "pass": true
+    },
+    {
+      "name": "stricter exam policy requires explicit confirmation",
+      "pass": true
+    },
+    {
+      "name": "an already started session retains its agreed policy",
+      "pass": true
+    },
+    {
+      "name": "8-minute overtime applies grace then one full 5-minute block",
+      "pass": true
+    },
+    {
+      "name": "penalty settles only on confirmation and respects no-overdraft",
+      "pass": true
+    },
+    {
+      "name": "exam price suggestion uses bounded 20-percent change",
+      "pass": true
+    },
+    {
+      "name": "relaxed phase can lower a raised price toward base price",
+      "pass": true
+    },
+    {
+      "name": "new user can enter full questionnaire without a hidden baseline",
+      "pass": true
+    },
+    {
+      "name": "all-skipped questionnaire produces neutral preview",
+      "pass": true
+    },
+    {
+      "name": "all-skipped neutral start grants 80 once",
+      "pass": true
+    },
+    {
+      "name": "holiday gift claims once",
+      "pass": true
+    },
+    {
+      "name": "holiday effort bonus is independent from gift and respects amount split",
+      "pass": true
+    },
+    {
+      "name": "return questionnaire updates context without filling history or changing baseline funds",
+      "pass": true
+    },
+    {
+      "name": "feedback content is escaped and explicitly private",
+      "pass": true
+    },
+    {
+      "name": "submitter can read admin reply and ordinary navigation is restored",
+      "pass": true
+    },
+    {
+      "name": "review feedback persists locally without dispatching anything",
+      "pass": true
+    },
+    {
+      "name": "review notes download as a real local text file",
+      "pass": true
+    },
+    {
+      "name": "390px layout fits: today",
+      "pass": true
+    },
+    {
+      "name": "390px layout fits: questionnaire",
+      "pass": true
+    },
+    {
+      "name": "390px layout fits: plans",
+      "pass": true
+    },
+    {
+      "name": "390px layout fits: rewards",
+      "pass": true
+    },
+    {
+      "name": "390px layout fits: growth",
+      "pass": true
+    },
+    {
+      "name": "390px layout fits: diary",
+      "pass": true
+    },
+    {
+      "name": "390px layout fits: profile",
+      "pass": true
+    },
+    {
+      "name": "390px layout fits: comeback",
+      "pass": true
+    },
+    {
+      "name": "390px layout fits: feedback",
+      "pass": true
+    },
+    {
+      "name": "390px layout fits: guide",
+      "pass": true
+    },
+    {
+      "name": "mobile compact group selector opens the corresponding reward questions",
+      "pass": true
+    },
+    {
+      "name": "mobile free allowance appears directly after composer and before plans",
+      "pass": true
+    },
+    {
+      "name": "mobile timer fits and actions remain available",
+      "pass": true
+    },
+    {
+      "name": "360px layout fits: today",
+      "pass": true
+    },
+    {
+      "name": "360px layout fits: questionnaire",
+      "pass": true
+    },
+    {
+      "name": "360px layout fits: rewards",
+      "pass": true
+    },
+    {
+      "name": "360px layout fits: profile",
+      "pass": true
+    },
+    {
+      "name": "360px layout fits: guide",
+      "pass": true
+    },
+    {
+      "name": "tablet questionnaire fits",
+      "pass": true
+    },
+    {
+      "name": "CSP prohibits API traffic and preview collects no passwords or keys",
+      "pass": true
+    },
+    {
+      "name": "standalone HTML opens directly from disk without a server",
+      "pass": true
+    }
+  ],
+  "runtimeErrors": [],
+  "screenshots": [
+    "desktop-second-voucher.png",
+    "desktop-custom-schedule.png",
+    "desktop-event-clarification.png",
+    "desktop-custom-reward.png",
+    "desktop-reward-price-proposal.png",
+    "mobile-custom-schedule.png",
+    "mobile-custom-reward.png",
+    "mobile-reward-price-proposal.png",
+    "desktop-today.png",
+    "desktop-reward-preview.png",
+    "desktop-timer.png",
+    "desktop-exception.png",
+    "desktop-diary.png",
+    "desktop-growth.png",
+    "desktop-rewards.png",
+    "desktop-questionnaire.png",
+    "desktop-phase-advice.png",
+    "desktop-overtime-confirm.png",
+    "desktop-holiday-award.png",
+    "desktop-admin-feedback.png",
+    "desktop-guide.png",
+    "mobile-today.png",
+    "mobile-questionnaire.png",
+    "mobile-plans.png",
+    "mobile-rewards.png",
+    "mobile-growth.png",
+    "mobile-diary.png",
+    "mobile-profile.png",
+    "mobile-comeback.png",
+    "mobile-feedback.png",
+    "mobile-guide.png",
+    "mobile-timer.png",
+    "tablet-questionnaire.png"
+  ]
+}

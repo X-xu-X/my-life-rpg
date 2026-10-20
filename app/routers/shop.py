@@ -21,6 +21,7 @@ def _item_out(it: ShopItem) -> dict:
     return {
         "id": it.id,
         "name": it.name,
+        'reward_kind':it.reward_kind,'duration_seconds':it.duration_seconds,'base_coin_price':it.base_coin_price,
         "kind": it.kind,
         "price_yuan": it.price_yuan,
         "coin_price": it.coin_price,
@@ -59,15 +60,7 @@ def list_items(db: Session = Depends(get_db)):
 @router.post("/shop/items")
 def create_item(body: ShopItemIn, db: Session = Depends(get_db)):
     """新建自录物品 → **触发 AI 定价**（一次 LLM 调用，返回定价理由与建议）。"""
-    user = get_or_create_default_user(db)
-    name = (body.name or "").strip()
-    if not name:
-        raise HTTPException(status_code=400, detail="物品名不能为空")
-    try:
-        item = shop_service.create_item_with_pricing(db, user, name, body.price_yuan)
-    except LLMError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
-    return _item_out(item)
+    raise HTTPException(409,'请先生成奖励价格建议，核对后通过接受接口加入商店。')
 
 
 @router.put("/shop/items/{item_id}")
@@ -106,16 +99,8 @@ def update_item(item_id: int, body: ShopItemUpdateIn, db: Session = Depends(get_
 @router.post("/shop/items/{item_id}/reprice")
 def reprice_item(item_id: int, db: Session = Depends(get_db)):
     """让 AI 依据近况与兑换历史**重新定价**（验证"情境浮动"用）。"""
-    user = get_or_create_default_user(db)
-    it = _get_item(db, user, item_id)
-    try:
-        it = shop_service.repricing(db, user, it)
-    except ValueError as exc:
-        db.rollback()
-        raise HTTPException(409, str(exc)) from exc
-    except LLMError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
-    return _item_out(it)
+    _get_item(db,get_or_create_default_user(db),item_id)
+    raise HTTPException(409,'请使用奖励价格建议并主动接受；每日改价及涨降幅受限。')
 
 
 @router.delete("/shop/items/{item_id}")

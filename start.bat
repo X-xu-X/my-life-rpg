@@ -85,6 +85,7 @@ if "%PHONE_MODE%"=="1" (
 REM ========== 4. 启动后端 ==========
 echo [3/5] 启动后端 http://127.0.0.1:8000 ...
 start "game-life-backend" /d "%~dp0" cmd /k ".venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000"
+start "game-life-worker" /d "%~dp0" cmd /k ".venv\Scripts\python.exe -m app.local_worker_launcher"
 
 REM ========== 5. 启动前端 ==========
 if "%PHONE_MODE%"=="1" (

@@ -1,0 +1,162 @@
+{
+  "status": "PASS",
+  "checks": [
+    {
+      "name": "diary original persisted",
+      "status": "PASS"
+    },
+    {
+      "name": "answer separate from original",
+      "status": "PASS"
+    },
+    {
+      "name": "review restored after navigation",
+      "status": "PASS"
+    },
+    {
+      "name": "diary layout 390",
+      "status": "PASS"
+    },
+    {
+      "name": "diary layout 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "schedule created in real Vue",
+      "status": "PASS"
+    },
+    {
+      "name": "missed locks inline with no event",
+      "status": "PASS"
+    },
+    {
+      "name": "missed has no success notice",
+      "status": "PASS"
+    },
+    {
+      "name": "plans layout 390",
+      "status": "PASS"
+    },
+    {
+      "name": "plans layout 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "export selection sent",
+      "status": "PASS"
+    },
+    {
+      "name": "real Vue export download",
+      "status": "PASS"
+    },
+    {
+      "name": "mail unconfigured never shown as sent",
+      "status": "PASS"
+    },
+    {
+      "name": "hosted unconfigured option disabled",
+      "status": "PASS"
+    },
+    {
+      "name": "AI off persisted in real form",
+      "status": "PASS"
+    },
+    {
+      "name": "dynamic candidate real Vue saved",
+      "status": "PASS"
+    },
+    {
+      "name": "unconfigured dynamic reward disabled",
+      "status": "PASS"
+    },
+    {
+      "name": "policy long semantic ID wraps",
+      "status": "PASS"
+    },
+    {
+      "name": "published notice readable in user workspace",
+      "status": "PASS"
+    },
+    {
+      "name": "admin workspace separate navigation",
+      "status": "PASS"
+    },
+    {
+      "name": "admin real page /admin/users",
+      "status": "PASS"
+    },
+    {
+      "name": "admin real page /admin/announcements",
+      "status": "PASS"
+    },
+    {
+      "name": "admin real page /admin/site",
+      "status": "PASS"
+    },
+    {
+      "name": "admin real page /admin/audit",
+      "status": "PASS"
+    },
+    {
+      "name": "admin security returns to legal admin source",
+      "status": "PASS"
+    },
+    {
+      "name": "admin layout 390",
+      "status": "PASS"
+    },
+    {
+      "name": "admin layout 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "admin candidate rule saved without activation",
+      "status": "PASS"
+    },
+    {
+      "name": "no unexpected API",
+      "status": "PASS"
+    },
+    {
+      "name": "no runtime errors",
+      "status": "PASS"
+    }
+  ],
+  "errors": [],
+  "unknown": [],
+  "buildHashes": {
+    "_tmp_p2p6_review_20261017\\icon.svg": "768f167e44fbf477c23aef28d0b8aa93921635d0f24ad1effaace3caea53799d",
+    "_tmp_p2p6_review_20261017\\index.html": "d3acc9e6ddfc6d659385d0650b02ecaa0f8490cb216e06e18966bf03223c6a86",
+    "_tmp_p2p6_review_20261017\\manifest.webmanifest": "f7b1a710e36c41b68bdb3b05203cb0219d6697b555d9f796514b1dff22b7d0c6",
+    "_tmp_p2p6_review_20261017\\assets\\AccountSecurity-CM4K9-b6.js": "7d8cc03982813d3a50258a5ca816e9ea7f26a65954b62e431aab12fda1897795",
+    "_tmp_p2p6_review_20261017\\assets\\AdminView-Bj1Fu7rf.js": "69155ba47d0d98d5df0c463e49ad1a965cbd460dde871cd1dfbfba3625308a60",
+    "_tmp_p2p6_review_20261017\\assets\\AnchorsView-Despsy4Y.js": "62a2243c0d1dbcbe5c7063d75bdf573e846e9ea26bb4696e143707080a461af6",
+    "_tmp_p2p6_review_20261017\\assets\\AnnouncementsView-V1T3dtCu.js": "8dcf830009ee89d29f046f4bbf42e48d3def5e777abffdd10ec0ea147f5aa99e",
+    "_tmp_p2p6_review_20261017\\assets\\AttributePanel-Hdg4200e.js": "b77d1ea3d92b970b362722d0b2e06e6ae950ffe83c9a2897965edce624d0e807",
+    "_tmp_p2p6_review_20261017\\assets\\ChallengeView-D85Zei5N.js": "51b97e542ca2dc4b90487baa9f5be65b323d64eaf043664e6f4075b9b19a722b",
+    "_tmp_p2p6_review_20261017\\assets\\DiaryView-DawlVrC0.js": "7881189ccbdf13974beb8022c69c1edc80c897d7ebb138155f08553d692a3e6b",
+    "_tmp_p2p6_review_20261017\\assets\\GoalsView-TXQD0blK.js": "bc398349f6a57de6c5a11bd5bc56847526135d55c3c8fcc21142f2e4bd7d961a",
+    "_tmp_p2p6_review_20261017\\assets\\HomeView-CJvtPs7w.js": "1bceec41627f96b4254c8f1ae64205b75be45f6a88b0ce238a519a07f6384608",
+    "_tmp_p2p6_review_20261017\\assets\\index-DTVDJDBR.css": "d5ddec4113d088de81e996d58d945358efbb0e81a32987774f27b918c0ee2d2b",
+    "_tmp_p2p6_review_20261017\\assets\\index-DWJZi_Vt.js": "448ae4a6ccc5706b852aad802b3ae2e16cf8cf5bd04e9e3e59765b2e8f6e17d3",
+    "_tmp_p2p6_review_20261017\\assets\\ItemManager-CbuIq_bG.js": "29002fd2a9ce6d3051337bcf680d0a58ae0c45e0ffdb855dcbbcf425edbc6792",
+    "_tmp_p2p6_review_20261017\\assets\\JudgmentList-vWCyDCyC.js": "eae62fb238fb4627765b657cbba653ea4a7dfe08fcfe7c2061a344788cf797d3",
+    "_tmp_p2p6_review_20261017\\assets\\MyView-DvvIt6Kg.js": "ca99d728456d178af1ef7f721650f82025965d6cc0d841ec68137a9f32053387",
+    "_tmp_p2p6_review_20261017\\assets\\Onboarding-CbKiugzd.js": "6f8b61c783f8dafa26286098de7c738e3540a72adca580fa13cbb9b6cce1ff5d",
+    "_tmp_p2p6_review_20261017\\assets\\PageHeader-Djj8QP1d.js": "2e9e63048264cd5aea6b15f9f2565454d3cf61d601be3d1c215bbd1769ecfd91",
+    "_tmp_p2p6_review_20261017\\assets\\PendingView-C-5Z2oCw.js": "0f0ced51ae0f62dbfd8db204d63f83e2a68b8f4e1f7c3bcb01c73edc88c22b75",
+    "_tmp_p2p6_review_20261017\\assets\\PlanAgenda-DCrnSYB1.js": "e570f5eff227987d351caea346b8bf06a5dc74b68b0bbf9a1e179a3069db1aef",
+    "_tmp_p2p6_review_20261017\\assets\\PlansView-Bm6I0QvC.js": "27af9d399e42f2f97574a8386983508a7e0d6ff05c995aad4dcd2ee36e05e12b",
+    "_tmp_p2p6_review_20261017\\assets\\RecordDetail-BjGOgxdv.js": "75e9e40950f636da3c6599becb397bf362495bc784515ff35e96ce6176752ee0",
+    "_tmp_p2p6_review_20261017\\assets\\RecordList-DueORBP4.js": "77634f0c6d137a9cbe64f4b65abadaa639ebde0a33125a2feac9d0226d60b306",
+    "_tmp_p2p6_review_20261017\\assets\\RecordPreview-CLz4Jr-h.js": "6dd6ae331d0ade35d55b2a5da3450843f7ee09b28079f9c4b3f2c68a0302c304",
+    "_tmp_p2p6_review_20261017\\assets\\ReportHistory-DQDIBZEs.js": "03bc6c216998549238e37045ffe7588fd111dfb1ee43e21204e5b5cf16822f4f",
+    "_tmp_p2p6_review_20261017\\assets\\ReviewView-DoeNY2nN.js": "5593dfed564115c66a5091e1a1d38defd1c53ba48309885d66cc110d75933d7f",
+    "_tmp_p2p6_review_20261017\\assets\\SettingsView-D3K0CPZr.js": "f020fa14d74e9f2d437790f3bfe0195e55331c93260a4124bc411ff4f184d0e8",
+    "_tmp_p2p6_review_20261017\\assets\\TodayCheckin-DOOn2-3E.js": "2afcbdf259d90e898e03cbcf1c38b0640c6fb5017f5a261b93cab4db22da52dc",
+    "_tmp_p2p6_review_20261017\\assets\\useWorkflowWrite-USHNMLXn.js": "66a6e82c6a5804091094424a38cee5481b09749fd79e4c59bf2f1e5ec180cfc6"
+  },
+  "limitations": [
+    "Compiled Vue; synthetic APIs; no real PG/model/mail/phone"
+  ]
+}

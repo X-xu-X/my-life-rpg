@@ -1,0 +1,38 @@
+[
+  {
+    "name": "new schedule retains exactly one revision",
+    "passed": true
+  },
+  {
+    "name": "invalid past effective date rejected",
+    "passed": true
+  },
+  {
+    "name": "rejected edit does not capture baseline",
+    "passed": true
+  },
+  {
+    "name": "omitted minutes preserved on legacy edit",
+    "passed": true
+  },
+  {
+    "name": "same UUID returns identical original response",
+    "passed": true
+  },
+  {
+    "name": "stale version rejected",
+    "passed": true
+  },
+  {
+    "name": "second accepted edit advances version normally",
+    "passed": true
+  },
+  {
+    "name": "multiple edits capture legacy baseline only once",
+    "passed": true
+  },
+  {
+    "name": "today keeps original explicit 20 minutes",
+    "passed": true
+  }
+]

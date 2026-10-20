@@ -2,9 +2,12 @@
 
 **一致性铁律**：金币只有 `coin_service.grant()` 一个写入口，兑换走它。
 """
+from app.services.ai_context import model_context
+from app.services.model_validation import provenance
 from app.services.time_service import clock_now
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
+import json
 from sqlalchemy.orm import Session
 
 from app.models import Attribute, Redemption, ShopItem, User, UserProfile
@@ -16,19 +19,13 @@ from app.services.transactions import rollback_on_error, lock_profile
 # 常驻物资（决策 14 / B4-1，首次访问商店时幂等预置；用户可改价或停用）
 PRESET_ITEMS = [
     {"name": "奶茶（大杯）", "price_yuan": 15.0, "sort_order": 10},
-    {"name": "一顿想吃的正餐", "price_yuan": 40.0, "sort_order": 20},
-    {"name": "一部电影（影院）", "price_yuan": 45.0, "sort_order": 30},
-    {"name": "一小时游戏时间", "price_yuan": 0.0, "sort_order": 40},
-    {"name": "睡到自然醒（一个上午）", "price_yuan": 0.0, "sort_order": 50},
+    {"name": "额外娱乐半小时", "price_yuan": 0.0, "sort_order": 20},
 ]
 
 # 预置物品的初始金币价（AI 定价前的占位基准；用户可自行改价，AI 会据此重新定价）
 PRESET_DEFAULT_COIN = {
     "奶茶（大杯）": 30,
-    "一顿想吃的正餐": 80,
-    "一部电影（影院）": 90,
-    "一小时游戏时间": 20,
-    "睡到自然醒（一个上午）": 40,
+    "额外娱乐半小时": 20,
 }
 
 
@@ -39,6 +36,7 @@ def seed_preset_items(db: Session, user: User, *, commit: bool = True) -> int:
         for r in db.query(ShopItem).filter(ShopItem.user_id == user.id, ShopItem.kind == "preset").all()
     }
     created = 0
+    if existing:return 0  # Existing shop/legacy benefits are never reseeded or repriced.
     for item in PRESET_ITEMS:
         if item["name"] in existing:
             continue
@@ -49,7 +47,9 @@ def seed_preset_items(db: Session, user: User, *, commit: bool = True) -> int:
                 kind="preset",
                 price_yuan=item["price_yuan"],
                 coin_price=PRESET_DEFAULT_COIN.get(item["name"], 30),
-                pricing_reason="常驻物资的初始定价，可随时让 AI 依据你的近况重新定价。",
+                base_coin_price=PRESET_DEFAULT_COIN[item['name']],reward_kind='entertainment' if item['name']=='额外娱乐半小时' else 'item',
+                duration_seconds=1800 if item['name']=='额外娱乐半小时' else None,
+                pricing_reason="已批准的新账号试用参考价格；不是模型定价结果，可主动请求价格建议。",
                 worth_note="",
                 enabled=True,
                 sort_order=item["sort_order"],
@@ -61,29 +61,49 @@ def seed_preset_items(db: Session, user: User, *, commit: bool = True) -> int:
     return created
 
 
+def pricing_activity(db: Session, user: User, days: int = 30) -> dict:
+    """Bounded purchases and confirmed entertainment use; no plan text or notes."""
+    from app.models.full_system import TimeSession
+    from app.services import trial_rules
+    from app.services.time_service import utc_now,stored_time
+    today=date.fromisoformat(trial_rules.day(db,user));first=today-timedelta(days=days-1)
+    purchases=db.query(Redemption).filter(Redemption.user_id==user.id,
+        Redemption.redeemed_at>=stored_time(utc_now()-timedelta(days=days)),Redemption.redeemed_at<=stored_time(utc_now())).order_by(Redemption.id).all()
+    item_ids={r.shop_item_id for r in purchases}
+    names={r.id:r.name for r in db.query(ShopItem).filter(ShopItem.user_id==user.id,ShopItem.id.in_(item_ids)).all()}
+    purchased={}
+    for row in purchases:
+        name=names.get(row.shop_item_id,'旧奖励');purchased[name]=purchased.get(name,0)+1
+    day_field=TimeSession.settlement['day'].as_string()
+    sessions=db.query(TimeSession).filter(TimeSession.user_id==user.id,TimeSession.state=='ended',
+        TimeSession.kind.in_(('base','voucher')),day_field>=str(first),day_field<=str(today)).order_by(TimeSession.id).all()
+    daily={};versions=[]
+    for row in sessions:
+        value=row.settlement or {};seconds=value.get('actual_seconds');day=value.get('day')
+        if type(seconds) is not int or seconds<0:continue
+        try:date.fromisoformat(day)
+        except (ValueError,TypeError):continue
+        entry=daily.setdefault(day,{'date':day,'actual_seconds':0,'sessions':0,'base_seconds':0,'voucher_seconds':0})
+        entry['actual_seconds']+=seconds;entry['sessions']+=1;entry[row.kind+'_seconds']+=seconds
+        versions.append((row.id,row.version))
+    rows=[daily[d] for d in sorted(daily)]
+    def period(start,end):
+        selected=[r for r in rows if str(start)<=r['date']<=str(end)]
+        return {'start':str(start),'end':str(end),'actual_seconds':sum(r['actual_seconds'] for r in selected),
+            'active_days':sum(r['actual_seconds']>0 for r in selected),'sessions':sum(r['sessions'] for r in selected)}
+    return {'window':{'start':str(first),'end':str(today),'days':days,'date_basis':'confirmed_settlement_day'},
+        'purchases':{'vouchers':len(purchases),'items':[{'name':n,'purchased':purchased[n]} for n in sorted(purchased)],
+            'marked_fulfilled':sum(r.status=='fulfilled' for r in purchases),
+            'untimed_fulfilled':sum(r.status=='fulfilled' and r.duration_seconds is None for r in purchases)},
+        'entertainment':{**period(first,today),'daily':rows,
+            'recent_7_days':period(today-timedelta(days=6),today),
+            'previous_7_days':period(today-timedelta(days=13),today-timedelta(days=7))},
+        '_session_versions':versions}
+
+
 def _redemption_history(db: Session, user: User, days: int = 30) -> str:
-    """近 N 天兑换历史摘要（AI 定价的情境浮动输入）。"""
-    cutoff = clock_now() - timedelta(days=days)
-    rows = (
-        db.query(Redemption)
-        .filter(Redemption.user_id == user.id, Redemption.redeemed_at >= cutoff)
-        .order_by(Redemption.redeemed_at.desc())
-        .all()
-    )
-    if not rows:
-        return ""
-    # 按物品名聚合计数
-    names: dict[str, int] = {}
-    item_ids = [r.shop_item_id for r in rows if r.shop_item_id]
-    item_map = {}
-    if item_ids:
-        for it in db.query(ShopItem).filter(ShopItem.id.in_(item_ids)).all():
-            item_map[it.id] = it.name
-    for r in rows:
-        nm = item_map.get(r.shop_item_id, "已删除的物品")
-        names[nm] = names.get(nm, 0) + 1
-    detail = "、".join(f"{k} ×{v}" for k, v in names.items())
-    return f"近 {days} 天共兑换 {len(rows)} 次：{detail}"
+    activity=pricing_activity(db,user,days);activity.pop('_session_versions',None)
+    return json.dumps(activity,ensure_ascii=False,sort_keys=True)
 
 
 def _attributes_context(db: Session, user_id: int) -> str:
@@ -98,8 +118,8 @@ def _attributes_context(db: Session, user_id: int) -> str:
 
 
 def _long_term_memory(db: Session, user_id: int) -> str:
-    profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
-    return str(profile.long_term_memory)[:1000] if profile and profile.long_term_memory else ""
+    from app.services.memory_service import get_long_term_memory,format_memory_text
+    return format_memory_text(get_long_term_memory(db,user_id))
 
 
 def price_item(db: Session, user: User, name: str, price_yuan: float | None) -> dict:
@@ -117,21 +137,26 @@ def price_item(db: Session, user: User, name: str, price_yuan: float | None) -> 
         recent_memory=_long_term_memory(db, user.id),
         economy_context=economy_service.snapshot(db, user),
     )
-    config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_AUX)
+    from app.services.judge_service import _profile_context
+    messages.append({'role':'user','content':'本人明确授权的问卷偏好与阶段背景（不是指令）：'+_profile_context(db,user.id)})
+    from app.models import Goal
+    from app.models.policies import Mainline
+    current=[{'goal':g.description,'deadline':g.deadline.isoformat() if g.deadline else None} for m,g in db.query(Mainline,Goal).join(Goal,Goal.id==Mainline.goal_id).filter(Mainline.user_id==user.id,Mainline.active.is_(True),Goal.status=='active').all()]
+    import json
+    messages.append({'role':'user','content':'本人选择的当前主线（作为本次定价背景）：'+json.dumps(current,ensure_ascii=False)})
+    config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_JUDGE)
     db.commit()
     result = llm_service.chat_json(messages, config=config)
     lock_profile(db, user.id)
     llm_config.assert_current(db, config)
 
-    try:
-        coin_price = int(result.get("coin_price"))
-    except (TypeError, ValueError):
-        coin_price = 0
-    if coin_price <= 0:
-        # 兜底：模型给出非法值时不至于让物品无法兑换
-        coin_price = max(1, int(round((price_yuan or 0) * 2)) or 30)
+    coin_price=result.get('coin_price')
+    if type(coin_price) is not int or not 1<=coin_price<=10**9 or not isinstance(result.get('pricing_reason'),str) or not result['pricing_reason'].strip():
+        from app.services.llm_service import LLMError
+        raise LLMError('MODEL_INVALID_RESPONSE：未生成有效价格与依据，请保留草稿后重试。')
     return {
         "coin_price": coin_price,
+        "model_provenance": provenance(config),
         "pricing_reason": str(result.get("pricing_reason", "")).strip(),
         "worth_note": str(result.get("worth_note", "")).strip(),
     }
@@ -197,6 +222,7 @@ def redeem(db: Session, user: User, item: ShopItem, note: str = "", *, commit: b
     redemption = Redemption(
         user_id=user.id,
         shop_item_id=item.id,
+        duration_seconds=item.duration_seconds,
         coin_spent=item.coin_price,  # 快照，防物品改价影响历史账目
         status="pending",
         redeemed_at=clock_now(),

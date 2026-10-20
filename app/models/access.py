@@ -43,6 +43,7 @@ class LLMCredential(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     group: Mapped[str] = mapped_column(String(10))
     provider_id: Mapped[str] = mapped_column(String(30))
+    base_url: Mapped[str | None] = mapped_column(String(300),nullable=True)
     model: Mapped[str] = mapped_column(String(100))
     encrypted_key: Mapped[str] = mapped_column(Text, default="")
     key_id: Mapped[str] = mapped_column(String(30), default="v1")

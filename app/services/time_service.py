@@ -44,7 +44,11 @@ def local_day(value, timezone):
     return value.astimezone(zone(timezone)).date()
 
 
-def capture_saved_day(event, timezone):
+def capture_saved_day(event, timezone, db=None):
     """Only new records: preserve first-save local date independently from content time."""
+    if db is not None:
+        from app.services import trial_rules
+        from app.models import User
+        timezone=trial_rules.zone_for(db,db.get(User,event.user_id))
     event.saved_timezone=timezone
     event.saved_on=local_day(event.created_at,timezone).isoformat()

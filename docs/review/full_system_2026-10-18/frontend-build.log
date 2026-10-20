@@ -1,0 +1,53 @@
+
+> game-of-life-frontend@0.1.0 build
+> vite build
+
+vite v5.4.21 building for production...
+transforming...
+✓ 640 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                              0.67 kB │ gzip:   0.41 kB
+dist/assets/index-DTVDJDBR.css              22.95 kB │ gzip:   5.50 kB
+dist/assets/PageHeader-BEGfxOaz.js           0.54 kB │ gzip:   0.33 kB
+dist/assets/RecordPreview-BvELLZya.js        0.59 kB │ gzip:   0.43 kB
+dist/assets/AnnouncementsView-B903i7Ev.js    0.81 kB │ gzip:   0.57 kB
+dist/assets/useWorkflowWrite-DaRh8WZA.js     0.91 kB │ gzip:   0.58 kB
+dist/assets/PlansView-Cr5B1-Jv.js            1.17 kB │ gzip:   0.93 kB
+dist/assets/ConfirmDialog-Daor5n9Z.js        1.52 kB │ gzip:   0.88 kB
+dist/assets/EventPicker-DVl46C9Q.js          2.02 kB │ gzip:   1.20 kB
+dist/assets/AnchorsView-B13WjWfy.js          2.02 kB │ gzip:   1.31 kB
+dist/assets/PendingView-DV1OzYeY.js          2.05 kB │ gzip:   1.40 kB
+dist/assets/FeedbackView-IT8cz7Ei.js         2.94 kB │ gzip:   1.50 kB
+dist/assets/RecordList-0RyTTJT5.js           3.13 kB │ gzip:   1.87 kB
+dist/assets/GrowthPolicies-DWKysUhI.js       3.15 kB │ gzip:   1.74 kB
+dist/assets/ReportHistory-C6cyWLp4.js        3.26 kB │ gzip:   1.77 kB
+dist/assets/TrialRules-JINwudND.js           3.44 kB │ gzip:   2.05 kB
+dist/assets/AccountSecurity-DKHavjC0.js      3.75 kB │ gzip:   1.98 kB
+dist/assets/PhaseView-Dsk-6Sxy.js            3.90 kB │ gzip:   2.05 kB
+dist/assets/MyView--VVgUD6y.js               4.13 kB │ gzip:   2.39 kB
+dist/assets/ReviewView-CkYM2zvH.js           4.59 kB │ gzip:   2.47 kB
+dist/assets/RecordComposer-DHTx78to.js       4.70 kB │ gzip:   2.65 kB
+dist/assets/QuestionnaireView-DXaYb1_X.js    5.39 kB │ gzip:   2.71 kB
+dist/assets/GoalsView-BlqmeVVZ.js            5.91 kB │ gzip:   2.66 kB
+dist/assets/HomeView-D2ZMx4dd.js             5.99 kB │ gzip:   3.09 kB
+dist/assets/CareSettings-CsZLKkVl.js         6.17 kB │ gzip:   2.85 kB
+dist/assets/TimerView-CFYl3o5M.js            7.53 kB │ gzip:   3.42 kB
+dist/assets/ItemManager-BFh7fcZa.js          7.88 kB │ gzip:   3.64 kB
+dist/assets/DiaryView-DtTTtbuj.js            8.99 kB │ gzip:   3.91 kB
+dist/assets/FactAnalysis-CYbLLu5Z.js         9.37 kB │ gzip:   4.18 kB
+dist/assets/PlanAgenda-CXtvAoFF.js          10.35 kB │ gzip:   4.36 kB
+dist/assets/RecordDetail-3Hszrznz.js        11.51 kB │ gzip:   5.22 kB
+dist/assets/TodayCheckin-o1zqo-dt.js        12.67 kB │ gzip:   4.59 kB
+dist/assets/AdminView-DkcxDJ7Z.js           14.17 kB │ gzip:   5.72 kB
+dist/assets/JudgmentList-ByahUp1H.js        16.60 kB │ gzip:   6.42 kB
+dist/assets/SettingsView-BuOgUIYI.js        21.24 kB │ gzip:   9.37 kB
+dist/assets/ChallengeView-S7DtFm3m.js       30.54 kB │ gzip:  11.76 kB
+dist/assets/index-BoWB0fWr.js              131.31 kB │ gzip:  49.90 kB
+dist/assets/AttributePanel-yqvXFCoo.js     545.93 kB │ gzip: 184.83 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 7.78s

@@ -11,12 +11,23 @@ from app.database import Base
 
 @event.listens_for(Session, "do_orm_execute")
 def scope_queries(execution):
+    if execution.session.info.get('ai_only') and not execution.execution_options.get('record_metadata'):
+        from app.models import Event
+        execution.statement=execution.statement.options(with_loader_criteria(Event,
+            (Event.ai_permission=='allowed') & Event.is_deleted.is_(False) & Event.is_pure.is_(False),include_aliases=True))
+        from app.services.ai_context import CURRENT
+        from app.models import Attribute
+        context=CURRENT.get()
+        if context is not None:
+            execution.statement=execution.statement.options(with_loader_criteria(Attribute,
+                Attribute.parent_id.is_(None)|Attribute.id.in_(context['safe_children']),include_aliases=True))
     user_id = execution.session.info.get("user_id")
     if user_id is None:
         return
     statement = execution.statement
     for mapper in Base.registry.mappers:
         model = mapper.class_
+        if model.__tablename__ in ('feedback','feedback_replies') and execution.session.info.get('manage_feedback'):continue
         if model.__tablename__=='auth_sessions' and execution.session.info.get('manage_auth_sessions'):continue
         if model.__tablename__=='hosted_usage' and execution.session.info.get('monitor_hosted_usage'):continue
         if model.__tablename__=='user_profiles' and execution.session.info.get('manage_profile_locks'):continue
@@ -33,6 +44,15 @@ def validate_references(db, context, instances):
         return
     models = {mapper.local_table.name: mapper.class_ for mapper in Base.registry.mappers}
     for row in set(db.new) | set(db.dirty) | set(db.deleted):
+        if row.__tablename__ in ('feedback','feedback_replies') and db.info.get('manage_feedback'):
+            from app.models import User
+            from app.models.full_system import Feedback
+            actor=db.get(User,user_id)
+            if not actor or actor.role!='owner' or actor.status!='active':raise HTTPException(403,'管理权限已失效。')
+            if row.__tablename__=='feedback_replies':
+                parent=db.get(Feedback,row.feedback_id)
+                if not parent or parent.user_id!=row.user_id or row.actor_id!=user_id:raise HTTPException(404,'反馈关联无效。')
+            continue
         if hasattr(row, "user_id") and row.user_id != user_id:
             raise HTTPException(404, "资源不存在。")
         if row.__tablename__ == "anchors":

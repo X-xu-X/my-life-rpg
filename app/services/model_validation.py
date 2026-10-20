@@ -48,6 +48,6 @@ def controlled_error(exc):
 
 
 def provenance(config):
-    return {'provider': next((name for name, url in PROVIDERS.items() if url == config.base_url), 'custom-local'),
+    return {'provider': next((name for name, url in PROVIDERS.items() if url == config.base_url), 'custom' if settings.cloud else 'custom-local'),
             'model': config.model, 'config_version': config.config_version,
             'source': 'hosted' if getattr(config,'scope','personal')=='hosted' else 'personal' if config.config_id or config.config_version else 'local-legacy'}

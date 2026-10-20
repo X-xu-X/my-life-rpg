@@ -10,6 +10,7 @@
 3. 属性值写入仍统一走 `judge_service._clamp_attribute_value()`（v1.5 B-03 教训）。
 """
 
+from app.services.ai_context import model_context,sources as ai_sources
 from app.services.time_service import clock_now
 from datetime import datetime, timedelta
 
@@ -168,13 +169,13 @@ def _related_events(db: Session, user: User, parent_name: str, days: int = 120, 
     for title, category, _content, reason in rows:
         t = (title or "").strip() or "(无标题)"
         c = (category or "").strip()
-        lines.append(f"- {t}{('（' + c + '）') if c else ''}｜判定依据：{(reason or '').strip()[:60]}")
+        lines.append(f"- {t}{('（' + c + '）') if c else ''}｜{(_content or '').strip()[:160]}")
     return "\n".join(lines)
 
 
 def _long_term_memory(db: Session, user_id: int) -> str:
-    profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
-    return str(profile.long_term_memory)[:1000] if profile and profile.long_term_memory else ""
+    from app.services.memory_service import get_long_term_memory,format_memory_text
+    return format_memory_text(get_long_term_memory(db,user_id))
 
 
 def _clean_items(raw) -> list[dict]:
@@ -200,6 +201,7 @@ def _clean_items(raw) -> list[dict]:
 
 
 @rollback_on_error
+@model_context
 def propose(db: Session, user: User, attr: Attribute) -> dict:
     """让 AI 提议细分方向并落库为 `pending`（**不创建任何子维度行**）。
 
@@ -217,7 +219,8 @@ def propose(db: Session, user: User, attr: Attribute) -> dict:
         raise ValueError(f"「{attr.name}」已经拆分过子维度，暂不支持重复拆分。")
 
     prop = attr.sub_proposal if isinstance(attr.sub_proposal, dict) else {}
-    if prop.get("state") == STATE_PENDING and prop.get("items"):
+    from app.services import ai_context
+    if prop.get("state") == STATE_PENDING and prop.get("items") and ai_context.valid(db,prop.get('ai_sources'),user.id):
         return prop  # 幂等：复用上次提议
 
     messages = build_subdimension_messages(
@@ -245,6 +248,8 @@ def propose(db: Session, user: User, attr: Attribute) -> dict:
         )
 
     proposal = {
+        'ai_sources':ai_sources(),
+        'history':[*prop.get('history',[]),{k:v for k,v in prop.items() if k!='history'}] if prop else [],
         "state": STATE_PENDING,
         "items": items,
         "reason": str(result.get("reason", "")).strip()[:300],
@@ -297,6 +302,7 @@ def accept(db: Session, user: User, attr: Attribute, names: list[str]) -> list[A
             current_value=0.0,
             max_value=attr.max_value or ATTRIBUTE_FULL,
             parent_id=attr.id,
+            ai_sources=prop.get('ai_sources'),
         )
         db.add(row)
         created.append(row)

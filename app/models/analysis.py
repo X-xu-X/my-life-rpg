@@ -17,6 +17,8 @@ class AnalysisJob(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     event_id: Mapped[int] = mapped_column(ForeignKey("events.id"))
     event_version: Mapped[int] = mapped_column(Integer)
+    permission_version: Mapped[int | None] = mapped_column(Integer,nullable=True)
+    input_snapshot: Mapped[list | None] = mapped_column(JSON,nullable=True)
     judgment_id: Mapped[int | None] = mapped_column(ForeignKey("ai_judgments.id"))
     judgment_version: Mapped[str] = mapped_column(String(60), default="")
     review_session_id: Mapped[int | None] = mapped_column(ForeignKey('review_sessions.id'), nullable=True)
@@ -72,6 +74,8 @@ class ModelUsage(Base):
 class GrowthReport(Base):
     __tablename__ = "growth_reports"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    state: Mapped[str] = mapped_column(String(20),default='legacy_saved')
+    version: Mapped[int] = mapped_column(Integer,default=1)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     period: Mapped[str] = mapped_column(String(20))
     timezone: Mapped[str] = mapped_column(String(60))

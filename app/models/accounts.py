@@ -45,3 +45,20 @@ class AdminAudit(Base):
     reason:Mapped[str]=mapped_column(Text)
     version:Mapped[int]=mapped_column(Integer)
     created_at:Mapped[datetime]=mapped_column(DateTime,default=utc_now)
+
+
+class MailDelivery(Base):
+    """Private durable outbox. No user_id scope: only worker may resolve recipients."""
+    __tablename__='mail_deliveries'
+    id:Mapped[int]=mapped_column(primary_key=True)
+    email:Mapped[str]=mapped_column(String(254))
+    purpose:Mapped[str]=mapped_column(String(20))
+    state:Mapped[str]=mapped_column(String(20),default='queued')
+    attempts:Mapped[int]=mapped_column(Integer,default=0)
+    lease_token:Mapped[str|None]=mapped_column(String(64),nullable=True)
+    next_attempt:Mapped[datetime]=mapped_column(DateTime,default=utc_now)
+    expires_at:Mapped[datetime]=mapped_column(DateTime)
+    encrypted_key:Mapped[str|None]=mapped_column(Text,nullable=True)
+    key_id:Mapped[str|None]=mapped_column(String(30),nullable=True)
+    token_id:Mapped[int|None]=mapped_column(ForeignKey('email_tokens.id'),nullable=True)
+    error_code:Mapped[str|None]=mapped_column(String(40),nullable=True)

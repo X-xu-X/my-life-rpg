@@ -1,0 +1,1040 @@
+{
+  "status": "PASS",
+  "validatedAt": "2026-10-18T02:19:50.630Z",
+  "scope": "Unified fictional local system preview. Catalog coverage plus explicit behavior tests. Not backend, real-model, real-email, security, concurrency, or physical-phone acceptance.",
+  "modules": [
+    {
+      "route": "today",
+      "title": "今天",
+      "group": "日常",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "handbook",
+      "title": "手账",
+      "group": "日常",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "record",
+      "title": "事件详情",
+      "group": "日常",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "diary",
+      "title": "晚间日记",
+      "group": "日常",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "pending",
+      "title": "待处理",
+      "group": "日常",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "plans",
+      "title": "计划与目标",
+      "group": "日常",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "growth",
+      "title": "成长面板",
+      "group": "成长",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "history",
+      "title": "属性历史",
+      "group": "成长",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "reports",
+      "title": "周期回顾",
+      "group": "成长",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "achievements",
+      "title": "成就",
+      "group": "成长",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "challenges",
+      "title": "挑战",
+      "group": "成长",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "rewards",
+      "title": "奖励商店",
+      "group": "成长",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "timer",
+      "title": "计时记录",
+      "group": "成长",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "my",
+      "title": "我的",
+      "group": "设置",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "models",
+      "title": "模型与 AI",
+      "group": "设置",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "model-help",
+      "title": "API 配置帮助",
+      "group": "设置",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "security",
+      "title": "账号与安全",
+      "group": "设置",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "auth",
+      "title": "登录与注册",
+      "group": "设置",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "export",
+      "title": "导出与本地保存",
+      "group": "设置",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "questionnaire",
+      "title": "详细问卷",
+      "group": "设置",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "profile",
+      "title": "额度与约定",
+      "group": "设置",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "preferences",
+      "title": "显示与扩展设置",
+      "group": "设置",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "subdimensions",
+      "title": "高分后的细分方向",
+      "group": "成长",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "comeback",
+      "title": "回归近况",
+      "group": "设置",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "anchors",
+      "title": "量化参考",
+      "group": "设置",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "announcements",
+      "title": "站点公告",
+      "group": "设置",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "feedback",
+      "title": "意见与问题",
+      "group": "设置",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "guide",
+      "title": "完整体验目录",
+      "group": "设置",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "admin",
+      "title": "管理概览",
+      "group": "管理",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "admin-users",
+      "title": "用户账号",
+      "group": "管理",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "admin-notices",
+      "title": "公告管理",
+      "group": "管理",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "admin-site",
+      "title": "站点设置",
+      "group": "管理",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "admin-feedback",
+      "title": "反馈管理",
+      "group": "管理",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "admin-audit",
+      "title": "操作记录",
+      "group": "管理",
+      "desktop": true,
+      "mobile": true
+    },
+    {
+      "route": "admin-security",
+      "title": "管理账号安全",
+      "group": "管理",
+      "desktop": true,
+      "mobile": true
+    }
+  ],
+  "checks": [
+    {
+      "name": "unified preview has five user navigation tabs and all modules in one route catalog",
+      "pass": true
+    },
+    {
+      "name": "initial preview allows recording without AI while free entertainment is locked",
+      "pass": true
+    },
+    {
+      "name": "saving original unlocks daily allowance without settling an event",
+      "pass": true
+    },
+    {
+      "name": "first record sign-in grants the agreed three coins once",
+      "pass": true
+    },
+    {
+      "name": "event analyzes without manual tier or relevance fields",
+      "pass": true
+    },
+    {
+      "name": "event provides a cancellable queued state",
+      "pass": true
+    },
+    {
+      "name": "cancel prevents late analysis from replacing saved state",
+      "pass": true
+    },
+    {
+      "name": "failed analysis preserves original and offers retry",
+      "pass": true
+    },
+    {
+      "name": "normal mainline proposal splits the approved base and bonus before settlement",
+      "pass": true
+    },
+    {
+      "name": "one confirmation writes coin ledger and exact attribute snapshot",
+      "pass": true
+    },
+    {
+      "name": "all 13 dimensions and the fixed-scale radar are present",
+      "pass": true
+    },
+    {
+      "name": "separate events accumulate attribute deltas instead of a one-off fixed display",
+      "pass": true
+    },
+    {
+      "name": "explicit same-fact linking preserves both originals without duplicate coins or attributes",
+      "pass": true
+    },
+    {
+      "name": "insufficient facts ask event-related clarification and do not invent an award",
+      "pass": true
+    },
+    {
+      "name": "editing preserves previous original revision and invalidates stale analysis",
+      "pass": true
+    },
+    {
+      "name": "non-study event confirms its own attribute without changing intelligence",
+      "pass": true
+    },
+    {
+      "name": "audit exposes earlier input and confirmation evidence",
+      "pass": true
+    },
+    {
+      "name": "handbook searches original text and limits results",
+      "pass": true
+    },
+    {
+      "name": "handbook paginates instead of expanding an unlimited list",
+      "pass": true
+    },
+    {
+      "name": "handbook next page changes visible record slice",
+      "pass": true
+    },
+    {
+      "name": "life checklist can be hidden and restored",
+      "pass": true
+    },
+    {
+      "name": "skipping a checklist item is inline with no modal",
+      "pass": true
+    },
+    {
+      "name": "goals are user-created and exactly one is selected as current mainline",
+      "pass": true
+    },
+    {
+      "name": "custom weekly plan appears on selected Monday",
+      "pass": true
+    },
+    {
+      "name": "Monday plan is retained in all plans without appearing on Tuesday",
+      "pass": true
+    },
+    {
+      "name": "missed plan confirmation remains inside card",
+      "pass": true
+    },
+    {
+      "name": "confirmed missed plan is locked with no event created",
+      "pass": true
+    },
+    {
+      "name": "plan timer shares the existing settled fact instead of issuing another reward",
+      "pass": true
+    },
+    {
+      "name": "timer exception offers single-analysis advice without settling first",
+      "pass": true
+    },
+    {
+      "name": "ending entertainment consumes actual allowance and respects punctuality award",
+      "pass": true
+    },
+    {
+      "name": "new paid voucher starts from a full 30 minutes while first keeps 25",
+      "pass": true
+    },
+    {
+      "name": "reload preserves second voucher identity and its own elapsed time",
+      "pass": true
+    },
+    {
+      "name": "switching to another voucher requires ending current session explicitly",
+      "pass": true
+    },
+    {
+      "name": "new reward never asks the user to decide initial coin price",
+      "pass": true
+    },
+    {
+      "name": "AI price proposal waits for explicit acceptance",
+      "pass": true
+    },
+    {
+      "name": "returning to modify reward preserves duration and name",
+      "pass": true
+    },
+    {
+      "name": "accepted proposal becomes an ordinary redeemable product",
+      "pass": true
+    },
+    {
+      "name": "unsaved edits cannot accidentally test the previous saved model",
+      "pass": true
+    },
+    {
+      "name": "saving model is distinct from validation",
+      "pass": true
+    },
+    {
+      "name": "bad model ID produces a visible error and is not silently accepted",
+      "pass": true
+    },
+    {
+      "name": "my page shows the actually saved provider and model",
+      "pass": true
+    },
+    {
+      "name": "auxiliary model configuration is separate from primary judgment model",
+      "pass": true
+    },
+    {
+      "name": "auxiliary model can explicitly inherit primary configuration",
+      "pass": true
+    },
+    {
+      "name": "turning off AI does not stop original saving",
+      "pass": true
+    },
+    {
+      "name": "configuration help contains official links and complete steps",
+      "pass": true
+    },
+    {
+      "name": "first diary prompt is saved immediately with original context snapshot",
+      "pass": true
+    },
+    {
+      "name": "diary keeps question and answer separate and can continue to a new relevant topic",
+      "pass": true
+    },
+    {
+      "name": "unfinished diary review restores exact question and paired earlier answer",
+      "pass": true
+    },
+    {
+      "name": "finish stores analysis while keeping original and questions independent",
+      "pass": true
+    },
+    {
+      "name": "editing a saved diary keeps old review snapshot and does not add another diary day",
+      "pass": true
+    },
+    {
+      "name": "period review saves its sources without creating another diary or event",
+      "pass": true
+    },
+    {
+      "name": "JSON export includes records, gameplay, 13 attributes, and exact paired diary prompts",
+      "pass": true
+    },
+    {
+      "name": "download flow left app state unchanged",
+      "pass": true
+    },
+    {
+      "name": "readable export format is generated: markdown",
+      "pass": true
+    },
+    {
+      "name": "readable export format is generated: html",
+      "pass": true
+    },
+    {
+      "name": "readable export format is generated: csv",
+      "pass": true
+    },
+    {
+      "name": "password confirmation validates equality without storing password",
+      "pass": true
+    },
+    {
+      "name": "other-device logout is a confirmed account action",
+      "pass": true
+    },
+    {
+      "name": "email changes only after mock verification step",
+      "pass": true
+    },
+    {
+      "name": "registration needs no invitation and updates management user inventory",
+      "pass": true
+    },
+    {
+      "name": "new account has isolated records and funds and enters its own onboarding",
+      "pass": true
+    },
+    {
+      "name": "unconfigured new account can start neutral without fabricated AI scores",
+      "pass": true
+    },
+    {
+      "name": "AI-off reward request keeps draft instead of creating a priced item",
+      "pass": true
+    },
+    {
+      "name": "returning to the original account restores its own model, records and money",
+      "pass": true
+    },
+    {
+      "name": "returning user does not see another account private feedback",
+      "pass": true
+    },
+    {
+      "name": "forgot password uses uniform acknowledgement and does not ask for old password",
+      "pass": true
+    },
+    {
+      "name": "full questionnaire saves answered and skipped states independently",
+      "pass": true
+    },
+    {
+      "name": "long-term buying power preference is shown from questionnaire without daily editing field",
+      "pass": true
+    },
+    {
+      "name": "return update keeps previous funds and baseline",
+      "pass": true
+    },
+    {
+      "name": "feedback is escaped and privately scoped",
+      "pass": true
+    },
+    {
+      "name": "management has its own navigation and user statistics",
+      "pass": true
+    },
+    {
+      "name": "admin search filters actual sample account list",
+      "pass": true
+    },
+    {
+      "name": "disabling account requires an explicit reason",
+      "pass": true
+    },
+    {
+      "name": "account disable changes status and records management audit",
+      "pass": true
+    },
+    {
+      "name": "disabled account can be restored without deleting its data",
+      "pass": true
+    },
+    {
+      "name": "admin reply is saved to same private feedback object",
+      "pass": true
+    },
+    {
+      "name": "notice preview does not publish yet",
+      "pass": true
+    },
+    {
+      "name": "publication changes notice version and management audit",
+      "pass": true
+    },
+    {
+      "name": "registration switch is saved in site settings",
+      "pass": true
+    },
+    {
+      "name": "management account security returns to its previous admin page",
+      "pass": true
+    },
+    {
+      "name": "published notice appears in ordinary home with same state",
+      "pass": true
+    },
+    {
+      "name": "ordinary user sees the admin response without management controls",
+      "pass": true
+    },
+    {
+      "name": "disabled registration is reflected in the registration flow",
+      "pass": true
+    },
+    {
+      "name": "ordinary user cannot enter admin routes through direct hash routing",
+      "pass": true
+    },
+    {
+      "name": "attribute visibility hides display without changing stored accumulation",
+      "pass": true
+    },
+    {
+      "name": "subdimension proposal requires user selection and leaves parent score unchanged",
+      "pass": true
+    },
+    {
+      "name": "progress advice is optional and does not automatically change plans or coins",
+      "pass": true
+    },
+    {
+      "name": "challenge acceptance locks contract and charges deposit exactly once",
+      "pass": true
+    },
+    {
+      "name": "challenge settlement refunds deposit and rewards once using distinct confirmed actions",
+      "pass": true
+    },
+    {
+      "name": "30-day diary milestone is discovered from actual saved-day evidence",
+      "pass": true
+    },
+    {
+      "name": "milestone confirmation grants agreed reward once",
+      "pass": true
+    },
+    {
+      "name": "personal anchor calibration is stored without retroactive ledger changes",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: today",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: handbook",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: record",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: diary",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: pending",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: plans",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: growth",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: history",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: reports",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: achievements",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: challenges",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: rewards",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: timer",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: my",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: models",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: model-help",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: security",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: auth",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: export",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: questionnaire",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: profile",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: preferences",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: subdimensions",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: comeback",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: anchors",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: announcements",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: feedback",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: guide",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: admin",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: admin-users",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: admin-notices",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: admin-site",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: admin-feedback",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: admin-audit",
+      "pass": true
+    },
+    {
+      "name": "desktop module accessible and fits: admin-security",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: today",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: handbook",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: record",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: diary",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: pending",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: plans",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: growth",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: history",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: reports",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: achievements",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: challenges",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: rewards",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: timer",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: my",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: models",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: model-help",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: security",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: auth",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: export",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: questionnaire",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: profile",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: preferences",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: subdimensions",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: comeback",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: anchors",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: announcements",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: feedback",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: guide",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: admin",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: admin-users",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: admin-notices",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: admin-site",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: admin-feedback",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: admin-audit",
+      "pass": true
+    },
+    {
+      "name": "mobile module accessible and fits: admin-security",
+      "pass": true
+    },
+    {
+      "name": "360px compact layout fits: today",
+      "pass": true
+    },
+    {
+      "name": "360px compact layout fits: handbook",
+      "pass": true
+    },
+    {
+      "name": "360px compact layout fits: plans",
+      "pass": true
+    },
+    {
+      "name": "360px compact layout fits: diary",
+      "pass": true
+    },
+    {
+      "name": "360px compact layout fits: growth",
+      "pass": true
+    },
+    {
+      "name": "360px compact layout fits: models",
+      "pass": true
+    },
+    {
+      "name": "360px compact layout fits: security",
+      "pass": true
+    },
+    {
+      "name": "360px compact layout fits: export",
+      "pass": true
+    },
+    {
+      "name": "360px compact layout fits: guide",
+      "pass": true
+    },
+    {
+      "name": "360px new-reward dialog fits",
+      "pass": true
+    },
+    {
+      "name": "tablet full questionnaire fits",
+      "pass": true
+    },
+    {
+      "name": "unified demo does not send users to another demo for omitted modules",
+      "pass": true
+    },
+    {
+      "name": "CSP prohibits API calls and no secret is saved in demo state",
+      "pass": true
+    },
+    {
+      "name": "single complete HTML opens directly without any server",
+      "pass": true
+    }
+  ],
+  "runtimeErrors": [],
+  "screenshots": [
+    "desktop-today.png",
+    "desktop-event-proposal.png",
+    "desktop-growth.png",
+    "desktop-handbook.png",
+    "desktop-plan-schedule.png",
+    "desktop-timer.png",
+    "desktop-reward-pricing.png",
+    "desktop-model-error.png",
+    "desktop-diary-review.png",
+    "desktop-export.png",
+    "desktop-record.png",
+    "desktop-diary.png",
+    "desktop-pending.png",
+    "desktop-plans.png",
+    "desktop-history.png",
+    "desktop-reports.png",
+    "desktop-achievements.png",
+    "desktop-challenges.png",
+    "desktop-rewards.png",
+    "desktop-my.png",
+    "desktop-models.png",
+    "desktop-model-help.png",
+    "desktop-security.png",
+    "desktop-auth.png",
+    "desktop-questionnaire.png",
+    "desktop-profile.png",
+    "desktop-preferences.png",
+    "desktop-subdimensions.png",
+    "desktop-comeback.png",
+    "desktop-anchors.png",
+    "desktop-announcements.png",
+    "desktop-feedback.png",
+    "desktop-guide.png",
+    "desktop-admin.png",
+    "desktop-admin-users.png",
+    "desktop-admin-notices.png",
+    "desktop-admin-site.png",
+    "desktop-admin-feedback.png",
+    "desktop-admin-audit.png",
+    "desktop-admin-security.png",
+    "mobile-today.png",
+    "mobile-handbook.png",
+    "mobile-record.png",
+    "mobile-diary.png",
+    "mobile-pending.png",
+    "mobile-plans.png",
+    "mobile-growth.png",
+    "mobile-history.png",
+    "mobile-reports.png",
+    "mobile-achievements.png",
+    "mobile-challenges.png",
+    "mobile-rewards.png",
+    "mobile-timer.png",
+    "mobile-my.png",
+    "mobile-models.png",
+    "mobile-model-help.png",
+    "mobile-security.png",
+    "mobile-auth.png",
+    "mobile-export.png",
+    "mobile-questionnaire.png",
+    "mobile-profile.png",
+    "mobile-preferences.png",
+    "mobile-subdimensions.png",
+    "mobile-comeback.png",
+    "mobile-anchors.png",
+    "mobile-announcements.png",
+    "mobile-feedback.png",
+    "mobile-guide.png",
+    "mobile-admin.png",
+    "mobile-admin-users.png",
+    "mobile-admin-notices.png",
+    "mobile-admin-site.png",
+    "mobile-admin-feedback.png",
+    "mobile-admin-audit.png",
+    "mobile-admin-security.png",
+    "mobile-new-reward.png",
+    "mobile-ai-price.png",
+    "tablet-questionnaire.png"
+  ],
+  "captureCount": 83
+}

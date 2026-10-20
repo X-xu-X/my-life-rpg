@@ -19,7 +19,7 @@ async function load(update=true){
 }
 function dirty(group){const f=forms.value[group],s=raw.value?.[group];return !!(f&&s&&(f.api_key.trim()||f.enabled!==!!s.enabled||f.provider_id!==(s.provider_id||'deepseek')||f.model!==(s.model||'')||f.base_url!==(s.base_url||'')))}
 function status(group){const saved=raw.value?.[group];if(dirty(group))return '有未保存修改 · 请先保存再测试';if(busy.value[group]==='test')return '测试中';if(!saved?.configured)return '未配置';if(!saved.model)return '已绑定 Key · 待填写模型';return ({passed:'聊天连通测试通过',failed:'测试失败',stale:'旧验证已失效',untested:'已保存 · 尚未验证'})[saved?.validation?.status] || '尚未验证'}
-function provider(group){const f=forms.value[group];f.base_url=raw.value.providers[f.provider_id];f.api_key=''}
+function provider(group){const f=forms.value[group];f.base_url=raw.value.providers[f.provider_id]||'';f.api_key=''}
 async function save(group,clear=false){
  if(busy.value[group])return
  const f=forms.value[group];message.value[group]=''
@@ -48,15 +48,15 @@ onUnmounted(()=>{alive=false})
 <details class="model-help"><summary>第一次配置？跟着步骤来</summary>
 <ol><li>选择供应商。供应商账号与 LifeXP 账号不同。</li><li>在官方控制台创建 Key，只填写在下方密钥框，不发到聊天。</li><li>核对官方模型与价格，复制准确的聊天模型 ID，费用及权限以自己的账号为准。</li><li>保存本组配置，启用后主动测试，查看旁边的结果和修复提示。</li></ol>
 <ul><li v-for="entry in help" :key="entry.name">{{ entry.name }}：<a :href="entry.console" target="_blank" rel="noopener noreferrer">控制台 / Key</a> · <a :href="entry.models" target="_blank" rel="noopener noreferrer">模型与价格</a> · <a v-if="entry.pricing" :href="entry.pricing" target="_blank" rel="noopener noreferrer">价格表</a> · <a :href="entry.docs" target="_blank" rel="noopener noreferrer">配置文档</a></li></ul>
-<p class="muted">网页聊天免费、赠送额度和零价格 API 是不同概念；不承诺三家全免费或永久免费。官方资料核对：2026-10-16；控制台可能需登录。</p></details>
+<p class="muted">网页聊天免费、赠送额度和零价格 API 是不同概念；不承诺三家全免费或永久免费。官方资料核对：2026-10-18；控制台可能需登录。</p><p class="muted">免费 API 候选可查看 SiliconFlow 本人模型广场当前标记免费的模型；官方说明需实名且有固定限流。不指定具体免费默认 ID，不承诺永久可用。<a href="https://docs.siliconflow.cn/docs/userguide/faqs/rate-limit-and-upgradation" target="_blank" rel="noopener noreferrer">官方免费模型与限流说明</a></p></details>
 <section v-for="(label,group) in groups" :key="group" class="model-group">
 <h3>{{ label }}</h3><template v-if="raw&&forms[group]">
 <p class="saved-model">已保存：{{ raw[group].provider_id || '本地端点' }} / {{ raw[group].model || '未配置' }} · v{{ raw[group].config_version || 0 }} · {{ raw[group].enabled?'已启用':'已停用' }}</p>
 <p :data-model-state="group" role="status" aria-live="polite">{{ status(group) }}<span v-if="raw[group].validation?.tested_at"> · {{ raw[group].validation.tested_at }}</span></p>
 <p v-if="raw[group].validation?.error_code" class="error">{{ raw[group].validation.error_code }} · {{ raw[group].validation.message }}</p>
 <label><input type="checkbox" v-model="forms[group].enabled" /> 启用本组</label>
-<div class="form-grid"><label v-if="account?.mode==='cloud'">供应商<select v-model="forms[group].provider_id" @change="provider(group)"><option value="deepseek">DeepSeek</option><option value="openai">OpenAI</option><option value="siliconflow">SiliconFlow</option></select></label>
-<label>Base URL<input v-model="forms[group].base_url" :readonly="account?.mode==='cloud'" /></label><label>模型 ID<input :id="group+'-model'" v-model="forms[group].model" maxlength="100" placeholder="从官方模型页复制准确 ID" /></label></div>
+<div class="form-grid"><label v-if="account?.mode==='cloud'">供应商<select v-model="forms[group].provider_id" @change="provider(group)"><option value="deepseek">DeepSeek</option><option value="openai">OpenAI</option><option value="siliconflow">SiliconFlow</option><option value="custom">其他兼容接口（公网 HTTPS）</option></select></label>
+<label>Base URL<input v-model="forms[group].base_url" :readonly="account?.mode==='cloud'&&forms[group].provider_id!=='custom'" /></label><label>模型 ID<input :id="group+'-model'" v-model="forms[group].model" maxlength="100" placeholder="从官方模型页复制准确 ID" /></label></div>
 <label>API Key<input :id="group+'-key'" v-model="forms[group].api_key" type="password" autocomplete="new-password" :placeholder="raw[group].configured?'已绑定 · 留空保持；切换供应商需重填':'尚未绑定'" /></label>
 <div class="action-group"><button class="btn primary" :disabled="!!busy[group]" @click="save(group)">保存{{ label }}</button><button class="btn" :disabled="!!busy[group]||dirty(group)||!raw[group].configured||!raw[group].enabled" @click="test(group)">测试已保存配置（可能计费）</button><button class="btn" :disabled="!!busy[group]||!raw[group].configured" @click="save(group,true)">清除密钥并停用</button></div>
 </template><p v-if="message[group]" class="model-feedback" role="status" aria-live="polite">{{ message[group] }}</p>

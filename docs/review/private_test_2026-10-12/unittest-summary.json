@@ -1,0 +1,56 @@
+{
+  "tests_run": 111,
+  "passed": 100,
+  "failures": 0,
+  "errors": 0,
+  "skipped": [
+    {
+      "test": "test_pg_concurrent_redemption_and_int64_balance (test_next_iteration.CloudTests.test_pg_concurrent_redemption_and_int64_balance)",
+      "reason": "真实 PostgreSQL 并发用例"
+    },
+    {
+      "test": "test_pg_import_synthetic_legacy40_atomic_mapping (test_next_iteration.CloudTests.test_pg_import_synthetic_legacy40_atomic_mapping)",
+      "reason": "真实 PostgreSQL 导入用例"
+    },
+    {
+      "test": "test_real_caddy_homepage_stays_ok_api_stop_and_db_failure_alert (test_ops_review_integration.OpsReviewIntegrationTests.test_real_caddy_homepage_stays_ok_api_stop_and_db_failure_alert)",
+      "reason": "requires verified portable Caddy"
+    },
+    {
+      "test": "test_real_restic_retention_stable_host_and_other_deployment_preserved (test_ops_review_integration.OpsReviewIntegrationTests.test_real_restic_retention_stable_host_and_other_deployment_preserved)",
+      "reason": "requires verified portable restic"
+    },
+    {
+      "test": "test_confirmation_delete_race_and_achievement_delete_race (test_release_pg.ReleasePGTests.test_confirmation_delete_race_and_achievement_delete_race)",
+      "reason": "requires isolated PostgreSQL"
+    },
+    {
+      "test": "test_expiry_settle_abandon_race_and_baseline_duplicate (test_release_pg.ReleasePGTests.test_expiry_settle_abandon_race_and_baseline_duplicate)",
+      "reason": "requires isolated PostgreSQL"
+    },
+    {
+      "test": "test_import_forced_id_difference_all_semantic_paths_and_atomic_failure (test_release_pg.ReleasePGTests.test_import_forced_id_difference_all_semantic_paths_and_atomic_failure)",
+      "reason": "requires isolated PostgreSQL"
+    },
+    {
+      "test": "test_invitation_recovery_concurrent_consumption_sessions_expiry_origin_throttle (test_release_pg.ReleasePGTests.test_invitation_recovery_concurrent_consumption_sessions_expiry_origin_throttle)",
+      "reason": "requires isolated PostgreSQL"
+    },
+    {
+      "test": "test_model_deadline_reaps_child_releases_pg_lock_and_allows_next_call (test_release_pg.ReleasePGTests.test_model_deadline_reaps_child_releases_pg_lock_and_allows_next_call)",
+      "reason": "requires isolated PostgreSQL"
+    },
+    {
+      "test": "test_real_worker_crashes_claim_request_before_write_and_recovers (test_release_pg.ReleasePGTests.test_real_worker_crashes_claim_request_before_write_and_recovers)",
+      "reason": "requires isolated PostgreSQL"
+    },
+    {
+      "test": "test_real_workers_dual_claim_cancel_edit_delete_key_and_lease_late_results (test_release_pg.ReleasePGTests.test_real_workers_dual_claim_cancel_edit_delete_key_and_lease_late_results)",
+      "reason": "requires isolated PostgreSQL"
+    }
+  ],
+  "elapsed_seconds": 28.12,
+  "successful": true,
+  "scope": "Disposable SQLite fixtures, synthetic model responses; optional PostgreSQL/Caddy/restic integrations disabled",
+  "failing_tests": []
+}

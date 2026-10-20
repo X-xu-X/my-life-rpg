@@ -16,7 +16,7 @@ router = APIRouter()
 class JobIn(BaseModel):
     request_key: UUID
     event_version: int = Field(ge=1)
-    operation: Literal["judge", "supplement", "dispute"] = "judge"
+    operation: Literal["judge", "supplement", "dispute",'facts'] = "judge"
     detail: str = Field("", max_length=20000)
     question_job_id: int | None = None
     judgment_version: str | None = None
@@ -63,10 +63,16 @@ def retry(job_id: int, body: JobIn, db: Session = Depends(get_db)):
     return analysis_jobs.output(analysis_jobs.submit(db, user, event, body))
 
 
+@router.get('/events/{event_id}/analysis-jobs')
+def event_jobs(event_id:int,db:Session=Depends(get_db)):
+    user,event=owned(db,Event,event_id)
+    return {'items':[analysis_jobs.output(j) for j in db.query(AnalysisJob).filter_by(event_id=event.id,user_id=user.id).order_by(AnalysisJob.id.desc()).limit(20).all()]}
+
+
 @router.get("/pending")
 def pending(db: Session = Depends(get_db)):
     user = get_or_create_default_user(db)
-    events = db.query(Event).filter(Event.user_id == user.id, Event.is_deleted.is_(False), Event.is_pure.is_(False), Event.origin.is_(None)).order_by(Event.id.desc()).all()
+    events = db.query(Event).filter(Event.user_id == user.id, Event.ai_permission=='allowed',Event.is_deleted.is_(False), Event.is_pure.is_(False), Event.origin.is_(None)).order_by(Event.id.desc()).all()
     result = []
     for event in events:
         judgment = db.query(AIJudgment).filter_by(event_id=event.id).filter(

@@ -1,0 +1,434 @@
+{
+  "status": "PASS",
+  "validatedAt": "2026-10-16T06:38:37.262Z",
+  "scope": "Complete fictional local preview. No real authentication, emails, APIs, cloud, migrations, or writer dispatch. Browser simulations do not prove backend security or model quality.",
+  "checks": [
+    {
+      "name": "complete preview initializes fictional data and five main navigation entries",
+      "pass": true
+    },
+    {
+      "name": "today primary actions available without long settings lists",
+      "pass": true
+    },
+    {
+      "name": "empty original is not saved",
+      "pass": true
+    },
+    {
+      "name": "no-analysis original saved independently",
+      "pass": true
+    },
+    {
+      "name": "saved no-analysis choice shown consistently in detail",
+      "pass": true
+    },
+    {
+      "name": "analysis queued without award",
+      "pass": true
+    },
+    {
+      "name": "main-line effort grade generates illustrative suggestion without settlement",
+      "pass": true
+    },
+    {
+      "name": "unassessed starting point selected explicitly before award",
+      "pass": true
+    },
+    {
+      "name": "event confirmation awards once",
+      "pass": true
+    },
+    {
+      "name": "plan linked to already settled event reuses original award",
+      "pass": true
+    },
+    {
+      "name": "missed result locks without supplement modal or extra award",
+      "pass": true
+    },
+    {
+      "name": "Monday schedule appears",
+      "pass": true
+    },
+    {
+      "name": "partial result saves fact and suggestion before award",
+      "pass": true
+    },
+    {
+      "name": "partial occurrence settles once",
+      "pass": true
+    },
+    {
+      "name": "Tuesday has no overdue Monday reminder",
+      "pass": true
+    },
+    {
+      "name": "overall plan list keeps definitions and removes action domain",
+      "pass": true
+    },
+    {
+      "name": "new user schedule and associated goal saved without reward",
+      "pass": true
+    },
+    {
+      "name": "new Wednesday plan appears only on scheduled day",
+      "pass": true
+    },
+    {
+      "name": "main-line switch affects future related plans and preserves old awards",
+      "pass": true
+    },
+    {
+      "name": "new actual displayed question saved independently",
+      "pass": true
+    },
+    {
+      "name": "AI question and human answer preserve diary original and saved state",
+      "pass": true
+    },
+    {
+      "name": "diary, original AI prompts, user answers and separate analysis survive refresh",
+      "pass": true
+    },
+    {
+      "name": "handbook search excludes AI answer text",
+      "pass": true
+    },
+    {
+      "name": "diary filter and pagination keep page short",
+      "pass": true
+    },
+    {
+      "name": "second page shows remaining diaries",
+      "pass": true
+    },
+    {
+      "name": "unsaved model edits cannot silently test old configuration",
+      "pass": true
+    },
+    {
+      "name": "saved invalid model is not presented as verified",
+      "pass": true
+    },
+    {
+      "name": "invalid model failure visible next to controls and input retained",
+      "pass": true
+    },
+    {
+      "name": "validated saved model visible in compact summary",
+      "pass": true
+    },
+    {
+      "name": "AI-off retains original without starting analysis",
+      "pass": true
+    },
+    {
+      "name": "shop uses in-page dialog with complete amounts",
+      "pass": true
+    },
+    {
+      "name": "cancelled redemption does not spend coins",
+      "pass": true
+    },
+    {
+      "name": "same redemption operation creates one voucher and one debit",
+      "pass": true
+    },
+    {
+      "name": "marking reward enjoyed does not spend coins again",
+      "pass": true
+    },
+    {
+      "name": "discovered milestone mock can be claimed only once",
+      "pass": true
+    },
+    {
+      "name": "30-day achievement displays real fictional progress not fabricated completion",
+      "pass": true
+    },
+    {
+      "name": "neutral baseline displayed without proficient labels",
+      "pass": true
+    },
+    {
+      "name": "challenge progress counts unique confirmed learning actions across events and plans",
+      "pass": true
+    },
+    {
+      "name": "challenge reward mock can be claimed only once",
+      "pass": true
+    },
+    {
+      "name": "readable export includes paired questions answers and original separately",
+      "pass": true
+    },
+    {
+      "name": "readable formats retain event analysis without mixing it into original",
+      "pass": true
+    },
+    {
+      "name": "JSON archive optionally contains game data and no credentials",
+      "pass": true
+    },
+    {
+      "name": "HTML archive escapes original user markup",
+      "pass": true
+    },
+    {
+      "name": "CSV treats formula-like original as text",
+      "pass": true
+    },
+    {
+      "name": "clicking export creates actual local fixture download",
+      "pass": true
+    },
+    {
+      "name": "registration validation visible without sending email",
+      "pass": true
+    },
+    {
+      "name": "registration flow explicitly simulated email verification",
+      "pass": true
+    },
+    {
+      "name": "demo profile updated without persisting passwords",
+      "pass": true
+    },
+    {
+      "name": "change-password invalid input remains inline without saving secrets",
+      "pass": true
+    },
+    {
+      "name": "device logout mock updates visible session count",
+      "pass": true
+    },
+    {
+      "name": "email recovery path does not require the forgotten current password",
+      "pass": true
+    },
+    {
+      "name": "recovery mock completes without storing password",
+      "pass": true
+    },
+    {
+      "name": "ordinary identity sees no administrator mutation controls",
+      "pass": true
+    },
+    {
+      "name": "ordinary demo handler cannot mutate admin registration flag",
+      "pass": true
+    },
+    {
+      "name": "admin landing uses separate five-item navigation without ordinary pages",
+      "pass": true
+    },
+    {
+      "name": "overview separates ordinary-user and administrator totals",
+      "pass": true
+    },
+    {
+      "name": "admin navigation cannot accidentally render ordinary diary data",
+      "pass": true
+    },
+    {
+      "name": "user list includes registration login and status, but no private record links",
+      "pass": true
+    },
+    {
+      "name": "admin username search narrows list",
+      "pass": true
+    },
+    {
+      "name": "account status change requires reason and leaves state unchanged on error",
+      "pass": true
+    },
+    {
+      "name": "confirmed restore updates count and records one management action",
+      "pass": true
+    },
+    {
+      "name": "account role and status filters work together",
+      "pass": true
+    },
+    {
+      "name": "current management account cannot be stopped through user-status control",
+      "pass": true
+    },
+    {
+      "name": "candidate AI quota validates before saving without touching personal model",
+      "pass": true
+    },
+    {
+      "name": "candidate site save audited once, separate from user configuration",
+      "pass": true
+    },
+    {
+      "name": "registration toggle changes recorded with state restored for later demos",
+      "pass": true
+    },
+    {
+      "name": "announcement can be previewed before local publishing",
+      "pass": true
+    },
+    {
+      "name": "audit includes operator target reason and announcement actions without private content",
+      "pass": true
+    },
+    {
+      "name": "admin account settings display management identity only",
+      "pass": true
+    },
+    {
+      "name": "account back returns to preceding audit page and keeps management identity",
+      "pass": true
+    },
+    {
+      "name": "account back follows user-list entry rather than always opening overview",
+      "pass": true
+    },
+    {
+      "name": "direct account page without prior navigation falls back to management overview",
+      "pass": true
+    },
+    {
+      "name": "refresh preserves management landing role counts and audit",
+      "pass": true
+    },
+    {
+      "name": "390px management layout: admin",
+      "pass": true
+    },
+    {
+      "name": "390px management layout: admin-users",
+      "pass": true
+    },
+    {
+      "name": "390px management layout: admin-site",
+      "pass": true
+    },
+    {
+      "name": "390px management layout: admin-audit",
+      "pass": true
+    },
+    {
+      "name": "mobile management account security reachable without ordinary account pages",
+      "pass": true
+    },
+    {
+      "name": "mobile account back button fits viewport and has touch target",
+      "pass": true
+    },
+    {
+      "name": "mobile back returns to preceding management page",
+      "pass": true
+    },
+    {
+      "name": "new local announcement appears for normal preview identity",
+      "pass": true
+    },
+    {
+      "name": "leaving management clears account return destination",
+      "pass": true
+    },
+    {
+      "name": "dismissed announcement no longer repeats",
+      "pass": true
+    },
+    {
+      "name": "review choices stored locally with no writer dispatch",
+      "pass": true
+    },
+    {
+      "name": "390px whole-page layout: today",
+      "pass": true
+    },
+    {
+      "name": "390px whole-page layout: handbook",
+      "pass": true
+    },
+    {
+      "name": "390px whole-page layout: review",
+      "pass": true
+    },
+    {
+      "name": "390px whole-page layout: plans",
+      "pass": true
+    },
+    {
+      "name": "390px whole-page layout: settings",
+      "pass": true
+    },
+    {
+      "name": "390px whole-page layout: growth",
+      "pass": true
+    },
+    {
+      "name": "390px whole-page layout: export",
+      "pass": true
+    },
+    {
+      "name": "390px whole-page layout: my",
+      "pass": true
+    },
+    {
+      "name": "390px whole-page layout: auth",
+      "pass": true
+    },
+    {
+      "name": "360px plan layout and action controls remain in viewport",
+      "pass": true
+    },
+    {
+      "name": "768px tablet layout fits",
+      "pass": true
+    },
+    {
+      "name": "complete preview refresh retains awards vouchers feedback and separate diaries",
+      "pass": true
+    },
+    {
+      "name": "all source interactions remain local with CSP blocking API traffic",
+      "pass": true
+    }
+  ],
+  "runtimeErrors": [],
+  "screenshots": [
+    "desktop-today.png",
+    "desktop-event-detail.png",
+    "desktop-plans.png",
+    "desktop-diary-review.png",
+    "desktop-handbook.png",
+    "desktop-model-error.png",
+    "desktop-model-settings.png",
+    "desktop-redeem-dialog.png",
+    "desktop-shop.png",
+    "desktop-achievements.png",
+    "desktop-growth.png",
+    "desktop-export.png",
+    "desktop-security.png",
+    "desktop-admin.png",
+    "desktop-admin-users.png",
+    "desktop-admin-site.png",
+    "desktop-admin-notices.png",
+    "desktop-admin-audit.png",
+    "desktop-admin-account.png",
+    "mobile-admin-overview.png",
+    "mobile-admin-users.png",
+    "mobile-admin-site.png",
+    "mobile-admin-audit.png",
+    "mobile-admin-account.png",
+    "desktop-preview-guide.png",
+    "mobile-today.png",
+    "mobile-handbook.png",
+    "mobile-diary.png",
+    "mobile-plans.png",
+    "mobile-model.png",
+    "mobile-growth.png",
+    "mobile-export.png",
+    "mobile-my.png",
+    "mobile-auth.png",
+    "mobile-growth-stats.png",
+    "tablet-model.png"
+  ]
+}

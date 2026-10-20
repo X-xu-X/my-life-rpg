@@ -1,0 +1,22 @@
+{
+  "reference_sha256": {
+    "checked": 4,
+    "mismatches": []
+  },
+  "source_sha256": {
+    "checked": 128,
+    "mismatches": []
+  },
+  "documents_sha256": {
+    "checked": 6,
+    "mismatches": []
+  },
+  "evidence_sha256": {
+    "checked": 4,
+    "mismatches": []
+  },
+  "review_source_unchanged": {
+    "checked": 229,
+    "changed": []
+  }
+}

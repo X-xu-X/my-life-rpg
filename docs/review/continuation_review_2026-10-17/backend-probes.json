@@ -1,0 +1,55 @@
+{
+  "scope": "Synthetic reproduction, not production validation",
+  "results": {
+    "review_context": {
+      "keys": [
+        "sources",
+        "turns"
+      ],
+      "includes_plan": false,
+      "includes_checklist": false,
+      "includes_later_event": false
+    },
+    "schedule_goal_link": {
+      "status": 422,
+      "reason": "goal_id rejected as extra field"
+    },
+    "current_streak": {
+      "returned_keys": [
+        "count",
+        "longest_contiguous_days",
+        "dates",
+        "event_ids",
+        "unknown_saved_dates"
+      ],
+      "has_current_streak": false
+    },
+    "recovery_timing": {
+      "same_http_response": true,
+      "smtp_mock_calls": 1,
+      "known_email_seconds": 0.414,
+      "unknown_email_seconds": 0.009,
+      "explanation": "Only the known-account HTTP request waits for synchronous SMTP."
+    },
+    "admin_metadata": {
+      "overview": {
+        "users": 2,
+        "active": 2,
+        "published_announcements": 0,
+        "site": {
+          "site_name": "LifeXP",
+          "description": "个人记录与成长",
+          "registration": "invite",
+          "email_required": false,
+          "password_sessions": "all",
+          "version": 0
+        }
+      },
+      "ordinary_count": 1,
+      "management_count": 1,
+      "filtered_count": 2,
+      "all_count": 2,
+      "has_last_login": false
+    }
+  }
+}

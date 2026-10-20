@@ -1,4 +1,5 @@
 """成长周报/月报路由：基于一段时间的数据，AI 生成成长总结与建议。"""
+from app.services.ai_context import model_context
 from app.services.time_service import clock_now
 from datetime import datetime, timedelta
 
@@ -19,6 +20,7 @@ router = APIRouter()
 
 @router.post("/report")
 @router.post("/reports")
+@model_context
 def generate_report(db: Session = Depends(get_db), period: str = "week"):
     """生成成长报告。period=week（近 7 天）或 month（近 30 天）。"""
     if period not in ("week", "month"):
@@ -70,7 +72,7 @@ def generate_report(db: Session = Depends(get_db), period: str = "week"):
         goals_stat[g.status] = goals_stat.get(g.status, 0) + 1
 
     stats = {
-        "events_count": len(events),
+        "events_count": db.query(Event.id).execution_options(record_metadata=True).filter(Event.user_id==user.id,Event.is_deleted.is_(False),Event.occurred_at>=start,Event.occurred_at<=now).count(),
         "events_by_category": by_cat,
         "attribute_changes": attr_changes,
         "confirmed_count": confirmed_count,
@@ -93,7 +95,7 @@ def generate_report(db: Session = Depends(get_db), period: str = "week"):
     try:
         # v1.4：周报走辅助模型组（aux），缺失自动回退判定组/.env
         config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_AUX)
-        source_versions = [{"id":event.id,"version":event.content_version} for event in events]
+        source_versions = [{"id":event.id,"version":event.content_version,'permission_version':event.ai_permission_version} for event in events]
         db.commit()  # 模型请求不持有数据库锁。
         report = llm_service.chat_json(messages, config=config)
         lock_profile(db, user.id)
@@ -111,11 +113,12 @@ def generate_report(db: Session = Depends(get_db), period: str = "week"):
         "stats": stats,
         "report": report,
     }
-    row = GrowthReport(user_id=user.id, period=period, timezone=user.timezone, payload=payload,
-        provenance={"events":source_versions,"rule_version":"legacy-v1.11","model":config.model})
+    from app.services import ai_context
+    row = GrowthReport(user_id=user.id, period=period, timezone=user.timezone, payload=payload,state='preview',
+        provenance={"events":source_versions,'ai_sources':ai_context.sources(),'background':ai_context.CURRENT.get()['background'],"rule_version":"trial-2026-10-18-v1","model":config.model})
     db.add(row)
     db.commit()
-    return {"id":row.id, **payload}
+    return {"id":row.id,'state':row.state,'version':row.version, **payload}
 
 
 @router.get('/reports')
@@ -123,7 +126,27 @@ def list_reports(db: Session = Depends(get_db)):
     user=get_or_create_default_user(db)
     return {'items':[{'id':r.id,'period':r.period,'timezone':r.timezone,'created_at':r.created_at,
         'start':r.payload.get('start'),'end':r.payload.get('end')}
-        for r in db.query(GrowthReport).filter_by(user_id=user.id).order_by(GrowthReport.id.desc()).limit(100).all()]}
+        for r in db.query(GrowthReport).filter_by(user_id=user.id).filter(GrowthReport.state!='preview').order_by(GrowthReport.id.desc()).limit(100).all()]}
+
+
+@router.get('/reports/previews')
+def previews(db:Session=Depends(get_db)):
+    user=get_or_create_default_user(db)
+    return {'items':[{'id':r.id,'period':r.period,'created_at':r.created_at,'version':r.version} for r in db.query(GrowthReport).filter_by(user_id=user.id,state='preview').order_by(GrowthReport.id.desc()).limit(30).all()]}
+
+
+from app.services.workflow_common import WriteIn,begin,finish,version as check_version
+@router.post('/reports/{report_id}/save')
+def save_report(report_id:int,body:WriteIn,db:Session=Depends(get_db)):
+    user=get_or_create_default_user(db);op=f'report-save:{report_id}';fp,prior=begin(db,user,op,body)
+    if prior is not None:return prior
+    row=db.query(GrowthReport).filter_by(id=report_id,user_id=user.id).first()
+    if not row:raise HTTPException(404,'报告不存在。')
+    check_version(row,body.expected_version)
+    from app.services import ai_context
+    if row.state!='preview' or not ai_context.valid(db,row.provenance.get('ai_sources'),user.id) or row.provenance.get('background')!=ai_context.background(db,user.id):raise HTTPException(409,'来源或许可已变化，请重新生成；旧预览保留。')
+    row.state='saved';row.version+=1
+    return finish(db,user,op,body,fp,row,{'id':row.id,'state':row.state,'version':row.version})
 
 
 @router.get('/reports/{report_id}')
@@ -137,5 +160,5 @@ def get_report(report_id: int, db: Session = Depends(get_db)):
         state='unavailable' if event is None else ('deleted' if event.is_deleted else (
             'edited' if event.content_version!=source['version'] else 'original'))
         sources.append({**source,'state':state,'current_version':event.content_version if event else None})
-    return {"id":row.id, **row.payload, "provenance":row.provenance, 'sources':sources,
+    return {"id":row.id,'state':row.state,'version':row.version, **row.payload, "provenance":row.provenance, 'sources':sources,
         'timezone':row.timezone, "created_at":row.created_at}

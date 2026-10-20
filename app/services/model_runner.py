@@ -15,13 +15,13 @@ def main():
         if os.getppid()!=parent: return {'error':'MODEL_UNAVAILABLE'}
         signal.setitimer(signal.ITIMER_REAL, float(payload['timeout']))
     from openai import OpenAI
-    from app.services.credentials import http_client, PROVIDERS
-    if payload['base_url'] not in PROVIDERS.values():
-        return {'error':'MODEL_ENDPOINT_BLOCKED'}
+    from app.services.credentials import http_client,validate_endpoint
+    try:validate_endpoint(payload['base_url'])
+    except Exception:return {'error':'MODEL_ENDPOINT_BLOCKED'}
     client = None
     try:
         client = OpenAI(api_key=payload['api_key'], base_url=payload['base_url'],
-            max_retries=0, timeout=payload['timeout'], http_client=http_client())
+            max_retries=0, timeout=payload['timeout'], http_client=http_client(payload['base_url']))
         response = client.chat.completions.create(**payload['request'])
         return {'content':response.choices[0].message.content or '', 'usage':{'prompt_tokens':response.usage.prompt_tokens,'completion_tokens':response.usage.completion_tokens} if response.usage else None}
     except Exception as exc:

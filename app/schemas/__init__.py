@@ -30,6 +30,7 @@ class EventCreate(BaseModel):
     time_precision: Literal['date', 'minute'] | None = None
     client_request_id: UUID | None = None
     intent: Literal["now", "later", "never"] = "later"
+    ai_permission: Literal['private','allowed'] = 'private'
     timezone: str = "Asia/Shanghai"
 
     @model_validator(mode='after')
@@ -54,9 +55,14 @@ class EventUpdate(BaseModel):
     item_id: int | None = None
     occurred_at: datetime | None = None
     expected_version: int | None = Field(None, ge=1)
+    correction: bool = False
+    reason: str = Field('',max_length=2000)
 
 
 class EventOut(BaseModel):
+    economy_version: str | None = None
+    ai_permission: str = 'private'
+    ai_permission_version: int = 1
     saved_on: date | None = None
     saved_timezone: str | None = None
     record_kind: str | None = None
@@ -247,7 +253,7 @@ class SupplementProfileIn(BaseModel):
 
 class GoalCreate(BaseModel):
     description: str = ""
-    metric: str = Field(..., description="量化指标")
+    metric: str = Field('', description="可选量化指标")
     deadline: datetime | None = None
     related_attribute: str = ""
     reward: float = Field(2.0, ge=0, le=5, allow_inf_nan=False)

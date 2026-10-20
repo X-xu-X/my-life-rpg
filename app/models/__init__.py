@@ -53,6 +53,7 @@ class User(Base):
     email: Mapped[str | None] = mapped_column(String(254), unique=True, nullable=True)
     email_verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     credentials_version: Mapped[int] = mapped_column(Integer, default=1)
+    last_login_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
     profile: Mapped["UserProfile"] = relationship(back_populates="user", uselist=False)
@@ -84,6 +85,7 @@ class UserProfile(Base):
     coins: Mapped[int] = mapped_column(BigInteger, default=0)
     # 长期记忆（智能体式）：LLM 压缩历史事件成的五类摘要（长期目标/关键经历/性格/偏好/当前状态），JSON 字符串
     long_term_memory: Mapped[str | None] = mapped_column(Text, nullable=True)
+    memory_sources: Mapped[list | None] = mapped_column(JSON, nullable=True)
     memory_updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
@@ -114,6 +116,7 @@ class Attribute(Base):
     # v1.10 M3：子维度提议（{state: pending|accepted|dismissed, items:[{name, description}], at}）。
     # **只提议不自动创建**——用户勾选确认后才落库为真正的子维度行。
     sub_proposal: Mapped[dict] = mapped_column(JSON, default=dict)
+    ai_sources: Mapped[list | None] = mapped_column(JSON,nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
 
@@ -179,6 +182,10 @@ class Event(Base):
     record_kind: Mapped[str | None] = mapped_column(String(20), nullable=True)
     diary_key: Mapped[str | None] = mapped_column(String(80), unique=True, nullable=True)
     content_version: Mapped[int] = mapped_column(Integer, default=1)
+    ai_permission: Mapped[str] = mapped_column(String(12), default='private')
+    ai_permission_version: Mapped[int] = mapped_column(Integer, default=1)
+    ai_permission_changed_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    economy_version: Mapped[str | None] = mapped_column(String(30),nullable=True)
     client_request_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     analysis_intent: Mapped[str] = mapped_column(String(10), default="legacy")
     timezone_at_capture: Mapped[str] = mapped_column(String(60), default="Asia/Shanghai")
@@ -212,6 +219,7 @@ class AIJudgment(Base):
     """AI 判定记录。状态：pending/confirmed/adjusted/rejected。"""
 
     __tablename__ = "ai_judgments"
+    source_snapshot: Mapped[list | None] = mapped_column(JSON, nullable=True)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     event_id: Mapped[int] = mapped_column(ForeignKey("events.id"), nullable=False)
@@ -373,6 +381,7 @@ class Challenge(Base):
     """
 
     __tablename__ = "challenges"
+    ai_sources: Mapped[list | None] = mapped_column(JSON,nullable=True)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
@@ -415,6 +424,10 @@ class ShopItem(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     name: Mapped[str] = mapped_column(String(120), default="")
+    reward_kind: Mapped[str | None] = mapped_column(String(20),nullable=True)
+    duration_seconds: Mapped[int | None] = mapped_column(Integer,nullable=True)
+    base_coin_price: Mapped[int | None] = mapped_column(BigInteger,nullable=True)
+    repriced_on: Mapped[str | None] = mapped_column(String(10),nullable=True)
     kind: Mapped[str] = mapped_column(String(10), default="custom")  # preset/custom
     price_yuan: Mapped[float | None] = mapped_column(Float, nullable=True)  # 现实价格（元）
     coin_price: Mapped[int] = mapped_column(BigInteger, default=0)  # AI 定出的金币价（用户可改）
@@ -438,6 +451,7 @@ class Redemption(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     shop_item_id: Mapped[int | None] = mapped_column(ForeignKey("shop_items.id"), nullable=True)
+    duration_seconds: Mapped[int | None] = mapped_column(Integer,nullable=True)
     coin_spent: Mapped[int] = mapped_column(BigInteger, default=0)  # 兑换消耗（快照）
     status: Mapped[str] = mapped_column(String(10), default="pending")  # pending/fulfilled
     redeemed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -520,3 +534,4 @@ from app.models.workflow import DiaryRevision, ReviewSession, ReviewTurn, Review
 import app.models.accounts
 
 import app.models.policies
+import app.models.full_system

@@ -182,6 +182,11 @@ def check_and_grant(db: Session, user: User) -> list[Achievement]:
     from app.services.transactions import lock_profile
     from app.models.policies import DynamicAward
     lock_profile(db,user.id)
+    from app.services import trial_rules,discoveries
+    config=trial_rules.account(db,user)
+    if config and config.enabled:
+        discoveries.discover(db,user)
+        return []
     equivalents={a.equivalence_key for a in db.query(DynamicAward).filter_by(user_id=user.id).all() if a.equivalence_key}
     metrics = _metrics(db, user)
     unlocked = _unlocked_map(db, user)

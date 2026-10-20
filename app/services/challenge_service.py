@@ -13,6 +13,7 @@
 v1.10 变更（N1）：**金额改由 AI 定价** —— `COIN_TABLE` 降级为"解析兜底表"，
 押金统一由 `derive_deposit()` 按奖励比例派生。**不要在代码里加"金额必须等于参数表"的校验。**
 """
+from app.services.ai_context import model_context,sources as ai_sources
 from app.services.time_service import clock_now
 import json
 from datetime import datetime, timedelta
@@ -146,7 +147,7 @@ def _attributes_context_with_weakness(db: Session, user_id: int) -> str:
 def _existing_titles(db: Session, user_id: int, scope: str, pkey: str) -> list[str]:
     """本期已给过的全部挑战标题（防重复）。"""
     rows = (
-        db.query(Challenge.title)
+        db.query(Challenge)
         .filter(
             Challenge.user_id == user_id,
             Challenge.scope == scope,
@@ -154,11 +155,13 @@ def _existing_titles(db: Session, user_id: int, scope: str, pkey: str) -> list[s
         )
         .all()
     )
-    return [r[0] for r in rows if r[0]]
+    from app.services import ai_context
+    return [r.title for r in rows if ai_context.valid(db,r.ai_sources,user_id)]
 
 
 # ============ B2 · 生成 ============
 
+@model_context
 def generate(db: Session, user: User, scope: str = "daily", force: bool = False) -> list[Challenge]:
     """生成本期挑战候选（幂等）。
 
@@ -201,7 +204,7 @@ def generate(db: Session, user: User, scope: str = "daily", force: bool = False)
         economy_context=economy_service.snapshot(db, user),
     )
 
-    config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_AUX)
+    config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_JUDGE)
     db.commit()
     result = llm_service.chat_json(messages, config=config)
     lock_profile(db, user.id)
@@ -243,6 +246,7 @@ def generate(db: Session, user: User, scope: str = "daily", force: bool = False)
         ]
         related = [r for r in related if r]
         row = Challenge(
+            ai_sources=ai_sources(),
             user_id=user.id,
             scope=scope,
             period_key=pkey,
@@ -352,18 +356,10 @@ def switch_variant(db: Session, user: User, challenge: Challenge, variant_index:
 
 
 def _long_term_memory(db: Session, user_id: int) -> str:
-    """读取用户长期记忆摘要（可选上下文）。"""
-    from app.models import UserProfile
-
-    profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
-    if profile is None or not profile.long_term_memory:
-        return ""
-    return str(profile.long_term_memory)[:1200]
+    from app.services.memory_service import get_long_term_memory,format_memory_text
+    return format_memory_text(get_long_term_memory(db,user_id))
 
 
-# ============ B3-1 · 接受（扣押金） ============
-
-@rollback_on_error
 def accept(db: Session, user: User, challenge: Challenge, *, commit: bool = True) -> Challenge:
     """接受挑战：校验状态与余额 → 扣押金 → 置 accepted 并重设截止时间。"""
     if challenge.status != "candidate":
@@ -454,6 +450,7 @@ def _apply_outcome_changes(
 
 
 @rollback_on_error
+@model_context
 def complete(db: Session, user: User, challenge: Challenge, note: str) -> dict:
     """用户自报完成情况 → 一次 LLM 调用判定 outcome 与加点 → 生成待确认判定。
 
@@ -472,7 +469,12 @@ def complete(db: Session, user: User, challenge: Challenge, note: str) -> dict:
         raise ValueError("该判定已入账或失效。")
 
     # 1. 创建记录（复用判定链路；params 的 "_" 前缀键会被 format_event_description 跳过）
-    event = db.get(Event, challenge.event_id) if challenge.event_id else None
+    # Identity/lifecycle lookup, not a source for model context. The user explicitly
+    # submits the current note below; old private body is never sent.
+    previous_filter=db.info.pop('ai_only',None)
+    try:event = db.get(Event, challenge.event_id) if challenge.event_id else None
+    finally:
+        if previous_filter is not None:db.info['ai_only']=previous_filter
     if event is not None and event.is_deleted:
         raise ValueError("挑战事件已删除。")
     event = event or Event(
@@ -487,15 +489,22 @@ def complete(db: Session, user: User, challenge: Challenge, note: str) -> dict:
         occurred_at=clock_now(),
     )
     event.content = note or ""
+    from app.services import ai_context
+    ai_context.change(db,event,'allowed')
     event.content_version = (event.content_version or 0) + 1
     db.add(event)
     db.flush()
+    context=ai_context.CURRENT.get()
+    if context:
+        context['sources']=[s for s in context['sources'] if s['id']!=event.id]+[{'id':event.id,'version':event.content_version,'permission_version':event.ai_permission_version}]
 
     # 2. 一次 LLM 调用同时拿 outcome 与加点
+    from app.services import ai_context
+    trusted_contract=ai_context.valid(db,challenge.ai_sources,user.id)
     messages = build_completion_messages(
-        challenge_title=challenge.title,
-        challenge_description=challenge.description,
-        challenge_attributes=list(challenge.related_attributes or []),
+        challenge_title=challenge.title if trusted_contract else '既有挑战（历史生成来源当前不可用）',
+        challenge_description=challenge.description if trusted_contract else '仅依据本次主动提交的要求及完成事实判断，无法核实则请求补充，不猜测。',
+        challenge_attributes=list(challenge.related_attributes or []) if trusted_contract else [],
         note=note,
         today_events_context=judge_service._today_events_context(db, user.id, exclude_event_id=event.id),
     )

@@ -93,6 +93,7 @@ async def require_owner(request: Request, db: Session = Depends(get_db)):
 
 
 def create_session(db, user, response):
+    user.last_login_at = utc_now()
     token = secrets.token_urlsafe(48)
     session = AuthSession(user_id=user.id, token_hash=digest(token),
         csrf_secret=secrets.token_urlsafe(32), expires_at=utc_now() + timedelta(days=30))

@@ -58,8 +58,8 @@ onMounted(load)
 
 <template>
   <div class="card">
-    <h1>旧规则锚点与个人校准</h1>
-    <p class="muted">AI 判定以此为基准按强度/时长/质量加权。你可以校准基准值，校准后后续判定随之调整。</p>
+    <h1>AI 如何判断</h1>
+    <p class="muted">AI 根据你主动提供的实际事实、投入与成果、当前基线提出建议，并标明依据和不确定性。以下是历史内部参考，不是只能识别这些活动；主线只影响金币，属性由事实决定。</p>
     <p v-if="error" class="muted" style="color: var(--danger)">{{ error }}</p>
 
     <div class="table-scroll" role="region" aria-label="锚点基准与校准表" tabindex="0"><table style="width: 100%; border-collapse: collapse; font-size: 14px">
@@ -70,7 +70,7 @@ onMounted(load)
           <th>影响属性</th>
           <th>基准增减</th>
           <th>科学依据</th>
-          <th>操作</th>
+          <th>历史状态</th>
         </tr>
       </thead>
       <tbody>
@@ -95,18 +95,7 @@ onMounted(load)
             </span>
           </td>
           <td class="muted" style="max-width: 260px">{{ a.evidence }}</td>
-          <td>
-            <template v-if="editingId === a.id">
-              <button class="btn small primary" :disabled="busy" @click="saveCalibrate(a)">
-                <template v-if="busy">保存中…</template>
-                <template v-else>保存</template>
-              </button>
-            </template>
-            <template v-else>
-              <button class="btn small" @click="startEdit(a)">校准</button>
-              <button v-if="a.calibrated_value != null" class="btn small" :disabled="busy" @click="resetCalibrate(a)">恢复</button>
-            </template>
-          </td>
+          <td><span>{{ a.calibrated_value!=null?'旧校准记录已保留':'内部参考' }}</span></td>
         </tr>
       </tbody>
     </table></div>

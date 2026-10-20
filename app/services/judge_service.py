@@ -10,6 +10,7 @@
 - dispute：反驳复核（客观，不迎合）
 - 全程写 judgment_logs 审计
 """
+from app.services.ai_context import model_context
 from app.services.time_service import clock_now
 from app.services.model_validation import provenance
 import json
@@ -277,9 +278,11 @@ def _profile_context(db: Session, user_id: int) -> str:
     from app.models import UserProfile
 
     profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
-    if profile and profile.basic_profile:
-        return json.dumps(profile.basic_profile, ensure_ascii=False, indent=2)
-    return ""
+    from app.models.full_system import PersonalPhase
+    phase=db.query(PersonalPhase).filter_by(user_id=user_id).first()
+    background={'profile':profile.basic_profile if profile else {}}
+    if phase and phase.payload.get('ai_allowed'):background['phase']=phase.payload
+    return json.dumps(background,ensure_ascii=False)
 
 
 def _log(db: Session, judgment_id: int, user_id: int, action: str, detail: str = "", payload: dict | None = None) -> None:
@@ -453,8 +456,10 @@ def _subdimension_context(db: Session, user) -> str:
     return "\n".join(lines)
 
 
-def _prior_snapshot(judgment: AIJudgment) -> dict:
+def _prior_snapshot(judgment: AIJudgment, db: Session) -> dict:
     """基准判定快照（v1.6 增量修订契约：重判时注入，要求相干维度逐字保留）。"""
+    from app.services import ai_context
+    if not ai_context.valid(db,judgment.source_snapshot,judgment.user_id):return {}
     return {
         "affected_attributes": judgment.suggested_changes or [],
         "analysis": judgment.analysis or [],
@@ -467,6 +472,7 @@ def _prior_snapshot(judgment: AIJudgment) -> dict:
 # ============ 判定 ============
 
 @rollback_on_error
+@model_context
 def judge_event(db: Session, event: Event, clarification: str = "", *, before_write=None, commit_result=True) -> AIJudgment:
     """对事件触发 AI 判定，生成判定记录。
 
@@ -532,7 +538,7 @@ def judge_event(db: Session, event: Event, clarification: str = "", *, before_wr
         attribute_context=_attribute_context(db, user.id),
         clarification=clarification,
         clarify_history=clarify_history,
-        prior_judgment=(_prior_snapshot(current) if current is not None else None),  # v1.6：增量修订基准
+        prior_judgment=(_prior_snapshot(current,db) if current is not None else None),  # v1.6：增量修订基准
         recent_events_context=_recent_events_context(db, user.id, event.id),
         memory_context=memory_text,
         disabled_attributes=sorted(disabled),
@@ -648,6 +654,8 @@ def judge_event(db: Session, event: Event, clarification: str = "", *, before_wr
                 "exemption": exemption_hit,  # v1.10 M2：本次生效的豁免券（无则 None）
             },
         )
+    from app.services import ai_context
+    judgment.source_snapshot=ai_context.sources()
     if commit_result:
         db.commit()
     else:
@@ -710,7 +718,7 @@ def _handle_unrealistic(db: Session, user_id: int, event: Event, reason: str) ->
 # ============ 确认入账 ============
 
 @rollback_on_error
-def confirm(db: Session, judgment: AIJudgment, *, commit: bool = True) -> AIJudgment:
+def confirm(db: Session, judgment: AIJudgment, *, commit: bool = True, fact_id: int | None = None) -> AIJudgment:
     """确认判定入账：写属性流水 + 更新属性当前值。
 
     v1.2：置信度加权——实际入账 delta = 原始建议 delta × confidence
@@ -741,7 +749,14 @@ def confirm(db: Session, judgment: AIJudgment, *, commit: bool = True) -> AIJudg
     if event is None or event.is_deleted:
         raise ValueError("事件不存在。")
     from app.services.facts import claim
-    claim(db,event,judgment)
+    if fact_id is None:
+        if event.record_kind=='diary':raise ValueError('日记须通过逐事实整组确认。')
+        claim(db,event,judgment)
+    else:
+        from app.models.workflow import FactIdentity,FactSettlement
+        fact=db.get(FactIdentity,fact_id)
+        if not fact or fact.user_id!=user.id or db.query(FactSettlement).filter_by(fact_id=fact_id).first():raise ValueError('事实已入账，请刷新整组预览。')
+        db.add(FactSettlement(user_id=user.id,fact_id=fact_id,judgment_id=judgment.id));db.flush()
     raw_changes = judgment.suggested_changes
     normalized = _parse_changes(raw_changes, subdimension_service.child_name_set(db, user))
     changes, exemption_hit = _apply_exemption(db, user, event, normalized)
@@ -798,6 +813,7 @@ def confirm(db: Session, judgment: AIJudgment, *, commit: bool = True) -> AIJudg
 # ============ 补充信息重判 ============
 
 @rollback_on_error
+@model_context
 def supplement(db: Session, judgment: AIJudgment, detail: str, *, before_write=None, commit_result=True) -> AIJudgment:
     """用户补充信息，AI 重新判定。"""
     _require_reviewable(db, judgment)
@@ -821,7 +837,7 @@ def supplement(db: Session, judgment: AIJudgment, detail: str, *, before_write=N
         recent_count=_recent_same_category_count(db, user.id, event),
         attribute_context=_attribute_context(db, user.id),
         clarify_history=clarify_history,
-        prior_judgment=_prior_snapshot(judgment),  # v1.6：增量修订基准（注入后只改受影响维度）
+        prior_judgment=_prior_snapshot(judgment,db),  # v1.6：增量修订基准（注入后只改受影响维度）
         event_source=event.source,
         today_events_context=_today_events_context(db, user.id, event.id),  # v1.7：合并判断依据
         subdimension_context=_subdimension_context(db, user),  # v1.10 M3
@@ -856,6 +872,8 @@ def supplement(db: Session, judgment: AIJudgment, detail: str, *, before_write=N
     judgment.confidence_reason = str(result.get("confidence_reason", ""))  # v1.4：补充重判后同步更新
     judgment.revision_notes = _parse_revision_notes(result.get("revision_notes"))  # v1.6：本次修订说明
     judgment.merged_with = _parse_merged_with(result.get("merged_with"))  # v1.7
+    from app.services import ai_context
+    judgment.source_snapshot=ai_context.sources()
     judgment.model_provenance = provenance(config)
     judgment.status = "adjusted"
     _log(
@@ -880,6 +898,7 @@ def supplement(db: Session, judgment: AIJudgment, detail: str, *, before_write=N
 # ============ 反驳复核 ============
 
 @rollback_on_error
+@model_context
 def dispute(db: Session, judgment: AIJudgment, detail: str, *, before_write=None, commit_result=True) -> dict:
     """用户反驳，AI 依据事实复核（客观，不迎合）。
 
@@ -896,13 +915,7 @@ def dispute(db: Session, judgment: AIJudgment, detail: str, *, before_write=None
     messages = prompts.build_dispute_messages(
         anchors_text=anchors_text,
         event_description=format_event_description(event, item_context_text(db, event)),  # v1.7：带项目上下文
-        original_judgment={
-            "affected_attributes": judgment.suggested_changes,
-            "analysis": judgment.analysis or [],  # v1.6：完整基准（增量修订底稿）
-            "summary": judgment.summary,
-            "confidence": judgment.confidence,
-            "confidence_reason": judgment.confidence_reason or "",  # v1.4：让复核 AI 知道原判的不确定点
-        },
+        original_judgment=_prior_snapshot(judgment,db),
         dispute_reason=detail,
     )
     # v1.4：按用户解析判定模型配置（BYOK）
@@ -941,6 +954,8 @@ def dispute(db: Session, judgment: AIJudgment, detail: str, *, before_write=None
             judgment.status = "adjusted"
         else:
             conclusion = "maintain"  # 无有效调整，保守维持原判
+    from app.services import ai_context
+    judgment.source_snapshot=ai_context.sources()
     judgment.model_provenance = provenance(config)
     if conclusion == "maintain":
         # v1.6：维持原判时也用修订说明承载"维持原判的理由"
@@ -993,8 +1008,19 @@ def delete_event(db: Session, event: Event, *, commit: bool = True) -> None:
     db.refresh(event)
     judgments = db.query(AIJudgment).filter(AIJudgment.event_id == event.id,
                                            AIJudgment.user_id == user.id).order_by((AIJudgment.status == "invalidated").asc(), AIJudgment.id.desc()).populate_existing().all()
-    histories = db.query(AttributeHistory).filter(AttributeHistory.event_id == event.id,
-        AttributeHistory.user_id == user.id, AttributeHistory.judgment_id.in_([j.id for j in judgments])).all()
+    from app.models.workflow import EventFact,FactSettlement
+    from app.models.full_system import FactFragment
+    referenced={r.fact_id for r in db.query(EventFact).filter_by(event_id=event.id).all()}|{r.fact_id for r in db.query(FactFragment).filter_by(event_id=event.id).all()}
+    # A canonical booking may originate in an already withdrawn diary. The last
+    # surviving source reverses its points once; a shared live source preserves them.
+    canonical=db.query(AIJudgment).join(FactSettlement,FactSettlement.judgment_id==AIJudgment.id).filter(FactSettlement.fact_id.in_(referenced),AIJudgment.status=='confirmed').all()
+    judgments=list({j.id:j for j in [*judgments,*canonical]}.values());retained=set()
+    for settlement in db.query(FactSettlement).filter(FactSettlement.judgment_id.in_([j.id for j in judgments])).all():
+        other_fragment=db.query(FactFragment.id).join(Event,Event.id==FactFragment.event_id).filter(FactFragment.fact_id==settlement.fact_id,Event.id!=event.id,Event.is_deleted.is_(False)).first()
+        other_event=db.query(EventFact.id).join(Event,Event.id==EventFact.event_id).filter(EventFact.fact_id==settlement.fact_id,Event.id!=event.id,Event.is_deleted.is_(False)).first()
+        if other_fragment or other_event:retained.add(settlement.judgment_id)
+    histories = db.query(AttributeHistory).filter(AttributeHistory.user_id == user.id,
+        AttributeHistory.judgment_id.in_([j.id for j in judgments if j.id not in retained and j.status!='deleted'])).all()
     totals = {}
     for h in histories:
         totals[h.attribute_id] = totals.get(h.attribute_id, 0.0) + h.delta
@@ -1011,9 +1037,9 @@ def delete_event(db: Session, event: Event, *, commit: bool = True) -> None:
                 reason=f"事件删除回滚（event_id={event.id}）", evidence="按原始真实流水反向并夹取。"))
             reversed_changes.append({"attribute_id": attr.id, "name": attr.name, "delta": actual})
     for judgment in judgments:
-        judgment.status = "deleted"
+        if judgment.id not in retained:judgment.status = "deleted"
         _log(db, judgment.id, user.id, "delete", detail=f"删除事件（event_id={event.id}）",
-             payload={"source_history_ids": [h.id for h in histories], "reversed_changes": reversed_changes,
+             payload={"source_history_ids": [h.id for h in histories], "reversed_changes": reversed_changes,'withdrawn_source_id':event.id,'shared_booking_retained':judgment.id in retained,
                       "coins_rolled_back": False, "coins_note": "日常/成就/挑战金币不随事件删除回滚"})
     if commit:
         db.commit()

@@ -1,0 +1,256 @@
+{
+  "status": "PASS",
+  "scope": "Standalone fictional prototype; isolated Edge and loopback static server; no application, cloud, account or provider requests; all reward numbers illustrative and unapproved; AI coverage and saved analysis use scripted examples, not verified semantic reasoning",
+  "checks": [
+    {
+      "name": "initial event and linked activity",
+      "pass": true
+    },
+    {
+      "name": "editing linked checklist does not duplicate event",
+      "pass": true
+    },
+    {
+      "name": "skip is explicit, no penalty or generated event",
+      "pass": true
+    },
+    {
+      "name": "explicit checklist entry creates one supplement",
+      "pass": true
+    },
+    {
+      "name": "editing supplement updates same item",
+      "pass": true
+    },
+    {
+      "name": "review preserves written draft",
+      "pass": true
+    },
+    {
+      "name": "covered or skipped topics produce no repeated event or life questions",
+      "pass": true
+    },
+    {
+      "name": "unified diary saves one diary without duplicate event or award",
+      "pass": true
+    },
+    {
+      "name": "saving same evening diary again updates same original",
+      "pass": true
+    },
+    {
+      "name": "saved note and no-repetition result survive reload",
+      "pass": true
+    },
+    {
+      "name": "official guide has console and pricing links",
+      "pass": true
+    },
+    {
+      "name": "390px no whole-page overflow",
+      "pass": true
+    },
+    {
+      "name": "mobile review no whole-page overflow",
+      "pass": true
+    },
+    {
+      "name": "mobile answer action visible above bottom nav",
+      "pass": true
+    },
+    {
+      "name": "skip and early finish preserve existing answer",
+      "pass": true
+    },
+    {
+      "name": "mobile guide no whole-page overflow",
+      "pass": true
+    },
+    {
+      "name": "no real model request code",
+      "pass": true
+    },
+    {
+      "name": "feeling selector removed",
+      "pass": true
+    },
+    {
+      "name": "action-domain input removed; total plan count shown",
+      "pass": true
+    },
+    {
+      "name": "Friday only due daily action, no Monday or alternate-day reminder",
+      "pass": true
+    },
+    {
+      "name": "Monday includes weekday and anchored alternate-day actions",
+      "pass": true
+    },
+    {
+      "name": "partial completion saves fact but does not settle",
+      "pass": true
+    },
+    {
+      "name": "mobile plan actions and sample amounts readable without overflow",
+      "pass": true
+    },
+    {
+      "name": "explicit confirmation creates one linked sample ledger entry",
+      "pass": true
+    },
+    {
+      "name": "same occurrence cannot be settled twice",
+      "pass": true
+    },
+    {
+      "name": "confirmed occurrence has read-only detail",
+      "pass": true
+    },
+    {
+      "name": "user-confirmed original event link avoids extra fact",
+      "pass": true
+    },
+    {
+      "name": "main-line relation visible in sample settlement, no real amounts implied",
+      "pass": true
+    },
+    {
+      "name": "missed shows inline confirmation without modal, toast, new event or deduction",
+      "pass": true
+    },
+    {
+      "name": "confirmed missed removes result switches and awards nothing",
+      "pass": true
+    },
+    {
+      "name": "programmatic repeat cannot change confirmed missed to done",
+      "pass": true
+    },
+    {
+      "name": "daily review never rewards same plan again",
+      "pass": true
+    },
+    {
+      "name": "new user-entered schedule does not create reward or fact",
+      "pass": true
+    },
+    {
+      "name": "new Monday action appears on correct day",
+      "pass": true
+    },
+    {
+      "name": "Tuesday has neither Monday reminder nor overdue Monday row",
+      "pass": true
+    },
+    {
+      "name": "Tuesday overall plan history retains all four definitions",
+      "pass": true
+    },
+    {
+      "name": "next occurrence does not inherit prior confirmation",
+      "pass": true
+    },
+    {
+      "name": "schedule, locked missed and prior ledger persist through reload",
+      "pass": true
+    },
+    {
+      "name": "diary explicitly saved apart from events and ledger",
+      "pass": true
+    },
+    {
+      "name": "AI demo avoids covered studies, sleep, meals and activity",
+      "pass": true
+    },
+    {
+      "name": "discouraged diary gets optional new-angle prompt without repeated covered topics",
+      "pass": true
+    },
+    {
+      "name": "skipped encouragement accepted; diary edit is not a second day",
+      "pass": true
+    },
+    {
+      "name": "one evening editor updates existing diary without increasing days",
+      "pass": true
+    },
+    {
+      "name": "diary consecutive days counted independently",
+      "pass": true
+    },
+    {
+      "name": "diary longest streak survives a break",
+      "pass": true
+    },
+    {
+      "name": "event days distinct from event count and diary days",
+      "pass": true
+    },
+    {
+      "name": "separate day counters readable on narrow screen",
+      "pass": true
+    },
+    {
+      "name": "one diary editor with separate events and plans for reference",
+      "pass": true
+    },
+    {
+      "name": "record types and longest streak persist after reload",
+      "pass": true
+    },
+    {
+      "name": "opening or skipping AI review alone does not create a diary day",
+      "pass": true
+    },
+    {
+      "name": "answer saved as attributed review pair without changing diary draft",
+      "pass": true
+    },
+    {
+      "name": "AI answers alone cannot be counted as diary original",
+      "pass": true
+    },
+    {
+      "name": "editing saved diary shows unsaved status while original remains intact",
+      "pass": true
+    },
+    {
+      "name": "saving edited draft restores saved status without duplicate diary",
+      "pass": true
+    },
+    {
+      "name": "displayed AI question saved immediately with diary snapshot",
+      "pass": true
+    },
+    {
+      "name": "unanswered prompt survives reload and is shown as unanswered",
+      "pass": true
+    },
+    {
+      "name": "resuming same review does not duplicate question",
+      "pass": true
+    },
+    {
+      "name": "saved diary remains unchanged after AI-assisted answer",
+      "pass": true
+    },
+    {
+      "name": "AI prompt, human answer and model analysis preserved with clear roles",
+      "pass": true
+    },
+    {
+      "name": "review history readable on narrow screen without page overflow",
+      "pass": true
+    },
+    {
+      "name": "editing diary preserves prior AI question, answer, analysis and source snapshot",
+      "pass": true
+    },
+    {
+      "name": "saved diary and separate AI history both survive final reload",
+      "pass": true
+    }
+  ],
+  "runtimeErrors": [],
+  "screenshots": 16
+}

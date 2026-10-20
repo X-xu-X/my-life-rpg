@@ -25,7 +25,8 @@ class OpsTests(unittest.TestCase):
             command.upgrade(config,'head');command.upgrade(config,'head')
             engine=create_engine(url)
             with engine.connect() as db:
-                self.assertEqual(db.execute(text('SELECT version_num FROM alembic_version')).scalar(),'b009_policies')
+                from alembic.script import ScriptDirectory
+                self.assertEqual(db.execute(text('SELECT version_num FROM alembic_version')).scalar(),ScriptDirectory.from_config(config).get_current_head())
                 self.assertEqual(db.execute(text('SELECT count(*) FROM users')).scalar(),0)
             engine.dispose()
 

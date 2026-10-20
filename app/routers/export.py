@@ -113,6 +113,7 @@ def _collect_legacy(db: Session, user_id: int) -> dict:
 
 
 EXPORT_WORKFLOW_TABLES = ['diary_revisions','review_sessions','review_turns','review_analyses','life_checklists','plan_schedules','plan_occurrences','fact_identities','event_facts','fact_settlements','fact_relations','mainlines','reward_previews','mainline_awards','dynamic_candidates','dynamic_awards','ai_preferences']
+FULL_SYSTEM_TABLES=['trial_accounts','daily_entitlements','fact_fragments','fact_bundles','fact_notes','action_awards','care_configs','care_items','care_entries','pricing_quotes','voucher_allowances','time_sessions','personal_phases','holiday_claims']
 
 SAFE_EXPORT_SETTINGS = frozenset({"gamification_modules", "hidden_attributes", "disabled_attributes", "stagnation_checks", "unreal_count"})
 
@@ -132,7 +133,7 @@ def _export_row(row):
     return {c.name: _encode_export(getattr(row, c.name)) for c in row.__table__.columns if c.name not in excluded}
 
 
-def _collect(db: Session, user_id: int) -> dict:
+def _collect(db: Session, user_id: int,include_questionnaire=False,include_feedback=False) -> dict:
     data = _collect_legacy(db, user_id)
     table_models = (models.UserProfile, models.Attribute, models.AttributeHistory,
         models.CheckinItem, models.Event, models.AIJudgment, models.JudgmentLog, models.Goal,
@@ -154,10 +155,16 @@ def _collect(db: Session, user_id: int) -> dict:
             row.pop('config_version', None)
         tables[model.__tablename__] = rows
     from app.models import workflow
-    for name in EXPORT_WORKFLOW_TABLES:
+    for name in EXPORT_WORKFLOW_TABLES+FULL_SYSTEM_TABLES+(['questionnaires'] if include_questionnaire else [])+(['feedback','feedback_replies'] if include_feedback else []):
         model=next(mapper.class_ for mapper in models.Base.registry.mappers if mapper.local_table.name==name)
         tables[name]=[_export_row(row) for row in db.query(model).filter_by(user_id=user_id).order_by(model.id).all()]
-    return {**data, "format_version":4,"restore_supported":False,"tables":tables}
+    if not include_questionnaire:
+        for row in tables['user_profiles']:
+            for name in ('basic_profile','onboarding_state','pending_adjustment','long_term_memory','memory_sources'):row.pop(name,None)
+            row.get('initial_attributes_snapshot',{}).pop('authorized_answers',None)
+    for row in tables.get('pricing_quotes',[]):
+        row.get('context',{}).pop('config',None);row.pop('fingerprint',None)
+    return {**data, "format_version":5,"restore_supported":False,"tables":tables}
 
 
 @router.get('/record-metrics')
@@ -170,13 +177,51 @@ def record_metrics(db:Session=Depends(get_db)):
 def export_data(db:Session=Depends(get_db),format:Literal['json','csv','markdown','html']='json',
     kind:Literal['all','event','diary','legacy']='all',start:date|None=None,end:date|None=None,
     include_questions:bool=True,include_analysis:bool=True,include_deleted:bool=False,
-    include_history:bool=True,include_game:bool=False,schema_version:int=4):
+    include_history:bool=True,include_game:bool|None=None,schema_version:int=5,
+    include_questionnaire:bool=False,include_feedback:bool=False):
     user=get_or_create_default_user(db)
-    if schema_version not in (3,4):raise HTTPException(422,'仅支持 JSON v3/v4。')
+    if schema_version not in (3,4,5):raise HTTPException(422,'仅支持 JSON v3/v4/v5。')
     if start and end and start>end:raise HTTPException(422,'日期范围无效。')
     if format=='json':
-        if kind!='all' or start or end:raise HTTPException(422,'完整 JSON 包含本人全部日期；日期筛选用于可读格式。')
-        data=_collect(db,user.id)
+        if schema_version in (3,4) and (kind!='all' or start or end):raise HTTPException(422,'旧结构投影不支持日期筛选。')
+        data=_collect(db,user.id,include_questionnaire,include_feedback)
+        if schema_version==5:
+            from app.services.readable_export import select,strip_questions
+            selected=select(db,user,kind,start,end,include_deleted,include_history,include_questions,include_analysis)
+            ids={r['record']['id'] for r in selected}
+            data['records']=selected
+            data['events']=[r['record'] for r in selected]
+            data['judgments']=[j['judgment'] for r in selected for j in r.get('judgments',[])] if include_analysis else []
+            for name in ('events','ai_judgments','attribute_history','judgment_logs','diary_revisions','review_sessions','event_facts','fact_fragments','fact_bundles','fact_notes'):
+                rows=data['tables'].get(name,[])
+                if name=='events':rows=[r for r in rows if r['id'] in ids]
+                elif name!='judgment_logs':rows=[r for r in rows if (r.get('event_id') or r.get('diary_id')) in ids]
+                data['tables'][name]=rows
+            judgment_ids={r['id'] for r in data['tables']['ai_judgments']}
+            data['tables']['judgment_logs']=[r for r in data['tables']['judgment_logs'] if r['judgment_id'] in judgment_ids]
+            session_ids={r['id'] for r in data['tables']['review_sessions']}
+            for name in ('review_turns','review_analyses'):data['tables'][name]=[r for r in data['tables'][name] if r['session_id'] in session_ids]
+            from app.services.readable_export import project_record_tables
+            project_record_tables(data['tables'],selected,include_history)
+            if not include_questions:
+                data['tables']['fact_notes']=[]
+                data['tables']['review_turns']=[]
+                data['tables']['review_analyses']=strip_questions(data['tables']['review_analyses'])
+                for row in data['tables'].get('analysis_jobs',[]):row['detail']='';row['result']=strip_questions(row.get('result',{}))
+                data['tables']['judgment_logs']=[r for r in data['tables']['judgment_logs'] if r.get('action') not in ('supplement','dispute')]
+                for row in data['tables']['events']:row.get('params',{}).pop('_clarify_history',None)
+            if not include_analysis:
+                for name in ('review_analyses','ai_judgments','judgment_logs','fact_bundles','event_derivations','analysis_jobs'):data['tables'][name]=[]
+            if include_game is False:
+                keep={'users','events','diary_revisions','review_sessions','review_turns','review_analyses','ai_judgments','judgment_logs','fact_fragments','fact_bundles','fact_notes','fact_identities','event_facts','fact_settlements'}
+                if include_questionnaire:keep.add('questionnaires')
+                if include_feedback:keep.update(('feedback','feedback_replies'))
+                data['tables']={k:v for k,v in data['tables'].items() if k in keep}
+                for name in ('attributes','attribute_history','goals','anchors'):data.pop(name,None)
+            data['selection']={'kind':kind,'start':str(start) if start else None,'end':str(end) if end else None,'include_game':include_game is not False,'include_history':include_history,'include_questions':include_questions,'include_analysis':include_analysis,'include_questionnaire':include_questionnaire,'include_feedback':include_feedback}
+        else:
+            for name in FULL_SYSTEM_TABLES:data['tables'].pop(name,None)
+            data['format_version']=schema_version
         if schema_version==3:
             for name in EXPORT_WORKFLOW_TABLES:data['tables'].pop(name,None)
             data['format_version']=3
@@ -185,7 +230,9 @@ def export_data(db:Session=Depends(get_db),format:Literal['json','csv','markdown
     if format=='csv' and include_game:raise HTTPException(422,'CSV 不包含游戏表，请选择 JSON/Markdown/HTML。')
     from app.services.readable_export import select,render
     rows=select(db,user,kind,start,end,include_deleted,include_history,include_questions,include_analysis)
-    game=_collect(db,user.id)['tables'] if include_game else None
+    game=export_data(db=db,format='json',kind=kind,start=start,end=end,include_questions=include_questions,
+        include_analysis=include_analysis,include_deleted=include_deleted,include_history=include_history,
+        include_game=True,schema_version=5,include_questionnaire=include_questionnaire,include_feedback=include_feedback)['tables'] if include_game else None
     content=render(rows,format,game)
     extension={'csv':'csv','markdown':'md','html':'html'}[format]
     return Response(content=content,media_type={'csv':'text/csv','markdown':'text/markdown','html':'text/html'}[format],

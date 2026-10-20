@@ -49,7 +49,7 @@ def create_event(body: EventCreate, db: Session = Depends(get_db)):
     request_key = str(body.client_request_id) if body.client_request_id else None
     payload = body.model_dump(mode="json")
     # Keep pre-upgrade pending UUID fingerprints replayable when new fields are absent.
-    for name in ('occurred_on', 'time_precision', 'record_kind'):
+    for name in ('occurred_on', 'time_precision', 'record_kind','ai_permission'):
         if name not in body.model_fields_set: payload.pop(name, None)
     payload_hash = hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
     if request_key:
@@ -118,11 +118,16 @@ def create_event(body: EventCreate, db: Session = Depends(get_db)):
         time_precision=body.time_precision,
         client_request_id=request_key, content_version=1,
         analysis_intent="never" if body.is_pure else body.intent, timezone_at_capture=body.timezone,
+        ai_permission='allowed' if not body.is_pure and (body.ai_permission=='allowed' or 'ai_permission' not in body.model_fields_set and body.intent=='now') else 'private',
     )
     db.add(event)
     db.flush()
     from app.services.time_service import capture_saved_day
-    capture_saved_day(event,user.timezone)
+    capture_saved_day(event,user.timezone,db)
+    from app.services.trial_rules import qualify
+    qualify(db,user,event)
+    from app.services.discoveries import discover
+    discover(db,user)
     if request_key:
         db.add(RequestReceipt(user_id=user.id, operation="create_event", request_key=request_key,
             payload_hash=payload_hash, resource_id=event.id,
@@ -161,6 +166,23 @@ def list_events(
     if cursor is not None:
         query = query.filter(Event.id < cursor)
     return query.order_by(Event.id.desc()).limit(max(1, min(limit, 500))).all()
+
+
+@router.get('/event-options')
+def event_options(q:str='',cursor:int|None=None,db:Session=Depends(get_db)):
+    user=get_or_create_default_user(db)
+    from app.models.workflow import EventFact,FactSettlement
+    query=db.query(Event).filter(Event.user_id==user.id,Event.is_deleted.is_(False),or_(Event.record_kind.is_(None),Event.record_kind=='event'))
+    if q:query=query.filter(or_(Event.title.contains(q,autoescape=True),Event.content.contains(q,autoescape=True)))
+    if cursor:query=query.filter(Event.id<cursor)
+    rows=query.order_by(Event.id.desc()).limit(20).all()
+    items=[]
+    for row in rows:
+        booked=bool(db.query(AIJudgment.id).filter_by(event_id=row.id,status='confirmed').first() or
+            db.query(FactSettlement.id).join(EventFact,EventFact.fact_id==FactSettlement.fact_id).filter(EventFact.event_id==row.id).first())
+        items.append({'id':row.id,'content_version':row.content_version,'title':row.title,'content':row.content[:160],
+            'occurred_on':row.occurred_on,'occurred_at':row.occurred_at,'time_precision':row.time_precision,'is_confirmed':booked})
+    return {'items':items,'cursor':rows[-1].id if len(rows)==20 else None}
 
 
 @router.get("/events/heatmap")
@@ -258,7 +280,7 @@ def update_event(event_id: int, body: EventUpdate, db: Session = Depends(get_db)
         if (db.query(AttributeHistory.id).filter(AttributeHistory.event_id == event.id).first()
                 or db.query(AIJudgment.id).filter(AIJudgment.event_id == event.id,
                     AIJudgment.status == "confirmed").first()):
-            raise ValueError("事件已入账，不能编辑。如需撤销请删除事件。")
+            if event.record_kind!='event' or not body.correction or not body.reason.strip():raise ValueError('已入账原文须使用显式更正并填写原因；原结算不改写。旧未分类记录保留原编辑合同。')
     except ValueError as exc:
         db.rollback()
         raise HTTPException(409, str(exc)) from exc
@@ -271,9 +293,9 @@ def update_event(event_id: int, body: EventUpdate, db: Session = Depends(get_db)
     from app.models.access import EventDerivation
     db.add(EventDerivation(user_id=event.user_id,event_id=event.id,event_version=event.content_version,
         kind='original_version',payload=jsonable_encoder(EventOut.model_validate(event)),
-        provenance={'source':'user_edit'}))
+        provenance={'source':'user_edit','correction':body.correction,'reason':body.reason}))
     if event.record_kind == 'diary':raise HTTPException(409,'请通过晚间日记编辑原稿并保存版本。')
-    data = body.model_dump(exclude_unset=True, exclude={"expected_version"})
+    data = body.model_dump(exclude_unset=True, exclude={"expected_version",'correction','reason'})
     if "occurred_at" in data and data["occurred_at"] is not None:
         data["occurred_at"] = stored_time(data["occurred_at"], event.timezone_at_capture)
         data['occurred_on'] = None
@@ -301,6 +323,9 @@ def update_event(event_id: int, body: EventUpdate, db: Session = Depends(get_db)
             detail="事件被编辑，旧判定作废归档（判定结果不再可信，需重新判定）",
             payload={"event_id": event.id},
         )
+    from app.models.analysis import AnalysisJob
+    for job in db.query(AnalysisJob).filter(AnalysisJob.event_id==event.id,AnalysisJob.state.in_(('queued','running'))).all():
+        job.state='superseded';job.safe_error_code='CONTENT_CHANGED';job.lease_token=None
     db.commit()
     db.refresh(event)
     return event

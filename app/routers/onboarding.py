@@ -25,6 +25,8 @@ def status(db: Session = Depends(get_db)):
 @router.post("/onboarding/questions")
 def create_questions(db: Session = Depends(get_db)):
     """开始（或恢复）首次引导，AI 生成/继续提问。已完成则返回锁定提示。"""
+    if not onboarding_service.get_status(db)['onboarding_completed']:
+        raise HTTPException(409,'请使用详细可跳过问卷：保存、预览后主动确认建档。旧作答仍保留，不从此入口自动建档。')
     try:
         return onboarding_service.start_questions(db)
     except ValueError as exc:
@@ -37,12 +39,7 @@ def create_questions(db: Session = Depends(get_db)):
 @router.post("/onboarding/answer")
 def answer(body: OnboardingAnswerIn, db: Session = Depends(get_db)):
     """提交一轮回答。AI 评估把握度，达到阈值自动生成初始面板并归档。"""
-    try:
-        return onboarding_service.submit_answer(db, body.answers)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    except LLMError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+    raise HTTPException(409,'请使用详细问卷并预览确认；旧作答保留，不自动覆盖基线。')
 
 
 @router.post("/onboarding/supplement")

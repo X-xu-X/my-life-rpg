@@ -20,6 +20,23 @@ PROVIDERS = {
 }
 
 
+def validate_endpoint(value):
+    """Syntactic validation without network on save; DNS checked at every connection."""
+    if not isinstance(value,str) or len(value)>300:raise HTTPException(422,'端点无效。')
+    try:
+        parts=urlsplit(value)
+        port=parts.port
+    except ValueError:raise HTTPException(422,'端点格式无效。') from None
+    host=parts.hostname or ''
+    if parts.scheme!='https' or port not in (None,443) or parts.username is not None or parts.password is not None or parts.query or parts.fragment or not re.fullmatch(r'[a-zA-Z0-9.-]+',host) or '.' not in host or host.endswith('.') or not re.fullmatch(r'/[A-Za-z0-9/_~.\-]*|',parts.path) or '..' in parts.path.split('/'):
+        raise HTTPException(422,'仅支持无凭据、无查询参数的公网 HTTPS 443 端点。')
+    try:
+        if not ipaddress.ip_address(host).is_global:raise HTTPException(422,'禁止内网、回环或元数据地址。')
+    except ValueError:pass
+    if host.lower().endswith(('.localhost','.local','.internal')):raise HTTPException(422,'禁止本地端点。')
+    return 'https://'+host.lower()+parts.path.rstrip('/')
+
+
 def keyring():
     try:
         data = json.loads(Path(settings.credential_key_file).read_text(encoding="utf-8"))
@@ -45,7 +62,7 @@ def group_out(row):
     from app.services.llm_config import mask_key
     return {"provider_id": row.provider_id if row else "deepseek",
         "model": row.model if row else "", "enabled": bool(row and row.enabled),
-        "base_url": PROVIDERS.get(row.provider_id, "") if row else PROVIDERS["deepseek"],
+        "base_url": (row.base_url if row.provider_id=='custom' else PROVIDERS.get(row.provider_id, "")) if row else PROVIDERS["deepseek"],
         "api_key_masked": mask_key(decrypt(row)) if row else "",
         "api_key": mask_key(decrypt(row)) if row else "",
         "configured": bool(row and row.encrypted_key),
@@ -65,9 +82,10 @@ def save_config(db, user_id, body):
     lock_profile(db, user_id)
     row = db.query(LLMCredential).filter_by(user_id=user_id, group=body.group).first()
     provider = body.provider_id or (row.provider_id if row else "deepseek")
-    if provider not in PROVIDERS or (body.base_url and body.base_url.rstrip("/") != PROVIDERS[provider]):
+    if provider not in (*PROVIDERS,'custom') or (provider!='custom' and body.base_url and body.base_url.rstrip("/") != PROVIDERS[provider]):
         raise HTTPException(422, "请选择批准的供应商端点。")
-    changed_provider = bool(row and row.provider_id != provider)
+    endpoint=validate_endpoint(body.base_url or (row.base_url if row else '')) if provider=='custom' else PROVIDERS[provider]
+    changed_provider = bool(row and (row.provider_id != provider or provider=='custom' and row.base_url!=endpoint))
     fresh_key = body.api_key not in (None, "__KEEP__") and bool(body.api_key.strip())
     clearing = body.api_key not in (None, "__KEEP__") and not body.api_key.strip()
     enabled = body.enabled if body.enabled is not None else bool(row and row.enabled)
@@ -86,6 +104,7 @@ def save_config(db, user_id, body):
         row = LLMCredential(user_id=user_id, group=body.group, provider_id=provider, model="", config_version=0)
         db.add(row)
     row.provider_id = provider
+    row.base_url=endpoint if provider=='custom' else None
     if body.model is not None:
         row.model = body.model.strip()
     if fresh_key:
@@ -113,8 +132,11 @@ def public_addresses(host):
 
 class PinnedTransport(httpx.HTTPTransport):
     """每次连接前验证 DNS，并连接验证后的 IP，TLS 仍验证原始供应商主机。"""
+    def __init__(self,*args,allowed_hosts=None,**kwargs):
+        super().__init__(*args,**kwargs);self.allowed_hosts=set(allowed_hosts or (urlsplit(value).hostname for value in PROVIDERS.values()))
+
     def handle_request(self, request):
-        allowed = {urlsplit(value).hostname for value in PROVIDERS.values()}
+        allowed = self.allowed_hosts
         host = request.url.host
         if request.url.scheme != "https" or host not in allowed or request.url.port not in (None, 443):
             raise ValueError("MODEL_ENDPOINT_BLOCKED")
@@ -125,6 +147,7 @@ class PinnedTransport(httpx.HTTPTransport):
         return super().handle_request(request)
 
 
-def http_client():
-    return httpx.Client(transport=PinnedTransport(retries=0), trust_env=False,
+def http_client(base_url=None):
+    allowed=[urlsplit(validate_endpoint(base_url)).hostname] if base_url else None
+    return httpx.Client(transport=PinnedTransport(retries=0,allowed_hosts=allowed), trust_env=False,
         follow_redirects=False, timeout=httpx.Timeout(settings.ai_timeout, connect=5.0))

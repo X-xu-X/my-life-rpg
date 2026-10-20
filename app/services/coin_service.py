@@ -29,6 +29,7 @@ JOURNAL_STREAK_REWARDS = [(7, 30), (3, 10)]  # 从高到低匹配，避免 3 天
 
 # source 合法取值（与 CoinLedger 类 docstring 保持一致）
 SOURCES = (
+    'trial_action','daily_first_record','holiday_gift','timer_reward','timer_penalty','timer_adjustment',
     "onboarding_bonus",
     "event_confirm",
     "mainline_reward",
@@ -61,6 +62,14 @@ def balance(db: Session, user: User) -> int:
     """当前金币余额。"""
     profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
     return int(profile.coins or 0) if profile else 0
+
+
+def require_baseline(db: Session, user: User) -> None:
+    """Recoverable prerequisite, before new workflows consume eligibility or quotas."""
+    from app.config import settings
+    from fastapi import HTTPException
+    if settings.cloud and not _profile(db,user).onboarding_completed:
+        raise HTTPException(409,'记录和领取资格已保留；请先到“我的”选择角色基线，再确认游戏结算。')
 
 
 def grant(
@@ -203,6 +212,13 @@ def check_journal_streak(db: Session, user: User) -> list[dict]:
 
     返回本次新发放的列表（供接口回显）。
     """
+    from app.services import trial_rules,discoveries
+    from app.models import Achievement
+    from app.models.policies import DynamicAward
+    config=trial_rules.account(db,user)
+    if config and config.enabled:
+        discoveries.discover(db,user)
+        return []  # New trial milestones require the user's candidate confirmation.
     streak = _journal_days(db, user)
     granted: list[dict] = []
     if streak <= 0:
@@ -212,6 +228,7 @@ def check_journal_streak(db: Session, user: User) -> list[dict]:
         if streak < days:
             continue
         reason = f"连续写日记 {days} 天"
+        if db.query(DynamicAward).filter(DynamicAward.user_id==user.id,DynamicAward.equivalence_key.in_(('fixed:journal_streak_'+str(days),'trial:diary_streak_'+str(days)))).first() or db.query(Achievement).filter_by(user_id=user.id,code='journal_streak_'+str(days)).filter(Achievement.unlocked_at.is_not(None)).first():continue
         already = (
             db.query(CoinLedger)
             .filter(

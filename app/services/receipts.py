@@ -19,6 +19,10 @@ def replay(db, user_id, operation, body, *, require_version=True):
         raise HTTPException(422, "操作需要 request_key 和 expected_version。")
     payload=body.model_dump(mode='json')
     if 'reward_preview_id' not in body.model_fields_set:payload.pop('reward_preview_id',None)
+    # Preserve the exact pre-upgrade fingerprint of an already accepted request.
+    evolved={'DiaryIn':('ai_permission','correction_reason'),'ScheduleIn':('goal_id','planned_minutes'),'ResultIn':('ai_permission',),'StartIn':('source_version',)}
+    for name in evolved.get(type(body).__name__,()):
+        if name not in body.model_fields_set:payload.pop(name,None)
     fingerprint = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
     if body.request_key:
         row = db.query(RequestReceipt).filter_by(user_id=user_id, operation=operation,

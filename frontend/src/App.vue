@@ -6,6 +6,7 @@ import { account, setAccount, clearAccount, accountEpoch } from './session'
 import AuthView from './components/AuthView.vue'
 import ToastHost from './components/ToastHost.vue'
 import AppIcon from './components/ui/AppIcon.vue'
+import SiteFooter from './components/SiteFooter.vue'
 import { sectionRoot, returnTarget, beginReturn } from './navigation'
 const loading = ref(true)
 const error = ref('')
@@ -17,7 +18,12 @@ function selected(tab){return account.value?.role==='owner'?route.path===tab.pat
 async function initialize() {
   loading.value = true; error.value = ''
   try { setAccount(await api.me());if(account.value.role==='owner'&&route.meta.workspace!=='admin')await router.replace('/admin');else if(account.value.role!=='owner'&&route.meta.workspace==='admin')await router.replace('/me') }
-  catch (e) { clearAccount(); if (!e.message.includes('登录')) error.value = e.message }
+  catch (e) {
+    // A 401 already dispatched gol-auth-lost. Clearing again would cancel the
+    // newly mounted login page's registration-policy request.
+    if (e.status !== 401) clearAccount()
+    if (e.status !== 401 && !e.message.includes('登录')) error.value = e.message
+  }
   finally { loading.value = false }
 }
 function lost() { clearAccount(); loading.value = false }
@@ -39,7 +45,9 @@ onUnmounted(() => window.removeEventListener('gol-auth-lost', lost))
       <p v-if="error" class="error" role="alert">{{ error }}</p>
       <nav v-if="route.meta.section === 'growth'" class="section-links" aria-label="成长功能"><RouterLink to="/growth">历史属性</RouterLink><RouterLink to="/challenges">挑战 · 商店 · 成就</RouterLink></nav>
       <main id="main-content"><RouterLink v-if="route.path!==sectionRoot(route)" class="btn page-back" :to="returnTarget(router,route)" @click="beginReturn(returnTarget(router,route))">← 返回上一页</RouterLink><RouterView :key="account.id + ':' + route.fullPath" /></main>
+      <SiteFooter />
     </div>
     <nav class="mobile-nav" aria-label="主要导航"><RouterLink v-for="tab in tabs" :key="tab.key" :to="tab.path" :class="{selected:selected(tab)}" :aria-current="selected(tab) ? 'page' : undefined"><AppIcon :name="tab.key" />{{ tab.label }}</RouterLink></nav>
   </div>
+  <SiteFooter v-if="!account" />
 </template>

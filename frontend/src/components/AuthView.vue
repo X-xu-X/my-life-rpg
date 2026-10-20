@@ -49,7 +49,7 @@ function done() {
     </section>
     <form v-else @submit.prevent="submit" :aria-describedby="error?'auth-error':undefined">
       <h2>{{ { login: '登录', register: '注册账号', recover: '恢复账号' }[mode] }}</h2>
-      <label v-if="mode !== 'recover'">用户名<input v-model="username" autocomplete="username" required minlength="3" maxlength="50" placeholder="字母、数字或下划线" /></label>
+      <label v-if="mode !== 'recover'">用户名<input v-model="username" autocomplete="username" required minlength="3" maxlength="50" placeholder="3–50个字符，支持中文" /></label>
       <label v-if="mode === 'register'&&policy.registration==='invite'">邀请令牌<input v-model="invite" autocomplete="off" required /></label>
       <p v-if="mode==='register'&&policy.registration==='closed'" class="error">站点已关闭新注册。</p>
       <details v-if="mode==='register'"><summary>注册邮箱{{ policy.email_required?'（须验证）':'（可选）' }}</summary><label>邮箱<input type="email" v-model="email"/></label><button type="button" class="btn" :disabled="busy" @click="emailAction('/auth/email/register-request')">发送验证码</button><label>邮件验证码<input v-model="emailToken" :required="policy.email_required"/></label><button type="button" class="btn" :disabled="busy" @click="emailAction('/auth/email/verify')">验证邮箱</button><p role="status">{{ emailNote }}</p></details>

@@ -18,6 +18,7 @@ from app.models import User, UserProfile
 from app.models.access import AuthSession, Invitation, RecoveryToken
 
 COOKIE = "__Host-gol_session"
+USERNAME_PATTERN = r"^[a-zA-Z0-9_\-\u4e00-\u9fff]+$"
 PASSWORDS = PasswordHasher()
 _dummy_hash = PASSWORDS.hash(secrets.token_urlsafe(32))
 _attempts = OrderedDict()

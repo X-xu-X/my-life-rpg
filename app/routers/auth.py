@@ -15,7 +15,7 @@ router = APIRouter(prefix="/auth")
 
 
 class LoginIn(BaseModel):
-    username: str = Field(min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_\-]+$")
+    username: str = Field(min_length=3, max_length=50, pattern=auth.USERNAME_PATTERN)
     password: str = Field(min_length=12, max_length=256)
 
 

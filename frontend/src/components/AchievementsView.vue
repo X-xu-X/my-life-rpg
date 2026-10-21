@@ -1,0 +1,12 @@
+<script setup>
+import { ref,computed,onMounted } from 'vue'
+import { api } from '../api'
+import { useWorkflowWrite } from '../composables/useWorkflowWrite'
+import PageHeader from './ui/PageHeader.vue'
+const fixed=ref([]),dynamic=ref([]),error=ref(''),writes=useWorkflowWrite('achievements')
+const rows=computed(()=>{const codes=new Set(dynamic.value.map(d=>d.trial_terms?.legacy_code).filter(Boolean));return [...dynamic.value.map(d=>({key:'d'+d.id,name:d.name,state:d.state==='claimed'||fixed.value.some(f=>f.code===d.trial_terms?.legacy_code&&f.unlocked)?'已获得':d.state==='ignored'?'已忽略':'待核对',candidate:d,description:`已核实 ${d.evidence.count}/${d.evidence.target} 天`})),...fixed.value.filter(f=>!codes.has(f.code)).map(f=>({key:'f'+f.code,name:f.name,state:f.unlocked?'已获得':'尚未获得',description:f.description}))]})
+async function load(){try{const [a,d]=await Promise.all([api.flow('/achievements'),api.flow('/dynamic-candidates')]);fixed.value=a.items;dynamic.value=d.items}catch(e){error.value=e.message}}
+async function act(path,body){try{await writes.send(path,body);await load();error.value=''}catch(e){error.value=e.message}}
+onMounted(load)
+</script>
+<template><div class="reading-page"><PageHeader title="成就与里程碑" description="按可核实的记录看见积累；同一里程碑只领取一次。"><template #actions><button class="btn" :disabled="writes.busy.value" @click="act('/discoveries/refresh',{})">检查记录里程碑</button></template></PageHeader><p v-if="error" class="error" role="alert">{{ error }}</p><section class="card"><article v-for="r in rows" :key="r.key" class="project-row"><div class="section-heading"><h3>{{ r.name }}</h3><span class="tag">{{ r.state }}</span></div><p>{{ r.description }}</p><template v-if="r.candidate&&r.state==='待核对'"><p>{{ r.candidate.trial_terms?'试用奖励 '+r.candidate.trial_terms.amount+' 币':'没有已批准的奖励映射，保留候选' }}</p><div class="action-group"><button class="btn" :disabled="writes.busy.value" @click="act('/dynamic-candidates/'+r.candidate.id+'/decision',{expected_version:r.candidate.version,action:'verify'})">核对证据</button><button class="btn" :disabled="writes.busy.value||!r.candidate.evidence.eligible||!r.candidate.trial_terms" @click="act('/dynamic-candidates/'+r.candidate.id+'/decision',{expected_version:r.candidate.version,action:'claim'})">确认领取</button><button class="text-button" :disabled="writes.busy.value" @click="act('/dynamic-candidates/'+r.candidate.id+'/decision',{expected_version:r.candidate.version,action:'ignore'})">忽略</button></div></template></article></section></div></template>

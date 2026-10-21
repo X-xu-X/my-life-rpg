@@ -39,7 +39,7 @@ function done() {
 </script>
 <template>
   <main class="auth-paper">
-    <p class="eyebrow">游戏人生 · LifeXP</p>
+    <p class="eyebrow">人生手账</p>
     <h1>给今天留一页。</h1>
     <p class="muted">记录小事，慢慢看见自己的积累。</p>
     <section v-if="newRecovery" class="recovery-box" aria-live="polite">
@@ -52,12 +52,12 @@ function done() {
       <label v-if="mode !== 'recover'">用户名<input v-model="username" autocomplete="username" required minlength="3" maxlength="50" placeholder="3–50个字符，支持中文" /></label>
       <label v-if="mode === 'register'&&policy.registration==='invite'">邀请令牌<input v-model="invite" autocomplete="off" required /></label>
       <p v-if="mode==='register'&&policy.registration==='closed'" class="error">站点已关闭新注册。</p>
-      <details v-if="mode==='register'"><summary>注册邮箱{{ policy.email_required?'（须验证）':'（可选）' }}</summary><label>邮箱<input type="email" v-model="email"/></label><button type="button" class="btn" :disabled="busy" @click="emailAction('/auth/email/register-request')">发送验证码</button><label>邮件验证码<input v-model="emailToken" :required="policy.email_required"/></label><button type="button" class="btn" :disabled="busy" @click="emailAction('/auth/email/verify')">验证邮箱</button><p role="status">{{ emailNote }}</p></details>
+      <details v-if="mode==='register'&&policy.mail_ready"><summary>注册邮箱{{ policy.email_required?'（须验证）':'（可选）' }}</summary><label>邮箱<input type="email" v-model="email"/></label><button type="button" class="btn" :disabled="busy" @click="emailAction('/auth/email/register-request')">发送验证码</button><label>邮件验证码<input v-model="emailToken" :required="policy.email_required"/></label><button type="button" class="btn" :disabled="busy" @click="emailAction('/auth/email/verify')">验证邮箱</button><p role="status">{{ emailNote }}</p></details>
       <label v-if="mode === 'recover'">恢复码<input v-model="recovery" autocomplete="off" required /></label>
       <label>{{ mode === 'recover' ? '新密码' : '密码' }}<input v-model="password" type="password" :autocomplete="mode === 'login' ? 'current-password' : 'new-password'" required minlength="12" maxlength="256" placeholder="至少 12 个字符" /></label>
       <p v-if="error" id="auth-error" class="error" role="alert">{{ error }}</p>
       <button class="btn primary" :disabled="busy">{{ busy ? '请稍候…' : { login: '登录', register: '注册', recover: '重设密码' }[mode] }}</button>
       <div class="auth-switch"><button v-for="key in ['login','register','recover'].filter(key=>key!==mode)" :key="key" type="button" class="btn" :disabled="busy" @click="mode = key; error = ''">{{ {login:'返回登录',register:'注册账号',recover:'忘记密码'}[key] }}</button></div>
-    </form><EmailRecovery v-if="mode==='recover'&&!newRecovery"/>
+    </form><EmailRecovery v-if="mode==='recover'&&!newRecovery&&policy.mail_ready"/><p v-if="mode==='recover'&&!policy.mail_ready" class="muted">邮箱服务暂未开启，请使用恢复码找回。</p>
   </main>
 </template>

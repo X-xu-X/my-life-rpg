@@ -10,12 +10,16 @@ export function useWorkflowWrite(scope){
   const request=pending.value || {path,body:{...JSON.parse(JSON.stringify(body)),request_key:crypto.randomUUID()},method}
   pending.value=request;try{localStorage.setItem(key,JSON.stringify(request))}catch{};busy.value=true
   try{const result=await api.flow(request.path,request.body,request.method);if(epoch!==accountEpoch)throw Error('账号已切换。');pending.value=null;try{localStorage.removeItem(key)}catch{};return result}
-  catch(e){if(epoch===accountEpoch&&e.status>=400&&e.status<500){pending.value=null;try{localStorage.removeItem(key)}catch{}}throw e}
+  catch(e){const notDispatched=/^(MODEL_NOT_CONFIGURED|MODEL_DISABLED|MODEL_INPUT_LIMIT|MODEL_DAILY_LIMIT|MODEL_BUSY)(?:：|:|$)/.test(String(e.message||''));if(epoch===accountEpoch&&(e.status>=400&&e.status<500||e.status===503&&notDispatched)){pending.value=null;try{localStorage.removeItem(key)}catch{}}throw e}
   finally{busy.value=false}
  }
  function discardSuggestion(){
   if(busy.value||pending.value?.path!=='/reward-quotes')return
   pending.value=null;try{localStorage.removeItem(key)}catch{}
  }
- return {busy,pending,send,discardSuggestion}
+ function discardModelResult(){
+  if(busy.value||!/^\/questionnaire\/(analyze|preview)$/.test(pending.value?.path||''))return
+  pending.value=null;try{localStorage.removeItem(key)}catch{}
+ }
+ return {busy,pending,send,discardSuggestion,discardModelResult}
 }

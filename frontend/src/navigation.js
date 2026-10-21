@@ -1,5 +1,5 @@
 import { account, storageKey } from './session'
-const roots={today:'/',journal:'/journal',plans:'/plans',growth:'/growth',me:'/me',admin:'/admin'}
+const roots={today:'/',journal:'/journal',plans:'/plans',growth:'/growth',rewards:'/rewards',me:'/me',admin:'/admin'}
 let returning=null
 export function beginReturn(path){returning={path,owner:account.value?.id}}
 export function sectionRoot(route){return route.meta.workspace==='admin'?'/admin':roots[route.meta.section] || '/'}

@@ -1,16 +1,10 @@
 <script setup>
+import ProjectManager from './ProjectManager.vue'
 import GrowthPolicies from './GrowthPolicies.vue'
-import PlanAgenda from './PlanAgenda.vue'
-import { ref, onMounted } from 'vue'
-import { api } from '../api'
-import PageHeader from './ui/PageHeader.vue'
 import GoalsView from './GoalsView.vue'
 import ItemManager from './ItemManager.vue'
-const count=ref(null),error=ref('')
-onMounted(async()=>{try{count.value=(await api.listItems()).length}catch(e){error.value=e.message}})
+import PhaseBrief from './PhaseBrief.vue'
+import HintCard from './HintCard.vue'
+import PageHeader from './ui/PageHeader.vue'
 </script>
-<template><div class="reading-page"><PageHeader title="计划" description="目标和日程放在这里，按自己的节奏安排。" /><PlanAgenda/><GrowthPolicies/>
-<p v-if="error" class="error" role="alert">{{ error }}</p><p v-if="count!==null" class="muted">读取时共有 {{ count }} 个项目</p>
-<p class="muted">上方为新版日程与当次结果。下方旧项目继续沿用每日／每周次数规则，不自动改期。</p>
-<RouterLink class="btn" to="/checkin">查看现有当期项目 →</RouterLink><GoalsView /><details class="card"><summary>管理所有项目</summary><ItemManager /></details>
-</div></template>
+<template><div class="reading-page wide-page"><PageHeader title="计划" description="把想做的事，安排进适合自己的节奏。"><template #actions><RouterLink class="btn" to="/challenges">挑战与原有合同 →</RouterLink></template></PageHeader><HintCard id="plans-help"><p>行动计划与照顾自己在同一处管理；目标和时长都可不填，结果按实际记录。</p></HintCard><div class="daily-columns"><div class="page-stack"><GoalsView/><ProjectManager/></div><aside class="page-stack"><GrowthPolicies/><PhaseBrief/><details class="card"><summary>原有次数项目与历史</summary><p>继续沿用原每日／每周次数规则，不与周期结果相加。</p><RouterLink class="btn" to="/checkin">查看当期次数 →</RouterLink><ItemManager/></details></aside></div></div></template>

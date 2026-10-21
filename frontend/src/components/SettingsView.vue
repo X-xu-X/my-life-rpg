@@ -9,7 +9,7 @@ import ExportControls from './ExportControls.vue'
 import ModelSettings from './ModelSettings.vue'
 import PageHeader from './ui/PageHeader.vue'
 
-const directory=[['models','AI 模型'],['data','数据导出'],['items','打卡项目'],['dimensions','属性维度'],['modules','旧扩展开关'],['reports','成长报告']]
+const directory=[['models','AI 模型'],['data','数据导出'],['dimensions','属性维度'],['reports','成长报告']]
 async function locate(id){
   const target=document.getElementById('settings-'+id)
   if(!target)return
@@ -164,7 +164,7 @@ onMounted(() => {
   <PageHeader title="设置" description="模型与数据放在前面，其他设置按需展开。" />
   <nav class="settings-directory" aria-label="设置目录"><button v-for="[id,label] in directory" :key="id" type="button" class="btn" @click="locate(id)">{{ label }}</button></nav>
     <ModelSettings />
-    <TrialRules/><ExportControls/>
+    <ExportControls/>
     <div class="card backup-note">
       <h3>数据备份</h3><p v-if="account?.mode === 'cloud'" class="muted">服务器备份由运营者通过运维命令完成，数据库备份与加密主密钥需要分别保管。</p>
       <p v-if="account?.mode !== 'cloud'" class="muted">每次启动自动备份（保留最近 30 份），也可以手动备份。</p>
@@ -178,7 +178,6 @@ onMounted(() => {
         </div>
       </div>
     </div>
-  <details class="card settings-section" id="settings-items"><summary>打卡项目 · 项目管理</summary><ItemManager /></details>
     <details class="card settings-section" id="settings-dimensions">
       <summary>属性维度设置 · 修改 {{ changedAttrs.length }} 项</summary>
       <p class="muted">「隐藏」= AI 照判但面板不显示；「关闭判定」= AI 不分析不加点（值冻结，重开从当前值继续）。</p>
@@ -216,48 +215,6 @@ onMounted(() => {
 
       <p v-if="saveHint" class="muted" style="color: var(--success); font-size: 13px; margin-top: 6px">✓ {{ saveHint }}</p>
     </details>
-    <details class="card settings-section" id="settings-modules">
-      <summary>旧扩展开关 · 暂不可操作</summary>
-      <p class="muted">这组旧开关尚未接入已交付模块，暂不可操作。</p>
-      <div v-for="(mod, key) in MODULES" :key="key" class="judgment-item">
-        <div class="action-group" style="align-items: center; justify-content: space-between">
-          <div>
-            <b>{{ mod.label }}</b>
-            <div class="muted">{{ mod.desc }}</div>
-          </div>
-          <button
-            class="btn small"
-            :class="{ primary: (settings?.gamification_modules || {})[key] }"
-            disabled
-            @click="toggleModule(key)"
-          >
-            {{ (settings?.gamification_modules || {})[key] ? '已开启' : '已关闭' }}
-          </button>
-        </div>
-      </div>
-    </details>
-    <details class="card settings-section" id="settings-reports">
-      <summary>成长报告</summary><RouterLink class="btn" to="/reports">查看历史报告 →</RouterLink>
-      <p class="muted">AI 基于近期数据生成成长总结与建议，可能计费。展开不会调用模型。</p>
-      <div class="action-group">
-        <button class="btn primary" :disabled="reportBusy" @click="genReport('week')">{{ reportBusy ? '生成中…' : '生成周报' }}</button>
-        <button class="btn" :disabled="reportBusy" @click="genReport('month')">
-          <template v-if="reportBusy">生成中…</template>
-          <template v-else>生成月报</template>
-        </button>
-      </div>
-      <div v-if="reportData" style="margin-top: 12px">
-        <div class="muted" style="margin-bottom: 6px">{{ reportData.start }} ~ {{ reportData.end }}</div>
-        <div class="judgment-item"><b>✨ 亮点</b><div class="muted">{{ reportData.report.highlights }}</div></div>
-        <div class="judgment-item"><b>⚠️ 关注</b><div class="muted">{{ reportData.report.concerns }}</div></div>
-        <div class="judgment-item">
-          <b>💡 建议</b>
-          <ul v-if="reportData.report.suggestions && reportData.report.suggestions.length" style="margin: 6px 0 0; padding-left: 20px">
-            <li v-for="(s, i) in reportData.report.suggestions" :key="i">{{ s }}</li>
-          </ul>
-        </div>
-        <p class="muted" style="margin-top: 6px">{{ reportData.report.tone }}</p>
-      </div>
-    </details>
+    <section class="card settings-section" id="settings-reports"><h2>成长报告</h2><RouterLink class="btn" to="/reports">到成长生成与查看报告 →</RouterLink></section>
   <p v-if="error" class="error" role="alert">{{ error }}</p>
 </div></template>

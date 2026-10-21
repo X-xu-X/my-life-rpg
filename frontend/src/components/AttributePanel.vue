@@ -1,5 +1,5 @@
 <script setup>
-import GrowthPolicies from './GrowthPolicies.vue'
+import HintCard from './HintCard.vue'
 import RecordMetrics from './RecordMetrics.vue'
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, reactive } from 'vue'
 import * as echarts from 'echarts/core'
@@ -288,7 +288,7 @@ onBeforeUnmount(()=>{
 
 <template>
   <div class="growth-page">
-    <PageHeader title="成长" description="从记录里，看见慢慢发生的积累。"><template #actions><button class="btn" :disabled="loading" @click="load">重新读取</button><RouterLink class="btn" to="/reports">历史报告 →</RouterLink></template></PageHeader><RecordMetrics/><GrowthPolicies/>
+    <PageHeader title="成长" description="从记录里，看见慢慢发生的积累。"><template #actions><button class="btn" :disabled="loading" @click="load">重新读取</button><RouterLink class="btn" to="/reports">历史报告 →</RouterLink></template></PageHeader><HintCard id="growth-help"><p>游戏数值用于回看积累。变化以你自己的初始快照为基准，历史与子维度仍可查看。</p></HintCard><RecordMetrics/><nav class="section-links"><RouterLink to="/achievements">全部成就 →</RouterLink><RouterLink to="/reports">周期报告 →</RouterLink></nav>
     <p v-if="loading" role="status">正在读取成长数据…</p>
     <div v-if="error" role="alert" class="read-error"><p>{{ error }}{{ loaded?' · 显示上次读取的数据，本次未刷新成功。':'' }}</p><button class="btn" :disabled="loading" @click="load">重新读取</button></div>
     <template v-if="loaded">
@@ -334,22 +334,21 @@ onBeforeUnmount(()=>{
     </div>
 
 
-      <section class="card">
-        <h2>记录活动 · 近四个月</h2>
+      <details class="card"><summary>记录日历 · 近四个月</summary>
         <p class="muted">按实际发生日落格，补记会落在对应日期；今天的格子带红色描边。</p>
         <p v-if="!heatmap.length" class="muted">暂无活动记录，去「今天」记一笔。</p>
         <div v-show="heatmap.length" class="heatmap-scroll" role="region" aria-label="近四个月活动图，可用左右方向键滚动" tabindex="0"><div ref="heatmapEl" data-chart="heatmap" class="chart-heatmap"></div></div>
         <p v-if="heatmap.length" class="muted">左右滑动或聚焦后用方向键查看近四个月。</p>
         <details v-if="heatmap.length"><summary>查看记录日期与数量</summary><ul class="chart-data"><li v-for="h in heatmap" :key="h.date">{{ h.date }} · {{ h.count }} 条</li></ul></details>
-      </section>
+      </details>
       <div ref="growthLayout" class="growth-layout" :class="{'growth-wide':growthWide}">
         <section class="card">
           <h2>能力数值</h2><p class="muted">游戏分数用于观察积累，不是精确的能力测量。每项说明可展开查看。</p>
           <p v-if="!visibleAttrs.length" class="muted">暂无可见属性数据，请查看角色档案与维度设置。</p>
           <div v-for="a in visibleAttrs" :key="a.name" class="attr-bar">
-            <div class="head"><span><b>{{ a.name }}</b> <span v-if="a.tier" class="tier-badge">{{ ['neutral','neutral_opt_in','unassessed_questionnaire'].includes(baseline.kind)||!baseline.completed ? '未评估基线' : a.tier }}</span> <span v-if="a.visibility==='disabled'" class="tag">已关闭判定</span></span><span class="attr-value">{{ a.value }} / {{ a.max_value }}</span></div>
+            <div class="head"><span><b>{{ a.name }}</b>  <span v-if="a.visibility==='disabled'" class="tag">已关闭判定</span></span><span class="attr-value">{{ a.value }} / {{ a.max_value }}</span></div>
             <div class="track"><div class="fill" :style="{width:(a.value/a.max_value)*100+'%'}"></div></div>
-            <details v-if="a.description"><summary>说明</summary><p class="muted">{{ a.description }}</p></details>
+            <p class="muted">{{ a.change_from_initial==null?'历史初值不明，无法计算变化':'较本人初始值 '+(a.change_from_initial>=0?'+':'')+a.change_from_initial.toFixed(2) }}</p><details v-if="a.description"><summary>说明</summary><p class="muted">{{ a.description }}</p></details>
             <div v-if="subHierarchy[a.name]" class="sub-list"><div v-for="child in subHierarchy[a.name]" :key="child.name" class="sub-row"><span>{{ child.name }}</span><span class="attr-value">{{ child.value }} / {{ child.max_value }}</span></div></div>
           </div>
         </section>

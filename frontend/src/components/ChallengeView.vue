@@ -1,5 +1,5 @@
 <script setup>
-import RewardShop from './RewardShop.vue'
+import { useRoute } from 'vue-router'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { api } from '../api'
 import { toast } from '../composables/useToast'
@@ -15,7 +15,8 @@ const exemptionPurchase = useExemptionPurchase()
 // 提交交互复用 v1.7 C 的成果：处理中显示「AI 正在分析…」+ 禁用 + 可取消
 // ============================================================
 
-const segment = ref('challenge') // challenge | shop
+const route=useRoute()
+const segment = ref(route.path==='/special-vouchers'?'shop':'challenge') // challenge | shop
 const error = ref('')
 const loading = ref(false)
 
@@ -513,7 +514,7 @@ onMounted(loadAll)
 </script>
 
 <template>
-  <header class="page-intro"><h1>挑战与奖励</h1></header>
+  <header class="page-intro"><h1>{{ segment==='shop'?'特殊券与原有兑换':'挑战与合同' }}</h1></header>
   <div>
     <p v-if="exemptionPurchase.warning.value" class="error">{{ exemptionPurchase.warning.value }}</p>
     <p v-if="exemptionPurchase.pending.value?.state === 'unknown'" class="card">上次豁免购买结果待确认：{{ exemptionPurchase.pending.value.body.target_date }} · {{ exemptionPurchase.pending.value.body.period }}。<button class="btn" :disabled="anyBusy || exemptionPurchase.busy.value" @click="buyExemption">恢复购买结果</button></p>
@@ -592,20 +593,7 @@ onMounted(loadAll)
       <button class="btn small" style="margin-top: 8px" @click="stagnationResult = null">知道了</button>
     </div>
 
-    <!-- ============ 分段控件 ============ -->
-    <div class="segmented">
-      <button
-        class="seg-btn"
-        :class="{ active: segment === 'challenge' }"
-        @click="segment = 'challenge'"
-      >
-        挑战
-      </button>
-      <button class="seg-btn" :class="{ active: segment === 'shop' }" @click="segment = 'shop'">
-        商店
-      </button>
-    </div>
-
+    <nav class="section-links"><RouterLink to="/plans">计划与目标</RouterLink><RouterLink to="/rewards">奖励与休息</RouterLink></nav>
     <p v-if="error" class="conn-banner conn-error" style="margin-bottom: 12px">{{ error }}</p>
 
     <!-- ============================================================ -->
@@ -777,7 +765,7 @@ onMounted(loadAll)
     <!-- 商店区                                                        -->
     <!-- ============================================================ -->
     <template v-else>
-      <RewardShop/>
+
 
       <!-- 豁免券（v1.10 M2）：时段券，绝不做万能券 -->
       <div class="card">

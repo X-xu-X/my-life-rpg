@@ -1,0 +1,21 @@
+<script setup>
+import { ref,onMounted,onBeforeUnmount,watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { api } from '../api'
+import { storageKey,accountEpoch } from '../session'
+import { useWorkflowWrite } from '../composables/useWorkflowWrite'
+import PageHeader from './ui/PageHeader.vue'
+const router=useRouter(),data=ref(null),answers=ref({}),step=ref(0),version=ref(0),uses=ref([]),stop=ref(false),error=ref(''),writes=useWorkflowWrite('return-checkin'),labels={judge:'事件分析',review:'回顾',report:'报告',pricing:'奖励定价'}
+const cacheKey=storageKey('return-checkin-draft'),epoch=accountEpoch;let ready=false,alive=true,timer=null
+function persist(){if(ready)try{localStorage.setItem(cacheKey,JSON.stringify({answers:answers.value,uses:uses.value,step:step.value,version:version.value}))}catch{}}
+function cache(){if(!ready)return;persist();clearTimeout(timer);timer=setTimeout(save,900)}
+watch([answers,uses],cache,{deep:true,flush:'sync'})
+watch(step,persist,{flush:'sync'})
+onMounted(async()=>{try{data.value=await api.flow('/return-checkin');if(!alive||epoch!==accountEpoch)return;version.value=data.value.draft?.version||0;let local=null;try{local=JSON.parse(localStorage.getItem(cacheKey)||'null')}catch{}if(local?.version!==version.value)local=null;answers.value=local?.answers||{...(data.value.draft?.answers||{})};uses.value=local?.uses||data.value.draft?.uses||[];for(const q of data.value.questions)if(!answers.value[q.id])answers.value[q.id]={state:'answered',value:''};step.value=local?.step??data.value.questions.findIndex(q=>answers.value[q.id].state!=='skipped'&&!answers.value[q.id].value.trim());if(step.value<0)step.value=4;ready=true}catch(e){error.value=e.message}})
+onBeforeUnmount(()=>{alive=false;clearTimeout(timer)})
+async function leave(){if(await save())await router.push('/')}
+async function save(){if(writes.busy.value||!ready)return false;clearTimeout(timer);const captured=JSON.stringify({answers:answers.value,uses:uses.value});try{const r=await writes.send('/return-checkin',{expected_version:version.value,answers:answers.value,uses:uses.value},'PUT');if(!alive||epoch!==accountEpoch)return false;version.value=r.version;persist();error.value='';if(captured!==JSON.stringify({answers:answers.value,uses:uses.value}))timer=setTimeout(save,900);return true}catch(e){error.value=e.message;return false}}
+async function next(skip=false){if(skip)answers.value[data.value.questions[step.value].id]={state:'skipped',value:''};if(await save())step.value++}
+async function complete(skip=false){if(!skip&&!await save())return;try{await writes.send('/return-checkin/complete',{expected_version:version.value,skip,stop_reminding:stop.value});localStorage.removeItem(cacheKey);await router.push('/')}catch(e){error.value=e.message}}
+</script>
+<template><div class="reading-page questionnaire-page"><PageHeader title="欢迎回到自己的节奏" description="只补充现在，不补造离开期间的记录，也不重做初始评估。"/><p v-if="error" class="error" role="alert">{{ error }}</p><section v-if="data" class="card wizard-card"><template v-if="step<data.questions.length"><span class="eyebrow">近况 {{ step+1 }} / {{ data.questions.length }}</span><h2>{{ data.questions[step].text }}</h2><textarea v-model="answers[data.questions[step].id].value" rows="5" maxlength="2000" @input="answers[data.questions[step].id].state='answered'"/><div class="action-group"><button class="btn" :disabled="!step||writes.busy.value" @click="step--">上一题</button><button class="btn" :disabled="writes.busy.value" @click="next(true)">跳过这题</button><button class="btn primary" :disabled="writes.busy.value||!answers[data.questions[step].id].value.trim()" @click="next()">保存并继续</button></div></template><template v-else><h2>让新的近况陪你继续</h2><p>这些内容只作为你选择用途的未来背景，原属性、余额、券和约定保持不变。</p><label v-for="(label,key) in labels" :key="key"><input type="checkbox" v-model="uses" :value="key"/>允许用于{{ label }}</label><button class="btn primary" :disabled="writes.busy.value" @click="complete()">确认保存近况</button><RouterLink class="btn" to="/plans">到计划维护目标与安排 →</RouterLink></template><label><input type="checkbox" v-model="stop"/>不再自动提醒回归</label><div class="action-group"><button class="text-button" :disabled="writes.busy.value" @click="complete(true)">暂缓30天</button><button class="btn" :disabled="writes.busy.value" @click="leave">保存草稿并暂离</button></div></section></div></template>

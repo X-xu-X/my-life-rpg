@@ -2,6 +2,7 @@
 const BASE = '/api'
 
 import { account, accountEpoch, activeRequests, csrf } from './session'
+import { beginRequest } from './requestStatus'
 
 async function request(path, options = {}) {
   const epoch = accountEpoch
@@ -10,6 +11,8 @@ async function request(path, options = {}) {
   options.signal?.addEventListener('abort',abort,{once:true})
   if(options.signal?.aborted)controller.abort()
   activeRequests.add(controller)
+  let requestBody=null;try{requestBody=JSON.parse(options.body||'null')}catch{}
+  const done=beginRequest(path,options.method,requestBody)
   try {
     const resp = await fetch(`${BASE}${path}`, {
       ...options, credentials: 'same-origin', signal: controller.signal,
@@ -25,7 +28,7 @@ async function request(path, options = {}) {
       throw error
     }
     return data
-  } finally { options.signal?.removeEventListener('abort',abort);activeRequests.delete(controller) }
+  } finally { done();options.signal?.removeEventListener('abort',abort);activeRequests.delete(controller) }
 }
 
 async function queueJudgmentRevision(id, operation, detail, version) {
@@ -177,7 +180,7 @@ export const api = {
   listBackups: () => request('/backup/list'),
 
   // 成长报告
-  getReport: (period) => request(`/report?period=${period}`, { method: 'POST' }),
+  getReport: (period,requestKey=crypto.randomUUID()) => request(`/report?period=${period}`, { method: 'POST',body:JSON.stringify({request_key:requestKey}) }),
   listReports: () => request('/reports'),
   getSavedReport: (id) => request(`/reports/${id}`),
 

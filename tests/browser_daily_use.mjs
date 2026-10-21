@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {spawn} from 'node:child_process'
 import crypto from 'node:crypto'
-const root='docs/review/daily_use_2026-10-21/browser'
+const root=process.env.DAILY_USE_EVIDENCE_DIR||'docs/review/daily_use_2026-10-21/browser'
 fs.mkdirSync(root,{recursive:true})
 const pause=ms=>new Promise(r=>setTimeout(r,ms))
 const runtimePath=root+'/runtime.json'

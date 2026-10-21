@@ -24,6 +24,7 @@ class ItemIn(WriteIn):
     position:int=Field(0,ge=0,le=100000)
     frequency:Literal['daily','workdays','weekends','weekdays','interval','once','manual']='daily'
     start:date|None=None
+    effective_from:date|None=None
     interval:int=Field(1,ge=1,le=366)
     category:Literal['plan','care']='care'
     planned_minutes:int|None=Field(None,ge=1,le=1440,strict=True)
@@ -46,9 +47,9 @@ class EntryIn(WriteIn):
 
 def item_snapshot(item,day):
     dated=[h for h in item.history if 'rule' in h]
-    snapshot=next((h for h in reversed(dated) if h['rule'].get('start','0001-01-01')<=str(day)),None)
+    snapshot=next((h for h in reversed(dated) if h.get('effective_from',h['rule'].get('start','0001-01-01'))<=str(day)),None)
     if snapshot is None and not dated and item.rule.get('start','0001-01-01')<=str(day):snapshot=fields(item)
-    return snapshot
+    return snapshot if snapshot and snapshot['rule'].get('start','0001-01-01')<=str(day) else None
 
 
 def due(item,day):
@@ -116,7 +117,8 @@ def save_item(body:ItemIn,item_id:int|None=None,db:Session=Depends(get_db)):
         from app.models import Goal
         goal=get_owned(db,Goal,body.goal_id)
         if goal.status!='active':raise HTTPException(409,'请选择进行中的本人目标。')
-    if row and body.start and body.start<local_day(utc_now(),user.timezone):raise HTTPException(422,'修改请选今天或未来生效。')
+    effective=body.effective_from or body.start or local_day(utc_now(),user.timezone)
+    if row and effective<local_day(utc_now(),user.timezone):raise HTTPException(422,'修改请明确今天或未来生效；排期起算日可保留。')
     if not row:row=CareItem(user_id=user.id,version=0,history=[]);db.add(row)
     elif not any('rule' in h for h in row.history):row.history=[*row.history,{**fields(row),'legacy_baseline':True,'at':utc_now().isoformat()}]
     old_rule=row.rule or {}
@@ -124,7 +126,7 @@ def save_item(body:ItemIn,item_id:int|None=None,db:Session=Depends(get_db)):
     for key,default in (('category','care'),('planned_minutes',None),('goal_id',None)):
         rule[key]=getattr(body,key) if key in body.model_fields_set else old_rule.get(key,default)
     row.name=body.name;row.position=body.position;row.enabled=body.enabled;row.removed=body.removed;row.rule=rule;row.version+=1
-    row.history=[*row.history,{'version':row.version,'name':row.name,'position':row.position,'enabled':row.enabled,'removed':row.removed,'rule':row.rule,'at':utc_now().isoformat()}]
+    row.history=[*row.history,{'version':row.version,'name':row.name,'position':row.position,'enabled':row.enabled,'removed':row.removed,'rule':row.rule,'effective_from':str(effective),'at':utc_now().isoformat()}]
     if not db.query(CareConfig).filter_by(user_id=user.id).first():db.add(CareConfig(user_id=user.id))
     db.flush()
     return finish(db,user,op,body,fp,row,fields(row))

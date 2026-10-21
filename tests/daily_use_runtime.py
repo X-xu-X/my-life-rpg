@@ -34,7 +34,9 @@ from app.services.llm_service import llm_service
 from app.schemas import LLMConfigIn
 
 workspace=Path(__file__).resolve().parents[1]
-root=workspace/'docs/review/daily_use_2026-10-21/browser';root.mkdir(parents=True,exist_ok=True)
+root=(workspace/os.environ.get('DAILY_USE_EVIDENCE_DIR','docs/review/daily_use_2026-10-21/browser')).resolve()
+assert root.is_relative_to((workspace/'docs/review').resolve())
+root.mkdir(parents=True,exist_ok=True)
 temporary=tempfile.TemporaryDirectory(dir=workspace/'backups',prefix='daily_runtime_')
 temp_path=Path(temporary.name).resolve();assert (workspace/'backups').resolve() in temp_path.parents
 key=temp_path/'synthetic-key.json';key.write_text(json.dumps({'active':'test','keys':{'test':Fernet.generate_key().decode()}}))
@@ -56,7 +58,11 @@ def synthetic_json(messages,**kwargs):
     (root/'model-payloads.json').write_text(json.dumps(model_calls,ensure_ascii=False,indent=2),encoding='utf-8')
     time.sleep(.45)
     text='\n'.join(m['content'] for m in messages)
-    if '【物品名称】' in text:return {'coin_price':23,'pricing_reason':'合成模型：结合本人每周的奖励偏好与已确认实际用量。','worth_note':'可以在需要时选择，不替代必要休息。'}
+    if '【物品名称】' in text:
+        if os.environ.get('DAILY_USE_REVIEW_CASES') and 'QUEUE_FAIL' in text:
+            from app.services.llm_service import LLMError
+            raise LLMError('MODEL_TIMEOUT')
+        return {'coin_price':23,'pricing_reason':'合成模型：结合本人每周的奖励偏好与已确认实际用量。','worth_note':'可以在需要时选择，不替代必要休息。'}
     if '整体阅读本人明确授权' in text:return {'questions':[]}
     if '初始属性面板' in text or '初始金币' in text:return {'attributes':[{'name':n,'value':52,'reason':'合成问卷依据'} for n in ATTRIBUTE_DIMENSIONS],'initial_coins':120,'summary':'合成初始评估；非真实模型质量验收','economic_reference':{'basis':'本人期望频率，不设统一汇率'}}
     if '"facts"' in text:
@@ -108,6 +114,14 @@ class Handler(BaseHTTPRequestHandler):
         body=self.rfile.read(int(self.headers.get('Content-Length','0')))
         if self.path.startswith('/__qa__/'):
             if self.headers.get('X-QA-Guard')!=guard:self.write(403,b'{}');return
+            if self.path=='/__qa__/seed-pricing' and os.environ.get('DAILY_USE_REVIEW_CASES'):
+                from app.models import ShopItem
+                values=json.loads(body)
+                with factory() as db:
+                    offset=db.query(ShopItem).filter_by(user_id=uid).count()
+                    for n in range(min(30,max(0,values['count']))):
+                        db.add(ShopItem(user_id=uid,name=('QUEUE_FAIL_' if values.get('fail_index')==n else 'QUEUE_CASE_')+str(offset+n+1),coin_price=23,enabled=True,auto_pricing=True))
+                    db.commit()
             if self.path=='/__qa__/advance':clock['now']+=timedelta(seconds=json.loads(body)['seconds'])
             if self.path=='/__qa__/shutdown':threading.Thread(target=server.shutdown,daemon=True).start()
             self.write(200,json.dumps({'model_calls':len(model_calls),'api_calls':len(api_calls),'errors':errors}).encode(),{'Content-Type':'application/json'});return
@@ -115,7 +129,11 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 with client_lock:
                     response=client.request(self.command,self.path,content=body or None,headers={'Origin':'https://rpg.test','Content-Type':self.headers.get('Content-Type','application/json'),'X-CSRF-Token':self.headers.get('X-CSRF-Token','')})
-                api_calls.append({'method':self.command,'path':self.path,'status':response.status_code})
+                entry={'method':self.command,'path':self.path,'status':response.status_code}
+                if self.path.startswith('/api/projects') and body:
+                    source=json.loads(body);entry['body_fields']=sorted(source)
+                    entry['project_input']={k:source[k] for k in ('name','start','effective_from','category','position','removed','enabled') if k in source}
+                api_calls.append(entry)
                 (root/'api-requests.json').write_text(json.dumps(api_calls,ensure_ascii=False,indent=2),encoding='utf-8')
                 self.write(response.status_code,response.content,{k:v for k,v in response.headers.items() if k.lower() in ('content-type','content-disposition','cache-control')})
             except Exception as exc:

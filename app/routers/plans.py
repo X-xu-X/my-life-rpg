@@ -20,6 +20,9 @@ class ScheduleIn(WriteIn):
     goal_id:int|None=None
     planned_minutes:int|None=Field(30,ge=1,le=1440,strict=True)
     category:Literal['plan','care']='plan'
+    effective_from:date|None=None
+    position:int=Field(0,ge=0,le=100000,strict=True)
+    removed:bool=False
     start:date
     weekdays:list[int]=Field(default_factory=list,max_length=7)
     interval:int=Field(1,ge=1,le=366)
@@ -56,14 +59,14 @@ class DecisionIn(WriteIn):
 
 
 def historical(row,day):
-    return next((item for item in reversed(row.history) if item['rule']['start']<=str(day)),None)
+    return next((item for item in reversed(row.history) if item.get('effective_from',item['rule']['start'])<=str(day)),None)
 
 
 def timing_snapshot(row,day):
     snapshot=historical(row,day)
     if not snapshot and not row.history and row.rule['start']<=str(day):
         snapshot={'version':row.version,'name':row.name,'rule':row.rule,'enabled':row.enabled}
-    return snapshot
+    return snapshot if snapshot and snapshot['rule']['start']<=str(day) else None
 
 
 def due(rule,day):
@@ -92,11 +95,14 @@ def save_schedule(body:ScheduleIn,schedule_id:int|None=None,db:Session=Depends(g
     if row:version(row,body.expected_version)
     goal=get_owned(db,Goal,body.goal_id) if body.goal_id else None
     if goal and goal.status!='active':raise HTTPException(409,'请选择仍在进行的本人目标。')
-    rule=body.model_dump(mode='json',include={'frequency','start','weekdays','interval','planned_minutes','category'})
+    rule=body.model_dump(mode='json',include={'frequency','start','weekdays','interval','planned_minutes','category','position','removed'})
     if row and 'category' not in body.model_fields_set:rule['category']=row.rule.get('category','plan')
     if row and 'planned_minutes' not in body.model_fields_set:rule['planned_minutes']=row.rule.get('planned_minutes',30)
+    for key,default in (('position',0),('removed',False)):
+        if row and key not in body.model_fields_set:rule[key]=row.rule.get(key,default)
     rule['timezone']=user.timezone
-    if row and body.start<local_day(utc_now(),user.timezone):raise HTTPException(422,'周期修改需明确今天或未来的生效日，历史安排保留。')
+    effective=body.effective_from or body.start
+    if row and effective<local_day(utc_now(),user.timezone):raise HTTPException(422,'修改需明确今天或未来的生效日；排期起算日可保留，历史安排不变。')
     if not row:row=PlanSchedule(user_id=user.id,name=body.name,rule=rule,version=0,history=[]);db.add(row)
     elif not row.history:
         # Preserve the only known legacy settings before a future rule replaces them.
@@ -106,9 +112,12 @@ def save_schedule(body:ScheduleIn,schedule_id:int|None=None,db:Session=Depends(g
             'goal':{'id':old_goal.id,'title':old_goal.description,'updated_at':old_goal.updated_at.isoformat()} if old_goal else None,
             'at':utc_now().isoformat(),'legacy_baseline':True}]
     row.goal_id=body.goal_id
-    row.history=[*row.history,{'version':row.version+1,'name':body.name,'rule':rule,'enabled':body.enabled,
+    row.history=[*row.history,{'version':row.version+1,'name':body.name,'rule':rule,'enabled':body.enabled,'effective_from':str(effective),
         'goal':{'id':goal.id,'title':goal.description,'updated_at':goal.updated_at.isoformat()} if goal else None,'at':utc_now().isoformat()}]
     row.name=body.name;row.rule=rule;row.enabled=body.enabled;row.version+=1;db.flush()
+    if rule['category']=='care':
+        from app.models.full_system import CareConfig
+        if not db.query(CareConfig).filter_by(user_id=user.id).first():db.add(CareConfig(user_id=user.id))
     return finish(db,user,op,body,fp,row,fields(row))
 
 
@@ -122,7 +131,7 @@ def occurrences(day:date|None=None,today:bool=False,db:Session=Depends(get_db)):
         snapshot=historical(row,selected)
         if today and snapshot:selected=local_day(utc_now(),snapshot['rule']['timezone']);snapshot=historical(row,selected)
         saved=db.query(PlanOccurrence).filter_by(user_id=user.id,schedule_id=row.id,local_date=str(selected)).first()
-        if saved or snapshot and snapshot['enabled'] and due(snapshot['rule'],selected):items.append({'schedule':fields(row),'schedule_snapshot':saved.schedule_snapshot if saved else snapshot,'local_date':str(selected),'occurrence':fields(saved) if saved else None})
+        if saved or snapshot and snapshot['enabled'] and not snapshot['rule'].get('removed') and due(snapshot['rule'],selected):items.append({'schedule':fields(row),'schedule_snapshot':saved.schedule_snapshot if saved else snapshot,'local_date':str(selected),'occurrence':fields(saved) if saved else None})
     return {'date':str(day) if day else None,'items':items}
 
 
@@ -139,14 +148,14 @@ def result(schedule_id:int,day:date,body:ResultIn,db:Session=Depends(get_db)):
     snapshot=historical(schedule,day)
     category=(row.schedule_snapshot if row else snapshot or {}).get('rule',{}).get('category','plan')
     if body.outcome not in (('recorded','skipped') if category=='care' else ('done','partial','missed')):raise HTTPException(422,'请沿用当次项目的实际结果类型，旧记录不转换。')
-    if not row and (not snapshot or not snapshot['enabled'] or not due(snapshot['rule'],day)):raise HTTPException(409,'此日没有到期安排。')
+    if not row and (not snapshot or not snapshot['enabled'] or snapshot['rule'].get('removed') or not due(snapshot['rule'],day)):raise HTTPException(409,'此日没有到期安排。')
     if day>local_day(utc_now(),user.timezone):raise HTTPException(422,'不能提前记录未来结果。')
     if body.outcome not in ('missed','skipped') and not body.content.strip() and not body.event_id:raise HTTPException(422,'先保存实际事实，不默认完成比例。')
     event=None
     if body.outcome not in ('missed','skipped') and body.event_id:
         event=get_owned(db,Event,body.event_id)
         if event.is_deleted or event.record_kind=='diary' or event.content_version!=body.event_version:raise HTTPException(409,'关联事件无效或版本变化。')
-    if not row:row=PlanOccurrence(user_id=user.id,schedule_id=schedule.id,local_date=str(day),schedule_snapshot={**snapshot,'timezone':snapshot['rule']['timezone']},version=0,history=[]);db.add(row)
+    if not row:row=PlanOccurrence(user_id=user.id,schedule_id=schedule.id,local_date=str(day),schedule_snapshot={**snapshot,'timezone':snapshot['rule']['timezone']},outcome=body.outcome,facts={},version=0,history=[]);db.add(row)
     old_event=get_owned(db,Event,row.event_id) if row.event_id else None
     booked=bool(old_event and db.query(AIJudgment).filter_by(event_id=old_event.id,status='confirmed').first())
     if booked and event and event.id!=old_event.id:raise HTTPException(409,'当次已结算，纠错不能换成另一事实再次领奖。')

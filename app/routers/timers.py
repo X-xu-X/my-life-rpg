@@ -51,7 +51,7 @@ def start(body:StartIn,db:Session=Depends(get_db)):
         from app.routers.care import item_snapshot
         effective=(item_snapshot if body.source_type=='care' else timing_snapshot)(plan,local_day(now,plan.rule.get('timezone',user.timezone)))
         if not effective or not effective['enabled']:raise HTTPException(409,'此计划尚未生效或已经停用。')
-        if effective.get('removed'):raise HTTPException(409,'项目已移除。')
+        if effective.get('removed') or effective['rule'].get('removed'):raise HTTPException(409,'项目已移除。')
         configured=effective['rule'].get('planned_minutes',None if body.source_type=='care' else 30)
         if configured is None and 'planned_minutes' not in body.model_fields_set:raise HTTPException(422,'此项目没有固定时长，请先填写本次分钟数。')
         minutes=body.planned_minutes if configured is None else configured

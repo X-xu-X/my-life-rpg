@@ -4,18 +4,19 @@ import { api } from '../api'
 import { storageKey,localDate,accountEpoch,displayTime } from '../session'
 import { useWorkflowWrite } from '../composables/useWorkflowWrite'
 import ConfirmDialog from './ui/ConfirmDialog.vue'
+import { queuePriceSweep } from '../pricingSweep'
 const emit=defineEmits(['changed']),items=ref([]),quotes=ref([]),checks=ref([]),balance=ref(0),error=ref(''),notice=ref(''),choice=ref(null),writes=useWorkflowWrite('reward-shop'),form=ref({name:'',reward_kind:'item',minutes:30,price_yuan:null,description:''}),epoch=accountEpoch
-const key=storageKey('reward-draft');let alive=true,timer=null
+const key=storageKey('reward-draft');let alive=true,timer=null,checking=false
 try{form.value={...form.value,...JSON.parse(localStorage.getItem(key)||'{}')}}catch{}
 const pendingFailed=computed(()=>quotes.value.some(q=>q.request_key===writes.pending.value?.body.request_key&&q.state==='failed'))
 function cache(){try{localStorage.setItem(key,JSON.stringify(form.value))}catch{}}
 async function load(){try{const [shop,q,c]=await Promise.all([api.listShopItems(),api.flow('/reward-quotes'),api.flow('/pricing-checks')]);if(!alive||epoch!==accountEpoch)return;items.value=shop.items;balance.value=shop.balance;quotes.value=q.items;checks.value=c.items;clearTimeout(timer);if(c.items.some(r=>['queued','running'].includes(r.state)))timer=setTimeout(load,2200)}catch(e){if(alive&&epoch===accountEpoch)error.value=e.message}}
-async function check(force=false){if(writes.pending.value)return;const checkKey=storageKey('price-check:'+localDate());let uuid;try{if(!force)uuid=localStorage.getItem(checkKey)}catch{}uuid=uuid||crypto.randomUUID();try{const result=await api.flow('/pricing-checks',{request_key:uuid,expected_version:0});if(result.reason!=='model_not_ready')try{localStorage.setItem(checkKey,uuid)}catch{};await load()}catch(e){error.value=e.message}}
+async function check(){if(writes.pending.value||checking)return;checking=true;try{const result=await queuePriceSweep({storage:localStorage,key:storageKey('price-check:'+localDate()),request:body=>api.flow('/pricing-checks',body),current:()=>alive&&epoch===accountEpoch});if(alive&&epoch===accountEpoch){if(result.reason==='daily_limit')notice.value='今天已安排10项价格检查，其余授权奖励会在之后优先安排。';await load()}}catch(e){if(alive&&epoch===accountEpoch)error.value='价格检查结果待确认；下次进入会恢复原请求。'+e.message}finally{checking=false}}
 async function act(path,body,method='POST'){try{const result=await writes.send(path,body,method);if(!alive||epoch!==accountEpoch)return;await load();error.value='';emit('changed');return result}catch(e){if(alive&&epoch===accountEpoch){error.value=e.message;await load()}return null}}
 async function price(){cache();const name=form.value.name;const result=await act('/reward-quotes',{...form.value,price_yuan:form.value.price_yuan===''?null:form.value.price_yuan,auto_check:true});if(result?.item){notice.value='奖励已按本人模型的有效价格加入。';if(form.value.name===name){form.value.name='';form.value.description='';cache()}}}
 async function recover(){const p=writes.pending.value;if(p)await act(p.path,p.body,p.method)}
 async function redeem(){const item=choice.value;if(!item)return;const result=await act('/shop/items/'+item.id+'/redeem',{expected_version:item.updated_at});if(result){choice.value=null;notice.value='兑换成功；这张券按购买价格与时长保留。'}else if(items.value.find(i=>i.id===item.id)?.updated_at!==item.updated_at)choice.value=null}
-async function permission(item){await act('/shop/items/'+item.id+'/automatic-pricing',{expected_version:item.updated_at,enabled:!item.auto_pricing,acknowledge:!item.auto_pricing});await check(true)}
+async function permission(item){const result=await act('/shop/items/'+item.id+'/automatic-pricing',{expected_version:item.updated_at,enabled:!item.auto_pricing,acknowledge:!item.auto_pricing});if(result)await check()}
 async function disable(item){await act('/shop/items/'+item.id,{enabled:!item.enabled},'PUT')}
 defineExpose({reload:load})
 onMounted(async()=>{await load();await check()});onBeforeUnmount(()=>{alive=false;clearTimeout(timer)})

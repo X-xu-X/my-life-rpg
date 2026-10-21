@@ -4,6 +4,7 @@ from datetime import timedelta
 from uuid import uuid4
 import threading
 from fastapi import HTTPException
+from sqlalchemy import func
 from app.models import User,ShopItem
 from app.models.daily_use import PricingCheck
 from app.services.time_service import utc_now,USER_ZONE
@@ -29,11 +30,17 @@ def enqueue(db,user):
     today=trial_rules.day(db,user)
     previous=db.query(PricingCheck).filter_by(user_id=user.id,local_date=today).all()
     budget=max(0,MAX_DAILY-len(previous));ids={r.item_id for r in previous};created=[]
-    for item in db.query(ShopItem).filter_by(user_id=user.id,enabled=True,auto_pricing=True).order_by(ShopItem.id).all():
-        if item.id in ids or item.repriced_on==today or len(created)>=min(3,budget):continue
+    attempted=dict(db.query(PricingCheck.item_id,func.max(PricingCheck.local_date)).filter_by(user_id=user.id).group_by(PricingCheck.item_id).all())
+    eligible=[item for item in db.query(ShopItem).filter_by(user_id=user.id,enabled=True,auto_pricing=True).all() if item.id not in ids and item.repriced_on!=today]
+    # Never-attempted / least-recently-served first, including failed attempts.
+    # The daily cap must not permanently favor low IDs after each midnight.
+    eligible.sort(key=lambda item:(max(attempted.get(item.id,''),item.repriced_on or ''),item.id))
+    for item in eligible[:min(3,budget)]:
         row=PricingCheck(user_id=user.id,item_id=item.id,local_date=today,request_key=str(uuid4()))
         db.add(row);created.append(row)
-    db.flush();return {'queued':len(created),'ids':[r.id for r in created]}
+    remaining=len(eligible)-len(created);budget_remaining=budget-len(created)
+    db.flush();return {'queued':len(created),'ids':[r.id for r in created],'remaining':remaining,'budget_remaining':budget_remaining,
+        'has_more':remaining>0 and budget_remaining>0,'reason':'daily_limit' if remaining and not budget_remaining else 'covered' if not remaining else 'next_batch'}
 
 
 def claim(factory):

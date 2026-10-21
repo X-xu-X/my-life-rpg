@@ -1,10 +1,10 @@
 <script setup>
 import { ref, watch, nextTick, onUnmounted, getCurrentInstance } from 'vue'
-const props=defineProps({open:Boolean,title:String,busy:Boolean,confirmLabel:String})
+const props=defineProps({open:Boolean,title:String,busy:Boolean,confirmLabel:String,initialFocus:String})
 const emit=defineEmits(['confirm','cancel'])
 const titleId='confirm-title-'+getCurrentInstance().uid
 const dialog=ref(null);let trigger=null
-watch(()=>props.open,async(open)=>{await nextTick();if(open){trigger=document.activeElement;dialog.value?.showModal()}else{dialog.value?.close();trigger?.focus()}},{immediate:true})
+watch(()=>props.open,async(open)=>{await nextTick();if(open){trigger=document.activeElement;dialog.value?.showModal();if(props.initialFocus){dialog.value?.querySelector(props.initialFocus)?.focus({preventScroll:true});if(dialog.value)dialog.value.scrollTop=0}}else{dialog.value?.close();trigger?.focus()}},{immediate:true})
 function cancel(e){e?.preventDefault();if(!props.busy)emit('cancel')}
 function trap(e){
  if(e.key!=='Tab')return

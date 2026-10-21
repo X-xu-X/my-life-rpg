@@ -15,7 +15,7 @@ root=Path(args.output);root.mkdir(parents=True,exist_ok=True)
 os.environ['FULL_SYSTEM_EVIDENCE_DIR']=str(root)
 names=['tests.test_full_system','tests.test_continuation','tests.test_trial_p1','tests.test_next_iteration','tests.test_v1_11_safety','tests.test_ops_next','tests.test_account_identity']
 if args.repairs:names.append('tests.test_review_repairs')
-if args.daily_use:names.append('tests.test_daily_use_redesign')
+if args.daily_use:names.extend(['tests.test_daily_use_redesign','tests.test_daily_use_review_fixes'])
 with (root/'backend-tests.log').open('w',encoding='utf-8') as log,contextlib.redirect_stdout(log),contextlib.redirect_stderr(log):
     result=unittest.TextTestRunner(stream=log,verbosity=2).run(unittest.defaultTestLoader.loadTestsFromNames(names))
 report={'status':'PASS' if result.wasSuccessful() else 'FAIL','run':result.testsRun,

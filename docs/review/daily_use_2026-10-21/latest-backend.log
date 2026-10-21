@@ -1,0 +1,14 @@
+...E.................
+======================================================================
+ERROR: test_A04_A14_A22_phase_uses_only_current_goal_and_invalidates_late_mainline (tests.test_daily_use_redesign.DailyUseTests.test_A04_A14_A22_phase_uses_only_current_goal_and_invalidates_late_mainline)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\tests\test_daily_use_redesign.py", line 318, in test_A04_A14_A22_phase_uses_only_current_goal_and_invalidates_late_mainline
+    self.assertEqual(self.write('/mainlines',{'goal_id':goal['id'],'active':True}).status_code,200)
+                                                        ~~~~^^^^^^
+KeyError: 'id'
+
+----------------------------------------------------------------------
+Ran 21 tests in 20.482s
+
+FAILED (errors=1)

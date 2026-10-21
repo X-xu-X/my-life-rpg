@@ -1,0 +1,24 @@
+{
+  "status": "FAIL",
+  "run": 161,
+  "passed": 152,
+  "skipped": [
+    "test_pg_concurrent_redemption_and_int64_balance (tests.test_next_iteration.CloudTests.test_pg_concurrent_redemption_and_int64_balance): 真实 PostgreSQL 并发用例",
+    "test_pg_import_synthetic_legacy40_atomic_mapping (tests.test_next_iteration.CloudTests.test_pg_import_synthetic_legacy40_atomic_mapping): 真实 PostgreSQL 导入用例"
+  ],
+  "failures": [
+    "test_questionnaire_all_skipped_preview_only_confirm_once_and_existing_unchanged (tests.test_full_system.FullSystemTests.test_questionnaire_all_skipped_preview_only_confirm_once_and_existing_unchanged)",
+    "test_reward_quote_no_item_until_accept_invalid_no_fallback_reprice_bounds (tests.test_full_system.FullSystemTests.test_reward_quote_no_item_until_accept_invalid_no_fallback_reprice_bounds)",
+    "test_safe_error_categories_do_not_include_provider_text (tests.test_trial_p1.TrialP1Tests.test_safe_error_categories_do_not_include_provider_text)",
+    "test_save_never_tests_and_validation_is_versioned_and_private (tests.test_trial_p1.TrialP1Tests.test_save_never_tests_and_validation_is_versioned_and_private)",
+    "test_worker_two_real_call_budget_and_permanent_error (tests.test_next_iteration.CloudTests.test_worker_two_real_call_budget_and_permanent_error)",
+    "test_N03_legacy_default_duration_validation_and_old_receipt_replay (tests.test_review_repairs.ReviewRepairTests.test_N03_legacy_default_duration_validation_and_old_receipt_replay)"
+  ],
+  "errors": [
+    "test_cross_user_all_resource_action_families (tests.test_next_iteration.CloudTests.test_cross_user_all_resource_action_families)"
+  ],
+  "database": "synthetic SQLite; no application lifespan or real data",
+  "real_postgres": "NOT_RUN",
+  "real_supplier": "NOT_RUN",
+  "real_mail": "NOT_RUN"
+}

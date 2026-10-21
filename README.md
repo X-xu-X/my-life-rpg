@@ -1,5 +1,9 @@
 # 游戏人生（Game of Life）
 
+> **2026-10-21 本地开发交付**：本轮正式 Vue/API/worker 与 b025 迁移已实现，见[逐项交付及 A01～A33](docs/DAILY_USE_REDESIGN_DELIVERY_2026-10-21.md)。新版自动定价、一次问卷、长期信息/回归、项目整合、提示及日期导出已接入；保留旧权益和备案。下条“尚未完成”属于设计时点；本轮未推送/部署，真实 PG/供应商/SMTP/手机等仍单列 NOT_RUN。
+
+> **2026-10-21 当前开发入口**：用户认可新版[完整 Demo](docs/prototypes/life-journal-complete-preview-2026-10-21/index.html)，要求交 Writer 正式开发。[本轮开发规格](docs/DAILY_USE_REDESIGN_DEV_SPEC_2026-10-21.md)及[Writer 任务书](docs/WRITER_DAILY_USE_REDESIGN_2026-10-21.md)替代下文冲突的旧方案。涵盖全站整理、问卷/回归、模型诊断、逐事实 80% 门槛、个人自动定价等；首记 3 币独立，旧权益保留。143 项检查属于本机模拟 Demo，正式应用尚未完成本轮实现/发布；此前已经上云和迁移的事实不由下文历史“未上线”状态推翻。
+
 > **2026-10-18 本地实现交付**：已根据完整任务书开发正式API／Vue／worker及新增迁移；验收、规则与外部NOT_RUN见[完整交付记录](docs/FULL_SYSTEM_DELIVERY_2026-10-18.md)。改动尚在工作区，未推送或部署。`start.bat` 现衔接本地队列；手动启动时先启动API，再运行 `.venv/Scripts/python.exe -m app.worker --local`，否则分析任务会保持排队。下方“当前仅文档”是当天实施前状态。
 
 > **2026-10-18 开发文档已定稿**：用户已认可[第二版完整系统 Demo](docs/prototypes/lifexp-complete-preview-2026-10-18-v2/index.html)。正式范围见[完整系统开发规格](docs/FULL_SYSTEM_DEV_SPEC_2026-10-18.md)，交接使用[Writer 任务书](docs/WRITER_FULL_SYSTEM_2026-10-18.md)；Q1／Q2／Q3 已收束。当前仅文档交付，尚未发送 Writer 或修改正式应用／云端。

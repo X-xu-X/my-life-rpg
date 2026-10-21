@@ -1,5 +1,9 @@
 # Writer 工作指令（WRITER PROMPT）
 
+> **2026-10-21 续接实际代码**：[本轮交付](DAILY_USE_REDESIGN_DELIVERY_2026-10-21.md)已经接上正式 Vue/API/worker/迁移及隔离验收。后续从该报告与真实 HEAD 继续，不重做设计阶段工作，也不把合成模型通过当成真实供应商验收。真实 PG/供应商/SMTP/手机/生产升级仍按报告补测。
+
+> **2026-10-21 优先入口**：用户已认可[本轮完整 Demo](prototypes/life-journal-complete-preview-2026-10-21/index.html)，并要求编写开发文档让 Writer 开发。请按[最新任务书](WRITER_DAILY_USE_REDESIGN_2026-10-21.md)和[开发规格](DAILY_USE_REDESIGN_DEV_SPEC_2026-10-21.md)连续实施 W0～W6、完成 A01～A33。下文的早期“唯一来源”、SQLite 默认、邀请码、固定商品、人工接受改价、旧界面及旧状态按对应历史阅读；冲突以新规格与用户后续要求优先。当前仅本轮文档已交付准备，未通过聊天工具发送给 Writer，不声称已开工或已上线。
+
 > **2026-10-18 当前依据**：[完整系统开发规格](FULL_SYSTEM_DEV_SPEC_2026-10-18.md)、[Writer 任务书](WRITER_FULL_SYSTEM_2026-10-18.md)。第二版完整 Demo 已获用户认可，本次文档已定稿；包括自定照顾项目、逐篇 AI 许可、日记多事实防重、AI 判断依据及已收束的 Q1／Q2／Q3。下文历轮规格及“唯一来源”表述按历史范围解释，冲突以新版和用户最新答复优先。当前尚未发送 Writer、实现或升级云端。
 
 > 2026-10-17 最新任务顺序：先由顾问制作[本轮 Demo](prototypes/lifexp-context-preview-2026-10-17/index.html)供用户审阅，确认后再交 Writer 完整开发；[增量任务书](WRITER_CONTEXT_REWARDS_TIMER_2026-10-17.md)当前仅备妥、未派发。不要因历史“连续实施”说明提前跳过此次 Demo 确认。

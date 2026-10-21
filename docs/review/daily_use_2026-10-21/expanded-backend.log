@@ -1,0 +1,423 @@
+test_A01_controlled_diagnostics_and_provider_specific_request (tests.test_daily_use_redesign.DailyUseTests.test_A01_controlled_diagnostics_and_provider_specific_request) ... ok
+test_A04_A09_personal_background_permissions_delete_and_no_financial_writes (tests.test_daily_use_redesign.DailyUseTests.test_A04_A09_personal_background_permissions_delete_and_no_financial_writes) ... ok
+test_A06_A08_A09_questionnaire_once_readonly_history_and_neutral_exit (tests.test_daily_use_redesign.DailyUseTests.test_A06_A08_A09_questionnaire_once_readonly_history_and_neutral_exit) ... ok
+test_A07_personalized_followups_are_bounded_and_skips_not_resent (tests.test_daily_use_redesign.DailyUseTests.test_A07_personalized_followups_are_bounded_and_skips_not_resent) ... ok
+test_A08_ai_assessment_keeps_personal_coin_range_and_replays_without_second_call (tests.test_daily_use_redesign.DailyUseTests.test_A08_ai_assessment_keeps_personal_coin_range_and_replays_without_second_call) ... ERROR
+test_A10_A11_return_cooldown_excludes_deleted_and_never_deducts_for_absence (tests.test_daily_use_redesign.DailyUseTests.test_A10_A11_return_cooldown_excludes_deleted_and_never_deducts_for_absence) ... ok
+test_A12_A13_optional_minutes_project_reclassification_preserves_identity (tests.test_daily_use_redesign.DailyUseTests.test_A12_A13_optional_minutes_project_reclassification_preserves_identity) ... ok
+test_A15_A16_A17_A18_per_fact_threshold_supplement_and_first_record_independent (tests.test_daily_use_redesign.DailyUseTests.test_A15_A16_A17_A18_per_fact_threshold_supplement_and_first_record_independent) ... FAIL
+test_A15_invalid_confidence_never_becomes_a_fact_or_legacy_confirm (tests.test_daily_use_redesign.DailyUseTests.test_A15_invalid_confidence_never_becomes_a_fact_or_legacy_confirm) ... ok
+test_A19_A21_auto_price_initial_integer_bounds_no_default_goods (tests.test_daily_use_redesign.DailyUseTests.test_A19_A21_auto_price_initial_integer_bounds_no_default_goods) ... ok
+test_A20_A21_A23_auto_check_coalesces_bounds_and_old_purchase_preview_conflicts (tests.test_daily_use_redesign.DailyUseTests.test_A20_A21_A23_auto_check_coalesces_bounds_and_old_purchase_preview_conflicts) ... ok
+test_A20_failed_daily_check_preserves_price_and_has_only_one_explicit_retry (tests.test_daily_use_redesign.DailyUseTests.test_A20_failed_daily_check_preserves_price_and_has_only_one_explicit_retry) ... ok
+test_A22_price_late_background_revocation_cannot_create_item (tests.test_daily_use_redesign.DailyUseTests.test_A22_price_late_background_revocation_cannot_create_item) ... ERROR
+test_A26_preferences_are_server_owned_and_new_sessions_distinct (tests.test_daily_use_redesign.DailyUseTests.test_A26_preferences_are_server_owned_and_new_sessions_distinct) ... ok
+test_A27_official_calendar_and_import_do_not_add_gift_days (tests.test_daily_use_redesign.DailyUseTests.test_A27_official_calendar_and_import_do_not_add_gift_days) ... ok
+test_A28_important_days_cross_year_leap_day_and_invalid_date (tests.test_daily_use_redesign.DailyUseTests.test_A28_important_days_cross_year_leap_day_and_invalid_date) ... ok
+test_A30_optional_archives_and_no_lease_token_export (tests.test_daily_use_redesign.DailyUseTests.test_A30_optional_archives_and_no_lease_token_export) ... ERROR
+
+======================================================================
+ERROR: test_A08_ai_assessment_keeps_personal_coin_range_and_replays_without_second_call (tests.test_daily_use_redesign.DailyUseTests.test_A08_ai_assessment_keeps_personal_coin_range_and_replays_without_second_call)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\tests\test_daily_use_redesign.py", line 198, in test_A08_ai_assessment_keeps_personal_coin_range_and_replays_without_second_call
+    preview=self.write('/questionnaire/analyze',body,draft['version'],key=key)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\tests\test_full_system.py", line 20, in write
+    return self.client.request(method,'/api'+path,json={'request_key':key or str(uuid4()),'expected_version':version,**(body or {})})
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\testclient.py", line 455, in request
+    return super().request(
+           ~~~~~~~~~~~~~~~^
+        method,
+        ^^^^^^^
+    ...<11 lines>...
+        extensions=extensions,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\httpx2\_client.py", line 797, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\httpx2\_client.py", line 980, in send
+    response = self._send_handling_auth(
+        request,
+    ...<2 lines>...
+        history=[],
+    )
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\httpx2\_client.py", line 1008, in _send_handling_auth
+    response = self._send_handling_redirects(
+        request,
+        follow_redirects=follow_redirects,
+        history=history,
+    )
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\httpx2\_client.py", line 1043, in _send_handling_redirects
+    response = self._send_single_request(request)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\httpx2\_client.py", line 1076, in _send_single_request
+    response = transport.handle_request(request)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\testclient.py", line 354, in handle_request
+    raise exc
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\testclient.py", line 351, in handle_request
+    portal.call(self.app, scope, receive, send)
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\anyio\from_thread.py", line 338, in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\19687\.workbuddy\binaries\python\versions\3.13.12\Lib\concurrent\futures\_base.py", line 460, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\19687\.workbuddy\binaries\python\versions\3.13.12\Lib\concurrent\futures\_base.py", line 402, in __get_result
+    raise self._exception
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\anyio\from_thread.py", line 263, in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\applications.py", line 96, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\middleware\errors.py", line 186, in __call__
+    raise exc
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\middleware\cors.py", line 96, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\middleware\cors.py", line 154, in simple_response
+    await self.app(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\routing.py", line 670, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\routing.py", line 2734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\routing.py", line 1780, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\routing.py", line 2789, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\routing.py", line 1800, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\routing.py", line 1279, in handle
+    await app(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\routing.py", line 158, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\routing.py", line 144, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\routing.py", line 706, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\routing.py", line 354, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\anyio\to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2641, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1033, in run
+    result = context.run(func, *args)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\app\routers\questionnaire.py", line 202, in analyze
+    return evaluate(body,db,user,row,'questionnaire-analyze',fp)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\app\routers\questionnaire.py", line 121, in evaluate
+    messages=prompts.build_panel_messages([{'role':'user','content':json.dumps(selected,ensure_ascii=False)}])
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\app\prompts\onboarding.py", line 105, in build_panel_messages
+    lines.append(f"�ʣ�{turn['question']}\n��{turn['answer']}")
+                        ~~~~^^^^^^^^^^^^
+KeyError: 'question'
+
+======================================================================
+ERROR: test_A22_price_late_background_revocation_cannot_create_item (tests.test_daily_use_redesign.DailyUseTests.test_A22_price_late_background_revocation_cannot_create_item)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\tests\test_daily_use_redesign.py", line 271, in test_A22_price_late_background_revocation_cannot_create_item
+    with patch('app.services.llm_service.llm_service.chat_json',side_effect=revoke):result=self.write('/reward-quotes',{'name':'���ܽ�������'})
+                                                                                           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\tests\test_full_system.py", line 20, in write
+    return self.client.request(method,'/api'+path,json={'request_key':key or str(uuid4()),'expected_version':version,**(body or {})})
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\testclient.py", line 455, in request
+    return super().request(
+           ~~~~~~~~~~~~~~~^
+        method,
+        ^^^^^^^
+    ...<11 lines>...
+        extensions=extensions,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\httpx2\_client.py", line 797, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\httpx2\_client.py", line 980, in send
+    response = self._send_handling_auth(
+        request,
+    ...<2 lines>...
+        history=[],
+    )
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\httpx2\_client.py", line 1008, in _send_handling_auth
+    response = self._send_handling_redirects(
+        request,
+        follow_redirects=follow_redirects,
+        history=history,
+    )
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\httpx2\_client.py", line 1043, in _send_handling_redirects
+    response = self._send_single_request(request)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\httpx2\_client.py", line 1076, in _send_single_request
+    response = transport.handle_request(request)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\testclient.py", line 354, in handle_request
+    raise exc
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\testclient.py", line 351, in handle_request
+    portal.call(self.app, scope, receive, send)
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\anyio\from_thread.py", line 338, in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\19687\.workbuddy\binaries\python\versions\3.13.12\Lib\concurrent\futures\_base.py", line 460, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\19687\.workbuddy\binaries\python\versions\3.13.12\Lib\concurrent\futures\_base.py", line 402, in __get_result
+    raise self._exception
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\anyio\from_thread.py", line 263, in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\applications.py", line 1163, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\applications.py", line 96, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\middleware\errors.py", line 186, in __call__
+    raise exc
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\middleware\cors.py", line 96, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\middleware\cors.py", line 154, in simple_response
+    await self.app(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\routing.py", line 670, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\routing.py", line 2734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\routing.py", line 1780, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\routing.py", line 2789, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\routing.py", line 1800, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\routing.py", line 1279, in handle
+    await app(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\routing.py", line 158, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\routing.py", line 144, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\routing.py", line 706, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\fastapi\routing.py", line 354, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\starlette\concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\anyio\to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2641, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1033, in run
+    result = context.run(func, *args)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\app\services\ai_context.py", line 101, in wrapped
+    try:return function(*args,**kwargs)
+               ~~~~~~~~^^^^^^^^^^^^^^^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\app\routers\reward_quotes.py", line 137, in quote
+    priced=shop_service.price_item(db,user,detail,body.price_yuan)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\app\services\shop_service.py", line 151, in price_item
+    llm_config.assert_current(db, config)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\app\services\llm_config.py", line 147, in assert_current
+    ai_context.assert_current(db)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\app\services\ai_context.py", line 47, in assert_current
+    elif not valid(db,context['sources'],context['user_id']) or background(db,context['user_id'])!=context['background']:raise ValueError('AI_SOURCES_CHANGED')
+                                                                                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: AI_SOURCES_CHANGED
+
+======================================================================
+ERROR: test_A30_optional_archives_and_no_lease_token_export (tests.test_daily_use_redesign.DailyUseTests.test_A30_optional_archives_and_no_lease_token_export)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.IntegrityError: FOREIGN KEY constraint failed
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\tests\test_daily_use_redesign.py", line 294, in test_A30_optional_archives_and_no_lease_token_export
+    db.add(PricingCheck(user_id=self.user_id(),item_id=item.id,local_date=str(local_day(utc_now(),'Asia/Shanghai')),request_key=str(uuid4()),state='running',lease_token='EXPORT_LEASE_SECRET'));db.commit()
+                                                                                                                                                                                                 ~~~~~~~~~^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2035, in commit
+    trans.commit(_to_root=True)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "<string>", line 2, in commit
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1316, in commit
+    self._prepare_impl()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1290, in _prepare_impl
+    self.session.flush()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4353, in flush
+    self._flush(objects)
+    ~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4488, in _flush
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 4449, in _flush
+    flush_context.execute()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 465, in execute
+    rec.execute(self)
+    ~~~~~~~~~~~^^^^^^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py", line 641, in execute
+    util.preloaded.orm_persistence.save_obj(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self.mapper,
+        ^^^^^^^^^^^^
+        uow.states_for_mapper_hierarchy(self.mapper, False, False),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        uow,
+        ^^^^
+    )
+    ^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 94, in save_obj
+    _emit_insert_statements(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        base_mapper,
+        ^^^^^^^^^^^^
+    ...<3 lines>...
+        insert,
+        ^^^^^^^
+    )
+    ^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\orm\persistence.py", line 1234, in _emit_insert_statements
+    result = connection.execute(
+        statement,
+        params,
+        execution_options=execution_options,
+    )
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1421, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1643, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2365, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\.venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) FOREIGN KEY constraint failed
+[SQL: INSERT INTO pricing_checks (user_id, item_id, local_date, version, state, request_key, lease_token, started_at, completed_at, error_code, quote_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: (2, 1, '2026-10-21', 1, 'running', '5fdd3ca6-62d8-42d1-918f-524e1b563db0', 'EXPORT_LEASE_SECRET', None, None, None, None)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+======================================================================
+FAIL: test_A15_A16_A17_A18_per_fact_threshold_supplement_and_first_record_independent (tests.test_daily_use_redesign.DailyUseTests.test_A15_A16_A17_A18_per_fact_threshold_supplement_and_first_record_independent)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\19687\Desktop\��Ϸ����\work_place\my-life-rpg\tests\test_daily_use_redesign.py", line 161, in test_A15_A16_A17_A18_per_fact_threshold_supplement_and_first_record_independent
+    self.assertEqual(note.status_code,200,note.text)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 422 != 200 : {"detail":[{"type":"extra_forbidden","loc":["body","event_version"],"msg":"Extra inputs are not permitted","input":1}]}
+
+----------------------------------------------------------------------
+Ran 17 tests in 15.065s
+
+FAILED (failures=1, errors=3)

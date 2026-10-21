@@ -1,0 +1,1 @@
+{"origin": "http://127.0.0.1:54227", "guard": "581c6269-daf0-4269-843a-db271ae89eda", "database": "temporary synthetic SQLite", "supplier": "fake model callable; actual messages captured", "transport": "HTTP loopback to HTTPS TestClient; no real TLS/browser cookie claim", "lifespan": "NOT_RUN"}

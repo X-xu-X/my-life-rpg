@@ -1,0 +1,2 @@
+﻿id,kind,content_date,version,title,original,questions_answers_json,analyses_json,deleted,saved_on,saved_timezone,source,ai_permission,time_precision,created_at
+1,event,2026-10-21,1,原文可读,原文可读,"{""turns"": [[]], ""supplements"": []}","{""reviews"": [[]], ""judgments"": [], ""fact_bundles"": [], ""fact_fragments"": []}",False,2026-10-21,Asia/Shanghai,form,allowed,date,2026-10-21T07:26:45.233562+00:00

@@ -1,0 +1,13 @@
+test_A01_controlled_diagnostics_and_provider_specific_request (tests.test_daily_use_redesign.DailyUseTests.test_A01_controlled_diagnostics_and_provider_specific_request) ... ok
+test_A04_A09_personal_background_permissions_delete_and_no_financial_writes (tests.test_daily_use_redesign.DailyUseTests.test_A04_A09_personal_background_permissions_delete_and_no_financial_writes) ... ok
+test_A06_A08_A09_questionnaire_once_readonly_history_and_neutral_exit (tests.test_daily_use_redesign.DailyUseTests.test_A06_A08_A09_questionnaire_once_readonly_history_and_neutral_exit) ... ok
+test_A07_personalized_followups_are_bounded_and_skips_not_resent (tests.test_daily_use_redesign.DailyUseTests.test_A07_personalized_followups_are_bounded_and_skips_not_resent) ... ok
+test_A12_A13_optional_minutes_project_reclassification_preserves_identity (tests.test_daily_use_redesign.DailyUseTests.test_A12_A13_optional_minutes_project_reclassification_preserves_identity) ... ok
+test_A19_A21_auto_price_initial_integer_bounds_no_default_goods (tests.test_daily_use_redesign.DailyUseTests.test_A19_A21_auto_price_initial_integer_bounds_no_default_goods) ... ok
+test_A26_preferences_are_server_owned_and_new_sessions_distinct (tests.test_daily_use_redesign.DailyUseTests.test_A26_preferences_are_server_owned_and_new_sessions_distinct) ... ok
+test_A28_important_days_cross_year_leap_day_and_invalid_date (tests.test_daily_use_redesign.DailyUseTests.test_A28_important_days_cross_year_leap_day_and_invalid_date) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 5.401s
+
+OK

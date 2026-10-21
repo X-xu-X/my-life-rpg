@@ -1,6 +1,6 @@
 import hashlib,json
 from datetime import datetime
-from decimal import Decimal,ROUND_HALF_UP
+from decimal import Decimal,ROUND_CEILING,ROUND_FLOOR
 from typing import Literal
 from fastapi import APIRouter,Depends,HTTPException
 from pydantic import Field
@@ -36,63 +36,131 @@ class QuoteIn(WriteIn):
     description:str=Field('',max_length=2000)
     item_id:int|None=None
     item_version:datetime|None=None
+    auto_check:bool=False
 
 @router.get('/reward-quotes')
 def read(db:Session=Depends(get_db)):
     user=get_or_create_default_user(db)
     return {'items':[fields(q) for q in db.query(PricingQuote).filter_by(user_id=user.id).order_by(PricingQuote.id.desc()).limit(30).all()]}
 
+
+@router.get('/pricing-checks')
+def checks(db:Session=Depends(get_db)):
+    from app.models.daily_use import PricingCheck
+    user=get_or_create_default_user(db)
+    return {'items':[fields(r) for r in db.query(PricingCheck).filter_by(user_id=user.id).order_by(PricingCheck.id.desc()).limit(30).all()]}
+
+
+@router.post('/pricing-checks')
+def check_prices(body:WriteIn,db:Session=Depends(get_db)):
+    from app.services.pricing_checks import enqueue
+    user=get_or_create_default_user(db);fp,prior=begin(db,user,'pricing-checks',body,create=True)
+    if prior is not None:return prior
+    result=enqueue(db,user)
+    from app.models import UserProfile
+    resource=db.query(UserProfile).filter_by(user_id=user.id).one()
+    return finish(db,user,'pricing-checks',body,fp,resource,result)
+
+
+@router.post('/pricing-checks/{check_id}/retry')
+def retry_check(check_id:int,body:WriteIn,db:Session=Depends(get_db)):
+    from app.models.daily_use import PricingCheck
+    from uuid import uuid4
+    user=get_or_create_default_user(db);op=f'pricing-retry:{check_id}';fp,prior=begin(db,user,op,body)
+    if prior is not None:return prior
+    row=get_owned(db,PricingCheck,check_id);version(row,body.expected_version)
+    if row.state!='failed' or row.version>=6 or row.local_date!=trial_rules.day(db,user):raise HTTPException(409,'仅可主动重试今天的失败检查一次；不会无限调用模型。')
+    row.state='queued';row.request_key=str(uuid4());row.error_code=None;row.lease_token=None;row.version+=1;db.flush()
+    return finish(db,user,op,body,fp,row,fields(row))
+
+
+def bounded_price(current,proposed):
+    lower=max(1,int((Decimal(current)*Decimal('0.8')).to_integral_value(rounding=ROUND_CEILING)))
+    upper=max(1,int((Decimal(current)*Decimal('1.2')).to_integral_value(rounding=ROUND_FLOOR)))
+    return max(lower,min(upper,proposed)),[lower,upper]
+
+
+def apply_quote(db,user,row):
+    from app.services.time_service import utc_now,local_day
+    from app.services.pricing_checks import assert_lease
+    assert_lease(db)
+    today=trial_rules.day(db,user)
+    quote_day=row.context.get('day') or str(local_day(row.created_at,user.timezone))
+    if row.state!='suggested' or quote_day!=today or analysis_jobs.configuration(db,user.id)!=row.context['config'] or not ai_context.valid(db,row.context['sources'],user.id) or ai_context.background(db,user.id)!=row.context['background']:
+        raise HTTPException(409,'价格建议、日期或授权背景已变化，请重新定价。')
+    if economy_context(db,user)!=row.context['economy']:raise HTTPException(409,'收入、目标或确认使用量已变化，请重新定价。')
+    item=get_owned(db,ShopItem,row.item_id) if row.item_id else None
+    if item:
+        db.refresh(item)
+        if item.updated_at.isoformat()!=row.context['item_version'] or item.repriced_on==today:raise HTTPException(409,'商品已变化或今天已经更新价格。')
+        price,bounds=bounded_price(max(1,item.coin_price),row.result['coin_price'])
+        row.result={**row.result,'model_price':row.result['coin_price'],'coin_price':price,'bounds':bounds}
+    else:
+        item=ShopItem(user_id=user.id,name=row.payload['name'],kind='custom',reward_kind=row.payload['reward_kind'],
+            duration_seconds=row.payload['minutes']*60 if row.payload['reward_kind']=='entertainment' else None,
+            price_yuan=row.payload['price_yuan'],base_coin_price=row.result['coin_price'],description=row.payload.get('description',''),auto_pricing=row.payload.get('auto_check',False))
+        db.add(item);db.flush();row.item_id=item.id
+    item.coin_price=row.result['coin_price'];item.pricing_reason=row.result['pricing_reason'];item.worth_note=row.result['worth_note']
+    item.priced_at=utc_now();item.repriced_on=today
+    row.state='accepted';row.version+=1;db.flush()
+    return item
+
+
 @router.post('/reward-quotes')
 @model_context
 def quote(body:QuoteIn,db:Session=Depends(get_db)):
+    from app.services.transactions import lock_profile
+    from app.services import receipts
+    from app.services.pricing_checks import assert_lease
     user=get_or_create_default_user(db);op='reward-quote';fp,prior=begin(db,user,op,body,create=True)
     if prior is not None:return prior
+    assert_lease(db)
+    existing=db.query(PricingQuote).filter_by(user_id=user.id,request_key=str(body.request_key)).first()
+    if existing:
+        if existing.fingerprint!=fp:raise HTTPException(409,'同一价格请求的内容已变化。')
+        if existing.state=='accepted':
+            item=get_owned(db,ShopItem,existing.item_id)
+            return finish(db,user,op,body,fp,existing,{**fields(existing),'item':fields(item)})
+        raise HTTPException(409 if existing.state=='running' else 503,'定价仍在进行或上次请求已结束；请查看记录，失败后保留草稿再主动重试。')
     item=get_owned(db,ShopItem,body.item_id) if body.item_id else None
-    if item and body.item_version!=item.updated_at:raise HTTPException(409,'商品已更新。')
+    if item and (body.item_version!=item.updated_at or not item.enabled or item.repriced_on==trial_rules.day(db,user)):raise HTTPException(409,'商品已更新、停用或今天已处理价格，请刷新后查看。')
     versions=analysis_jobs.configuration(db,user.id);item_version=item.updated_at.isoformat() if item else None;economic=economy_context(db,user)
+    # Persist the request before the paid call: same-key concurrent/unknown retries
+    # see running/failed instead of calling the supplier a second time.
+    row=PricingQuote(user_id=user.id,item_id=item.id if item else None,state='running',request_key=str(body.request_key),fingerprint=fp,
+        payload=body.model_dump(mode='json',exclude={'request_key','expected_version'}),result={},
+        context={'config':versions,'item_version':item_version,'day':trial_rules.day(db,user),'sources':ai_context.sources(),
+            'background':ai_context.CURRENT.get()['background'],'economy':economic,'automatic_permission':body.auto_check})
+    db.add(row);db.flush();row_id=row.id;db.commit()
     detail=body.name+('；每次 '+str(body.minutes)+' 分钟' if body.reward_kind=='entertainment' else '')+'；'+body.description
-    try:priced=shop_service.price_item(db,user,detail,body.price_yuan)
+    try:
+        priced=shop_service.price_item(db,user,detail,body.price_yuan)
+        lock_profile(db,user.id);assert_lease(db)
+        db.refresh(row)
+        row.result=priced;row.state='suggested'
+        applied=apply_quote(db,user,row)
+        return finish(db,user,op,body,fp,row,{**fields(row),'item':fields(applied)})
     except Exception as exc:
+        db.rollback();lock_profile(db,user.id)
+        failed=db.query(PricingQuote).filter_by(id=row_id,state='running').first()
+        if failed:
+            from app.services.model_validation import controlled_error
+            code='CONTEXT_CHANGED' if isinstance(exc,ValueError) and str(exc)=='AI_SOURCES_CHANGED' else controlled_error(exc)[0] if not isinstance(exc,HTTPException) else 'CONTEXT_CHANGED' if exc.status_code==409 else 'PRICING_FAILED'
+            failed.state='failed';failed.result={'error_code':code};failed.version+=1;db.commit()
         from app.services.llm_service import LLMError
         if isinstance(exc,LLMError):raise HTTPException(503,str(exc)) from None
+        if isinstance(exc,ValueError) and str(exc)=='AI_SOURCES_CHANGED':raise HTTPException(409,'资料或用途许可已变化，旧价格结果不应用。') from None
         raise
-    from app.services.transactions import lock_profile
-    lock_profile(db,user.id)
-    if analysis_jobs.configuration(db,user.id)!=versions:raise HTTPException(409,'模型配置已变化。')
-    if economy_context(db,user)!=economic:raise HTTPException(409,'确认收入、购买、使用或主线背景已变化，请重新定价。')
-    from app.services import receipts
-    fp,prior=receipts.replay(db,user.id,op,body,require_version=False)
-    if prior is not None:return prior
-    if item:
-        db.refresh(item)
-        if item.updated_at.isoformat()!=item_version:raise HTTPException(409,'商品已更新，请重试。')
-        current=max(1,item.coin_price)
-        lower=max(1,int((Decimal(current)*Decimal('0.8')).quantize(Decimal('1'),rounding=ROUND_HALF_UP)))
-        upper=max(1,int((Decimal(current)*Decimal('1.2')).quantize(Decimal('1'),rounding=ROUND_HALF_UP)))
-        priced={**priced,'model_price':priced['coin_price'],'coin_price':max(lower,min(upper,priced['coin_price'])),'bounds':[lower,upper]}
-    row=PricingQuote(user_id=user.id,item_id=item.id if item else None,request_key=str(body.request_key),fingerprint=fp,
-        payload=body.model_dump(mode='json',exclude={'request_key','expected_version'}),result=priced,
-        context={'config':versions,'item_version':item_version,'sources':ai_context.sources(),'background':ai_context.CURRENT.get()['background'],'economy':economic})
-    db.add(row);db.flush()
-    return finish(db,user,op,body,fp,row,fields(row))
+
 
 @router.post('/reward-quotes/{quote_id}/accept')
 def accept(quote_id:int,body:WriteIn,db:Session=Depends(get_db)):
     user=get_or_create_default_user(db);op=f'reward-accept:{quote_id}';fp,prior=begin(db,user,op,body)
     if prior is not None:return prior
-    row=get_owned(db,PricingQuote,quote_id);version(row,body.expected_version)
-    if row.state!='suggested' or analysis_jobs.configuration(db,user.id)!=row.context['config'] or not ai_context.valid(db,row.context['sources'],user.id) or ai_context.background(db,user.id)!=row.context['background']:raise HTTPException(409,'建议或背景已变化，请重新定价。')
-    if economy_context(db,user)!=row.context['economy']:raise HTTPException(409,'确认收入或使用背景已变化，请重新定价。')
-    item=get_owned(db,ShopItem,row.item_id) if row.item_id else None
-    today=trial_rules.day(db,user)
-    if item:
-        if item.updated_at.isoformat()!=row.context['item_version'] or item.repriced_on==today:raise HTTPException(409,'商品已变化或今天已应用 AI 改价。')
-        item.repriced_on=today
-    else:
-        item=ShopItem(user_id=user.id,name=row.payload['name'],kind='custom',reward_kind=row.payload['reward_kind'],
-            duration_seconds=row.payload['minutes']*60 if row.payload['reward_kind']=='entertainment' else None,price_yuan=row.payload['price_yuan'],base_coin_price=row.result['coin_price'])
-        db.add(item);db.flush();row.item_id=item.id
-    item.coin_price=row.result['coin_price'];item.pricing_reason=row.result['pricing_reason'];item.worth_note=row.result['worth_note']
-    row.state='accepted';row.version+=1
-    db.flush()
+    row=get_owned(db,PricingQuote,quote_id)
+    # Compatibility for old clients receiving an already auto-applied result.
+    if row.state=='accepted':
+        item=get_owned(db,ShopItem,row.item_id)
+        return finish(db,user,op,body,fp,row,{'quote':fields(row),'item':fields(item)})
+    version(row,body.expected_version);item=apply_quote(db,user,row)
     return finish(db,user,op,body,fp,row,{'quote':fields(row),'item':fields(item)})

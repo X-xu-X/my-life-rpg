@@ -273,15 +273,13 @@ def format_event_description(event: Event, item_context: str = "") -> str:
     return "\n".join(lines)
 
 
-def _profile_context(db: Session, user_id: int) -> str:
+def _profile_context(db: Session, user_id: int, purpose=None) -> str:
     """提取用户画像背景，辅助 AI 判断事件相对水平（可选）。"""
     from app.models import UserProfile
 
-    profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
-    from app.models.full_system import PersonalPhase
-    phase=db.query(PersonalPhase).filter_by(user_id=user_id).first()
-    background={'profile':profile.basic_profile if profile else {}}
-    if phase and phase.payload.get('ai_allowed'):background['phase']=phase.payload
+    from app.services.personal_context import background as selected_background
+    from app.services.ai_context import CURRENT
+    background=selected_background(db,user_id,purpose or (CURRENT.get() or {}).get('purpose','judge'))
     return json.dumps(background,ensure_ascii=False)
 
 
@@ -360,6 +358,12 @@ def _parse_confidence(raw) -> float:
     except (TypeError, ValueError, OverflowError):
         return 0.0
     return value if math.isfinite(value) and 0 <= value <= 1 else 0.0
+
+
+def _model_confidence(raw):
+    if type(raw) not in (int,float) or not math.isfinite(raw) or not 0<=raw<=1:
+        raise LLMError('MODEL_INVALID_RESPONSE：置信度须为0到1的有限数值，不能缺省或使用布尔值。')
+    return float(raw)
 
 
 def _parse_changes(raw_changes, extra_names: set[str] | None = None) -> list[dict]:
@@ -598,7 +602,7 @@ def judge_event(db: Session, event: Event, clarification: str = "", *, before_wr
         current.suggested_changes = changes
         current.analysis = result.get("analysis", [])
         current.summary = summary
-        current.confidence = _parse_confidence(result.get("confidence"))
+        current.confidence = _model_confidence(result.get("confidence"))
         current.confidence_reason = str(result.get("confidence_reason", ""))
         current.revision_notes = _parse_revision_notes(result.get("revision_notes"))  # v1.6：本次修订说明
         current.merged_with = merged_with  # v1.7
@@ -633,7 +637,7 @@ def judge_event(db: Session, event: Event, clarification: str = "", *, before_wr
             suggested_changes=changes,
             analysis=result.get("analysis", []),  # v1.1：AI 分析过程（推理链路）
             summary=summary,
-            confidence=_parse_confidence(result.get("confidence")),
+            confidence=_model_confidence(result.get("confidence")),
             confidence_reason=str(result.get("confidence_reason", "")),  # v1.4：置信度说明
             revision_notes=[],  # v1.6：首判无修订
             merged_with=merged_with, model_provenance=provenance(config),  # v1.7：跨来源合并明细
@@ -868,7 +872,7 @@ def supplement(db: Session, judgment: AIJudgment, detail: str, *, before_write=N
     if exemption_hit:
         summary = (summary + "\n" + _exemption_note(exemption_hit)).strip()
     judgment.summary = summary
-    judgment.confidence = _parse_confidence(result.get("confidence"))
+    judgment.confidence = _model_confidence(result.get("confidence"))
     judgment.confidence_reason = str(result.get("confidence_reason", ""))  # v1.4：补充重判后同步更新
     judgment.revision_notes = _parse_revision_notes(result.get("revision_notes"))  # v1.6：本次修订说明
     judgment.merged_with = _parse_merged_with(result.get("merged_with"))  # v1.7
@@ -976,7 +980,7 @@ def dispute(db: Session, judgment: AIJudgment, detail: str, *, before_write=None
             payload={"result": result},
         )
 
-    judgment.confidence = _parse_confidence(result.get("confidence"))
+    judgment.confidence = _model_confidence(result.get("confidence"))
     if commit_result:
         db.commit()
     else:

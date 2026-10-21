@@ -50,12 +50,18 @@ def assert_current(db=None):
 def background(db,user_id):
     from app.models import UserProfile
     from app.models.full_system import PersonalPhase,CareConfig,CareItem
+    from app.models.daily_use import PersonalInformation,ReturnCheckin
     profile=db.query(UserProfile).filter_by(user_id=user_id).populate_existing().first()
     phase=db.query(PersonalPhase).filter_by(user_id=user_id).populate_existing().first()
     care=db.query(CareConfig).filter_by(user_id=user_id).populate_existing().first()
     items=[(i.id,i.version) for i in db.query(CareItem).filter_by(user_id=user_id).order_by(CareItem.id).all()]
+    voluntary=db.query(PersonalInformation).filter_by(user_id=user_id).populate_existing().first()
+    recent=db.query(ReturnCheckin).filter_by(user_id=user_id).populate_existing().first()
+    from app.models import Goal
+    from app.models.policies import Mainline
+    mains=[(m.id,m.version,g.id,g.updated_at.isoformat()) for m,g in db.query(Mainline,Goal).join(Goal,Goal.id==Mainline.goal_id).filter(Mainline.user_id==user_id,Mainline.active.is_(True)).order_by(Mainline.id).all()]
     return hashlib.sha256(json.dumps({'profile':profile.basic_profile if profile else None,'phase_version':phase.version if phase else None,
-        'care_version':care.version if care else None,'care_items':items},sort_keys=True,ensure_ascii=False).encode()).hexdigest()
+        'care_version':care.version if care else None,'care_items':items,'information_version':voluntary.version if voluntary else None,'return_version':recent.version if recent else None,'mainlines':mains},sort_keys=True,ensure_ascii=False).encode()).hexdigest()
 
 
 def sources():
@@ -84,7 +90,9 @@ def model_context(function):
         supplied=(event.content if event else '')+' '+str(bound.get('note',''))
         safe_children=[a.id for a in db.query(Attribute).filter(Attribute.user_id==user_id,Attribute.parent_id.is_not(None)).all()
             if valid(db,a.ai_sources,user_id) or a.name in supplied]
-        context={'user_id':user_id,'bind':db.get_bind(),'sources':snapshot(db,user_id),'background':background(db,user_id),'safe_children':safe_children}
+        module=function.__module__
+        purpose='pricing' if 'shop' in module or 'reward_quote' in module else 'report' if 'report' in module else 'review' if 'diary_review' in module else 'judge'
+        context={'user_id':user_id,'bind':db.get_bind(),'sources':snapshot(db,user_id),'background':background(db,user_id),'safe_children':safe_children,'purpose':purpose}
         if db.info.get('analysis_job_id'):
             from app.models.analysis import AnalysisJob
             job=db.get(AnalysisJob,db.info['analysis_job_id'])

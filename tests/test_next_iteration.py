@@ -144,6 +144,8 @@ class CloudTests(unittest.TestCase):
             db.add(m.JudgmentLog(user_id=friend,judgment_id=judgment.id,action='create',detail='禁止泄漏的审计'))
             challenge=m.Challenge(user_id=friend,scope='daily',period_key='2026-10-09',title='私密挑战',status='accepted',event_id=event['id'],judgment_id=judgment.id)
             item=db.query(m.ShopItem).filter_by(user_id=friend).first()
+            if item is None:
+                item=m.ShopItem(user_id=friend,name='已有奖励夹具',coin_price=23);db.add(item);db.flush()
             redemption=m.Redemption(user_id=friend,shop_item_id=item.id,status='pending')
             attribute=db.query(m.Attribute).filter_by(user_id=friend).first()
             report=GrowthReport(user_id=friend,period='week',timezone='Asia/Shanghai',payload={'private':'禁止泄漏的报告'})

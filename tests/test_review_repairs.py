@@ -139,7 +139,7 @@ class ReviewRepairTests(unittest.TestCase):
         response=self.write('/timers',{'kind':'plan','source_id':plan['id'],'source_version':1})
         self.assertEqual(response.status_code,200,response.text);self.assertEqual(response.json()['limit_seconds'],1800)
         # A lost accepted pre-upgrade request still returns its original receipt.
-        key=str(uuid4());payload=StartIn(request_key=key,expected_version=0,kind='plan',source_id=plan['id']).model_dump(mode='json');payload.pop('source_version')
+        key=str(uuid4());payload=StartIn(request_key=key,expected_version=0,kind='plan',source_id=plan['id']).model_dump(mode='json');payload.pop('source_version');payload.pop('source_type')
         fingerprint=hashlib.sha256(json.dumps(payload,sort_keys=True).encode()).hexdigest()
         with self.Session() as db:
             db.add(RequestReceipt(user_id=self.user_id(),operation='timer-start',request_key=key,payload_hash=fingerprint,resource_id=987,response_snapshot={'id':987,'limit_seconds':1800}));db.commit()

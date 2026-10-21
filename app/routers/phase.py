@@ -31,22 +31,25 @@ class HolidayIn(WriteIn):
 
 def holiday_rows(db,user):
     config=trial_rules.account(db,user)
-    if not config or not config.enabled or not config.region:return []
-    return db.query(Holiday).filter_by(local_date=trial_rules.day(db,user),region=config.region,enabled=True).order_by(Holiday.id).all()
+    if not config or not config.enabled:return []
+    return db.query(Holiday).filter_by(local_date=trial_rules.day(db,user),region=config.region or 'CN',enabled=True).order_by(Holiday.id).all()
 
 @router.get('/phase')
 def read(db:Session=Depends(get_db)):
     user=get_or_create_default_user(db);row=db.query(PersonalPhase).filter_by(user_id=user.id).first();now=utc_now()
-    latest=db.query(Event).filter_by(user_id=user.id).order_by(Event.created_at.desc()).first()
+    latest=db.query(Event).filter(Event.user_id==user.id,Event.is_deleted.is_(False),Event.record_kind.in_(('event','diary'))).order_by(Event.created_at.desc()).first()
     last=latest.created_at if latest else user.created_at
     from app.services.time_service import zone
     if last.tzinfo is None:last=last.replace(tzinfo=zone('Asia/Shanghai'))
     created=user.created_at
     if created.tzinfo is None:created=created.replace(tzinfo=zone('Asia/Shanghai'))
     from app.services.time_service import clock_now
-    recent_count=db.query(Event.id).filter(Event.user_id==user.id,Event.is_deleted.is_(False),Event.created_at>=clock_now()-timedelta(days=RETURN_POLICY['window_days'])).count()
+    recent_count=db.query(Event.id).filter(Event.user_id==user.id,Event.record_kind.in_(('event','diary')),Event.is_deleted.is_(False),Event.created_at>=clock_now()-timedelta(days=RETURN_POLICY['window_days'])).count()
     sparse=bool(user.last_login_at and user.last_login_at>=now-timedelta(days=RETURN_POLICY['recent_login_days']) and recent_count<=RETURN_POLICY['sparse_max_records'])
     eligible=(now-last>=timedelta(days=RETURN_POLICY['window_days']) or sparse) and now-created>=timedelta(days=RETURN_POLICY['min_account_days']) and (not row or not row.return_cooldown_until or now>=row.return_cooldown_until)
+    from app.models.daily_use import ExperiencePreference
+    preference=db.query(ExperiencePreference).filter_by(user_id=user.id).first()
+    eligible=eligible and user.role!='owner' and not (preference and preference.return_disabled)
     return {'phase':fields(row) if row else None,'return_prompt':eligible,'return_policy':RETURN_POLICY,'return_window_days':RETURN_POLICY['window_days'],'cooldown_days':RETURN_POLICY['cooldown_days'],
         'holidays':[fields(h) for h in holiday_rows(db,user)],'holiday_claimed':bool(db.query(HolidayClaim).filter_by(user_id=user.id,local_date=trial_rules.day(db,user)).first())}
 
@@ -56,7 +59,7 @@ def save(body:PhaseIn,db:Session=Depends(get_db)):
     if prior is not None:return prior
     row=db.query(PersonalPhase).filter_by(user_id=user.id).first();version(row,body.expected_version)
     if not row:row=PersonalPhase(user_id=user.id,version=0,history=[]);db.add(row)
-    if not body.skip_return:row.payload=body.model_dump(mode='json',exclude={'request_key','expected_version','skip_return'})
+    if not body.skip_return:row.payload={**(row.payload or {}),**body.model_dump(mode='json',exclude={'request_key','expected_version','skip_return'})}
     row.pending=None
     row.return_cooldown_until=utc_now()+timedelta(days=RETURN_POLICY['cooldown_days']);row.version+=1
     row.history=[*row.history,{'version':row.version,'skipped':body.skip_return,'payload':row.payload,'return_policy':RETURN_POLICY,'at':utc_now().isoformat()}]
@@ -76,17 +79,23 @@ def analyze_phase(body:WriteIn,db:Session=Depends(get_db)):
     row=db.query(PersonalPhase).filter_by(user_id=user.id).first();version(row,body.expected_version)
     if not row or not row.payload.get('ai_allowed'):raise HTTPException(409,'请先保存并明确授权本次阶段背景。')
     captured=row.version
+    from app.services import ai_context,analysis_jobs
+    from app.services.personal_context import background
+    signature=ai_context.background(db,user.id);models=analysis_jobs.configuration(db,user.id)
     try:config=llm_config.resolve_llm_config(db,user.id,llm_config.PURPOSE_JUDGE)
     except LLMError as exc:raise HTTPException(503,str(exc)) from None
     messages=[{'role':'system','content':'仅基于本次近期阶段建议未来娱乐约定。不要推定临考、不要改变已开始合同。必要休息免费，不凭负面情绪扣币。返回JSON {"mode":"gentle或strict或strong","reason":"可核对依据与不确定性"}。温和默认；strong仅建议未来明确接受后每5分钟4币、单次20每日30，宽限3分钟。'},
-        {'role':'user','content':json.dumps(row.payload,ensure_ascii=False)}];db.commit()
+        {'role':'user','content':json.dumps(background(db,user.id,'judge'),ensure_ascii=False)}]
+    from app.services.model_dispatch import mark
+    mark(db,user,'phase-analyze',body,fp)
     try:result=llm_service.chat_json(messages,config=config)
     except LLMError as exc:raise HTTPException(503,str(exc)) from None
     from app.services.transactions import lock_profile
     lock_profile(db,user.id);llm_config.assert_current(db,config);db.refresh(row)
-    if row.version!=captured:raise HTTPException(409,'阶段或许可已变化。')
+    if row.version!=captured or ai_context.background(db,user.id)!=signature:raise HTTPException(409,'阶段、主线或许可已变化。')
     if result.get('mode') not in ('gentle','strict','strong') or not isinstance(result.get('reason'),str) or not result['reason'].strip():raise HTTPException(422,'未生成有效约定建议。')
     row.pending={'mode':result['mode'],'reason':result['reason'][:2000],'model':config.model};row.version+=1;db.flush()
+    row.pending={**row.pending,'context':{'background':ai_context.background(db,user.id),'config':models}}
     return finish(db,user,'phase-analyze',body,fp,row,fields(row))
 
 @router.post('/phase/accept-constraint')
@@ -95,6 +104,9 @@ def accept_constraint(body:ConstraintIn,db:Session=Depends(get_db)):
     if prior is not None:return prior
     row=db.query(PersonalPhase).filter_by(user_id=user.id).first();version(row,body.expected_version)
     if not row or not row.pending or not body.acknowledge:raise HTTPException(422,'需明确接受当前建议，仅用于未来开始的会话。')
+    from app.services import ai_context,analysis_jobs
+    context=row.pending.get('context')
+    if not context or ai_context.background(db,user.id)!=context['background'] or analysis_jobs.configuration(db,user.id)!=context['config']:raise HTTPException(409,'原建议缺少当前来源或背景已变化，请重新生成；旧合同保持不变。')
     row.payload={**row.payload,'accepted_mode':row.pending['mode']};row.history=[*row.history,{'accepted_constraint':row.pending,'at':utc_now().isoformat()}];row.pending=None;row.version+=1;db.flush()
     return finish(db,user,'phase-constraint',body,fp,row,fields(row))
 

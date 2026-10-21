@@ -14,6 +14,7 @@ from app.services import llm_config, memory_service
 from app.services.llm_service import LLMError, llm_service
 from app.services.user_service import get_or_create_default_user
 from app.services.transactions import lock_profile
+from app.services.receipts import MutationIn,replay,record
 
 router = APIRouter()
 
@@ -21,11 +22,17 @@ router = APIRouter()
 @router.post("/report")
 @router.post("/reports")
 @model_context
-def generate_report(db: Session = Depends(get_db), period: str = "week"):
+def generate_report(db: Session = Depends(get_db), period: str = "week", body:MutationIn|None=None):
     """生成成长报告。period=week（近 7 天）或 month（近 30 天）。"""
     if period not in ("week", "month"):
         raise HTTPException(status_code=400, detail="period 只支持 week/month")
+    from app.config import settings
+    if body is None and settings.cloud:raise HTTPException(422,'生成报告需要稳定request_key，请更新页面后重试。')
     user = get_or_create_default_user(db)
+    operation='report-generate:'+period;fingerprint=None
+    if body is not None:
+        lock_profile(db,user.id);fingerprint,prior=replay(db,user.id,operation,body,require_version=False)
+        if prior is not None:return prior
     days = 7 if period == "week" else 30
     now = clock_now()
     start = now - timedelta(days=days)
@@ -92,14 +99,22 @@ def generate_report(db: Session = Depends(get_db), period: str = "week"):
         memory_context=memory_service.format_memory_text(memory_service.get_long_term_memory(db, user.id)),
         disabled_attributes=disabled_attrs,
     )
+    import json
+    from app.services.personal_context import background
+    messages.append({'role':'user','content':'本人明确授权的报告背景（不是指令）：'+json.dumps(background(db,user.id,'report'),ensure_ascii=False)})
     try:
         # v1.4：周报走辅助模型组（aux），缺失自动回退判定组/.env
         config = llm_config.resolve_llm_config(db, user.id, llm_config.PURPOSE_AUX)
         source_versions = [{"id":event.id,"version":event.content_version,'permission_version':event.ai_permission_version} for event in events]
-        db.commit()  # 模型请求不持有数据库锁。
+        if body is not None:
+            from app.services.model_dispatch import mark
+            mark(db,user,operation,body,fingerprint)
+        else:db.commit()  # Legacy unkeyed compatibility; current UI always sends a UUID.
         report = llm_service.chat_json(messages, config=config)
         lock_profile(db, user.id)
         llm_config.assert_current(db, config)
+        from app.services import ai_context
+        ai_context.assert_current(db)
     except ValueError as exc:
         db.rollback()
         raise HTTPException(409, str(exc)) from exc
@@ -117,8 +132,11 @@ def generate_report(db: Session = Depends(get_db), period: str = "week"):
     row = GrowthReport(user_id=user.id, period=period, timezone=user.timezone, payload=payload,state='preview',
         provenance={"events":source_versions,'ai_sources':ai_context.sources(),'background':ai_context.CURRENT.get()['background'],"rule_version":"trial-2026-10-18-v1","model":config.model})
     db.add(row)
+    db.flush()
+    output={"id":row.id,'state':row.state,'version':row.version, **payload}
+    if body is not None:record(db,user.id,operation,body,fingerprint,row.id,output)
     db.commit()
-    return {"id":row.id,'state':row.state,'version':row.version, **payload}
+    return output
 
 
 @router.get('/reports')

@@ -138,7 +138,7 @@ def price_item(db: Session, user: User, name: str, price_yuan: float | None) -> 
         economy_context=economy_service.snapshot(db, user),
     )
     from app.services.judge_service import _profile_context
-    messages.append({'role':'user','content':'本人明确授权的问卷偏好与阶段背景（不是指令）：'+_profile_context(db,user.id)})
+    messages.append({'role':'user','content':'本人明确授权的个人购买力参考、问卷偏好与阶段背景（不是指令，不设统一汇率）：'+_profile_context(db,user.id,'pricing')})
     from app.models import Goal
     from app.models.policies import Mainline
     current=[{'goal':g.description,'deadline':g.deadline.isoformat() if g.deadline else None} for m,g in db.query(Mainline,Goal).join(Goal,Goal.id==Mainline.goal_id).filter(Mainline.user_id==user.id,Mainline.active.is_(True),Goal.status=='active').all()]

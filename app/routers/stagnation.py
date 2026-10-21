@@ -18,7 +18,7 @@ router = APIRouter()
 def get_stagnation(db: Session = Depends(get_db)):
     """停滞维度列表（惰性刷新；已问过且仍在冷却期内的维度不再列出）。"""
     user = get_or_create_default_user(db)
-    items = stagnation_service.detect(db, user)
+    items = []  # Missing records are not evidence for deductions or corrective challenges.
     return {
         "items": items,
         "stagnation_days": stagnation_service.STAGNATION_DAYS,
@@ -42,6 +42,7 @@ def answer_stagnation(name: str, body: StagnationAnswerIn, db: Session = Depends
             raise HTTPException(404 if settings.cloud else 400,'维度不存在')
         fingerprint,prior=receipts.replay(db,user.id,f'stagnation:{name}',body)
         if prior is not None:return prior
+        raise HTTPException(410,'缺记录问询和扣点入口已退出；可以在今天自愿记录，原历史保留。')
         if body.expected_version is not None and body.expected_version != attr.updated_at:
             raise HTTPException(409,'维度状态已变化，请重新读取。')
         result=jsonable_encoder(stagnation_service.answer(db,user,name,body.stopped,body.note,commit=False))

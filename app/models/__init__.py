@@ -428,6 +428,9 @@ class ShopItem(Base):
     duration_seconds: Mapped[int | None] = mapped_column(Integer,nullable=True)
     base_coin_price: Mapped[int | None] = mapped_column(BigInteger,nullable=True)
     repriced_on: Mapped[str | None] = mapped_column(String(10),nullable=True)
+    auto_pricing: Mapped[bool] = mapped_column(Boolean,default=False)
+    description: Mapped[str] = mapped_column(Text,default='')
+    priced_at: Mapped[datetime | None] = mapped_column(DateTime,nullable=True)
     kind: Mapped[str] = mapped_column(String(10), default="custom")  # preset/custom
     price_yuan: Mapped[float | None] = mapped_column(Float, nullable=True)  # 现实价格（元）
     coin_price: Mapped[int] = mapped_column(BigInteger, default=0)  # AI 定出的金币价（用户可改）
@@ -535,3 +538,4 @@ import app.models.accounts
 
 import app.models.policies
 import app.models.full_system
+import app.models.daily_use

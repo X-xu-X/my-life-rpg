@@ -27,6 +27,8 @@ def get_attributes(db: Session = Depends(get_db)):
         .all()
     )
     profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
+    snapshot=(profile.initial_attributes_snapshot or {}).get('attributes',[]) if profile else []
+    initial={row['name']:row['value'] for row in snapshot if isinstance(row,dict) and isinstance(row.get('name'),str) and type(row.get('value')) in (int,float)} if isinstance(snapshot,list) else {}
 
     # 维度开关
     hidden = _get_list_setting(db, user.id, "hidden_attributes")
@@ -50,6 +52,7 @@ def get_attributes(db: Session = Depends(get_db)):
                 "description": a.description,
                 "visibility": visibility(a.name),
                 "tier": tier_of(a.current_value),
+                'initial_value':initial.get(a.name),'change_from_initial':a.current_value-initial[a.name] if a.name in initial else None,
             }
             for a in attrs
         ],

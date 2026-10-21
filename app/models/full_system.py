@@ -209,6 +209,11 @@ class Questionnaire(Base):
     version:Mapped[int]=mapped_column(Integer,default=1)
     answers:Mapped[dict]=mapped_column(JSON,default=dict)
     send_groups:Mapped[list]=mapped_column(JSON,default=list)
+    stage:Mapped[str]=mapped_column(String(20),default='basics')
+    question_snapshot:Mapped[list]=mapped_column(JSON,default=list)
+    followups:Mapped[list]=mapped_column(JSON,default=list)
+    history:Mapped[list]=mapped_column(JSON,default=list)
+    uses:Mapped[list]=mapped_column(JSON,default=lambda:['judge','review','report','pricing'])
     preview:Mapped[dict|None]=mapped_column(JSON,nullable=True)
     updated_at:Mapped[datetime]=mapped_column(UTCDateTime,default=utc_now,onupdate=utc_now)
 

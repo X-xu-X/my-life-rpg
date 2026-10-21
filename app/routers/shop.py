@@ -17,11 +17,29 @@ from app.models.access import RequestReceipt
 router = APIRouter()
 
 
+from app.services.receipts import MutationIn
+class AutomaticPricingIn(MutationIn):
+    enabled:bool
+    acknowledge:bool=False
+
+
+@router.post('/shop/items/{item_id}/automatic-pricing')
+def pricing_permission(item_id:int,body:AutomaticPricingIn,db:Session=Depends(get_db)):
+    user=get_or_create_default_user(db);lock_profile(db,user.id);item=_get_item(db,user,item_id);db.refresh(item)
+    op=f'automatic-pricing:{item_id}';fp,prior=receipts.replay(db,user.id,op,body)
+    if prior is not None:return prior
+    if item.updated_at!=body.expected_version:raise HTTPException(409,'奖励已变化，请刷新。')
+    if body.enabled and not body.acknowledge:raise HTTPException(422,'请明确同意有限自动检查会使用本人模型额度。')
+    item.auto_pricing=body.enabled;db.flush();result=_item_out(item)
+    receipts.record(db,user.id,op,body,fp,item.id,jsonable_encoder(result));db.commit();return result
+
+
 def _item_out(it: ShopItem) -> dict:
     return {
         "id": it.id,
         "name": it.name,
         'reward_kind':it.reward_kind,'duration_seconds':it.duration_seconds,'base_coin_price':it.base_coin_price,
+        'auto_pricing':it.auto_pricing,'description':it.description,'priced_at':it.priced_at,'repriced_on':it.repriced_on,
         "kind": it.kind,
         "price_yuan": it.price_yuan,
         "coin_price": it.coin_price,
@@ -45,9 +63,6 @@ def _get_item(db: Session, user, item_id: int) -> ShopItem:
 def list_items(db: Session = Depends(get_db)):
     """物品列表（首次访问时幂等预置常驻物资）。"""
     user = get_or_create_default_user(db)
-    from app.config import settings
-    if not settings.cloud:
-        shop_service.seed_preset_items(db, user)
     rows = (
         db.query(ShopItem)
         .filter(ShopItem.user_id == user.id)
@@ -71,6 +86,7 @@ def update_item(item_id: int, body: ShopItemUpdateIn, db: Session = Depends(get_
     lock_profile(db, user.id)
     db.refresh(it)
     fields = body.model_dump(exclude_unset=True)
+    if fields.get('coin_price') is not None:raise HTTPException(409,'价格由本人模型按受控流程更新；此入口只维护名称、排序和启停。')
 
     if "name" in fields and fields["name"] is not None:
         nm = str(fields["name"]).strip()

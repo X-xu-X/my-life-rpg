@@ -113,7 +113,8 @@ def _collect_legacy(db: Session, user_id: int) -> dict:
 
 
 EXPORT_WORKFLOW_TABLES = ['diary_revisions','review_sessions','review_turns','review_analyses','life_checklists','plan_schedules','plan_occurrences','fact_identities','event_facts','fact_settlements','fact_relations','mainlines','reward_previews','mainline_awards','dynamic_candidates','dynamic_awards','ai_preferences']
-FULL_SYSTEM_TABLES=['trial_accounts','daily_entitlements','fact_fragments','fact_bundles','fact_notes','action_awards','care_configs','care_items','care_entries','pricing_quotes','voucher_allowances','time_sessions','personal_phases','holiday_claims']
+FULL_SYSTEM_TABLES=['trial_accounts','daily_entitlements','fact_fragments','fact_bundles','fact_notes','action_awards','care_configs','care_items','care_entries','pricing_quotes','pricing_checks','voucher_allowances','time_sessions','personal_phases','holiday_claims']
+OPTIONAL_PERSONAL_TABLES=['personal_information','return_checkins','important_days','experience_preferences']
 
 SAFE_EXPORT_SETTINGS = frozenset({"gamification_modules", "hidden_attributes", "disabled_attributes", "stagnation_checks", "unreal_count"})
 
@@ -129,11 +130,11 @@ def _encode_export(value):
 
 
 def _export_row(row):
-    excluded = {"password_hash", "credentials_version"}
+    excluded = {"password_hash", "credentials_version", "lease_token"}
     return {c.name: _encode_export(getattr(row, c.name)) for c in row.__table__.columns if c.name not in excluded}
 
 
-def _collect(db: Session, user_id: int,include_questionnaire=False,include_feedback=False) -> dict:
+def _collect(db: Session, user_id: int,include_questionnaire=False,include_feedback=False,include_personal=False) -> dict:
     data = _collect_legacy(db, user_id)
     table_models = (models.UserProfile, models.Attribute, models.AttributeHistory,
         models.CheckinItem, models.Event, models.AIJudgment, models.JudgmentLog, models.Goal,
@@ -155,7 +156,7 @@ def _collect(db: Session, user_id: int,include_questionnaire=False,include_feedb
             row.pop('config_version', None)
         tables[model.__tablename__] = rows
     from app.models import workflow
-    for name in EXPORT_WORKFLOW_TABLES+FULL_SYSTEM_TABLES+(['questionnaires'] if include_questionnaire else [])+(['feedback','feedback_replies'] if include_feedback else []):
+    for name in EXPORT_WORKFLOW_TABLES+FULL_SYSTEM_TABLES+(['questionnaires','personal_information','return_checkins'] if include_questionnaire else [])+(['important_days','experience_preferences'] if include_personal else [])+(['feedback','feedback_replies'] if include_feedback else []):
         model=next(mapper.class_ for mapper in models.Base.registry.mappers if mapper.local_table.name==name)
         tables[name]=[_export_row(row) for row in db.query(model).filter_by(user_id=user_id).order_by(model.id).all()]
     if not include_questionnaire:
@@ -178,13 +179,13 @@ def export_data(db:Session=Depends(get_db),format:Literal['json','csv','markdown
     kind:Literal['all','event','diary','legacy']='all',start:date|None=None,end:date|None=None,
     include_questions:bool=True,include_analysis:bool=True,include_deleted:bool=False,
     include_history:bool=True,include_game:bool|None=None,schema_version:int=5,
-    include_questionnaire:bool=False,include_feedback:bool=False):
+    include_questionnaire:bool=False,include_feedback:bool=False,include_personal:bool=False):
     user=get_or_create_default_user(db)
     if schema_version not in (3,4,5):raise HTTPException(422,'仅支持 JSON v3/v4/v5。')
     if start and end and start>end:raise HTTPException(422,'日期范围无效。')
     if format=='json':
         if schema_version in (3,4) and (kind!='all' or start or end):raise HTTPException(422,'旧结构投影不支持日期筛选。')
-        data=_collect(db,user.id,include_questionnaire,include_feedback)
+        data=_collect(db,user.id,include_questionnaire,include_feedback,include_personal)
         if schema_version==5:
             from app.services.readable_export import select,strip_questions
             selected=select(db,user,kind,start,end,include_deleted,include_history,include_questions,include_analysis)
@@ -214,11 +215,12 @@ def export_data(db:Session=Depends(get_db),format:Literal['json','csv','markdown
                 for name in ('review_analyses','ai_judgments','judgment_logs','fact_bundles','event_derivations','analysis_jobs'):data['tables'][name]=[]
             if include_game is False:
                 keep={'users','events','diary_revisions','review_sessions','review_turns','review_analyses','ai_judgments','judgment_logs','fact_fragments','fact_bundles','fact_notes','fact_identities','event_facts','fact_settlements'}
-                if include_questionnaire:keep.add('questionnaires')
+                if include_questionnaire:keep.update(('questionnaires','personal_information','return_checkins'))
+                if include_personal:keep.update(('important_days','experience_preferences'))
                 if include_feedback:keep.update(('feedback','feedback_replies'))
                 data['tables']={k:v for k,v in data['tables'].items() if k in keep}
                 for name in ('attributes','attribute_history','goals','anchors'):data.pop(name,None)
-            data['selection']={'kind':kind,'start':str(start) if start else None,'end':str(end) if end else None,'include_game':include_game is not False,'include_history':include_history,'include_questions':include_questions,'include_analysis':include_analysis,'include_questionnaire':include_questionnaire,'include_feedback':include_feedback}
+            data['selection']={'kind':kind,'start':str(start) if start else None,'end':str(end) if end else None,'include_game':include_game is not False,'include_history':include_history,'include_questions':include_questions,'include_analysis':include_analysis,'include_questionnaire':include_questionnaire,'include_feedback':include_feedback,'include_personal':include_personal}
         else:
             for name in FULL_SYSTEM_TABLES:data['tables'].pop(name,None)
             data['format_version']=schema_version
@@ -232,7 +234,7 @@ def export_data(db:Session=Depends(get_db),format:Literal['json','csv','markdown
     rows=select(db,user,kind,start,end,include_deleted,include_history,include_questions,include_analysis)
     game=export_data(db=db,format='json',kind=kind,start=start,end=end,include_questions=include_questions,
         include_analysis=include_analysis,include_deleted=include_deleted,include_history=include_history,
-        include_game=True,schema_version=5,include_questionnaire=include_questionnaire,include_feedback=include_feedback)['tables'] if include_game else None
+        include_game=True,schema_version=5,include_questionnaire=include_questionnaire,include_feedback=include_feedback,include_personal=include_personal)['tables'] if include_game else None
     content=render(rows,format,game)
     extension={'csv':'csv','markdown':'md','html':'html'}[format]
     return Response(content=content,media_type={'csv':'text/csv','markdown':'text/markdown','html':'text/html'}[format],

@@ -20,6 +20,7 @@ from openai import OpenAI
 from app.config import settings
 CALL_GUARD = ContextVar("model_call_guard", default=None)
 USAGE_FACTORY = ContextVar("model_usage_factory", default=None)
+LAST_DIAGNOSTIC = ContextVar('last_model_diagnostic',default=None)
 _model_slot = threading.BoundedSemaphore(1)
 
 
@@ -142,6 +143,7 @@ class LLMService:
         json_mode: bool = False,
         config: "LLMConfig | None" = None,
         max_tokens: int | None = None,
+        diagnostic_mode: bool = False,
     ) -> str:
         """发起一次对话补全，返回文本内容。
 
@@ -150,6 +152,7 @@ class LLMService:
         :param json_mode: 是否要求模型输出 JSON（DeepSeek 需 prompt 含 json 关键字）
         :param config: v1.4 可选覆盖配置（BYOK）；不传走 .env 默认
         """
+        LAST_DIAGNOSTIC.set(None)
         if settings.cloud and not _model_slot.acquire(blocking=False):
             raise LLMError("MODEL_BUSY：分析正在进行，请稍后重试。")
         client = None
@@ -201,6 +204,9 @@ class LLMService:
         # 开启 JSON 输出模式，保证结构化结果稳定
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
+        if diagnostic_mode and config is not None:
+            from app.services.model_diagnostics import test_options
+            kwargs.update(test_options(config))
 
         try:
             if hosted_usage_id is not None:hosted_ai.dispatched(hosted_factory,config,hosted_usage_id)
@@ -209,6 +215,8 @@ class LLMService:
         except Exception as exc:
             from app.services.model_errors import category
             code = str(exc).split('：',1)[0] if isinstance(exc,LLMError) else category(exc)
+            status=getattr(exc,'status_code',None)
+            LAST_DIAGNOSTIC.set({'http_status':status if type(status) is int and 100<=status<=599 else None})
             if hosted_usage_id is not None:hosted_ai.settle(hosted_factory,hosted_usage_id,error=code)
             raise LLMError(code + "：分析失败，原文已保存，请检查模型配置后重试。") from None
         finally:
@@ -218,6 +226,11 @@ class LLMService:
                 finally:
                     _release_model_slot(global_lock)
 
+        from app.services.model_diagnostics import response_summary
+        diagnostic=getattr(resp,'safe_diagnostic',None) or response_summary(resp)
+        LAST_DIAGNOSTIC.set(diagnostic)
+        if diagnostic['finish_reason']=='length':raise LLMError('MODEL_OUTPUT_TRUNCATED：输出达到预算上限；未自动重试。')
+        if diagnostic['content_empty'] and (diagnostic_mode or not json_mode):raise LLMError('MODEL_EMPTY_RESPONSE：供应商没有返回可用正文。')
         content = resp.choices[0].message.content or ""
         return content
 
@@ -252,7 +265,8 @@ class LLMService:
                 continue
             return result
         if settings.cloud:
-            raise LLMError('MODEL_INVALID_RESPONSE：模型返回无效内容，原文已保存，请稍后重试。')
+            if not raw or not raw.strip():raise LLMError('MODEL_EMPTY_RESPONSE：有限重试后仍没有业务正文，原文已保存。')
+            raise LLMError('MODEL_JSON_INVALID：模型未返回有效业务JSON，原文已保存。')
         raise LLMError(
             "AI 服务偶发抖动，已自动重试仍失败，请稍后重试。" f"（{last_error}）"
         )

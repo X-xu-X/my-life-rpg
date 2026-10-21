@@ -18,7 +18,8 @@ class ScheduleIn(WriteIn):
     name:str=Field(min_length=1,max_length=120)
     frequency:Literal['daily','workdays','weekends','weekdays','interval','once','manual']
     goal_id:int|None=None
-    planned_minutes:int=Field(30,ge=1,le=1440,strict=True)
+    planned_minutes:int|None=Field(30,ge=1,le=1440,strict=True)
+    category:Literal['plan','care']='plan'
     start:date
     weekdays:list[int]=Field(default_factory=list,max_length=7)
     interval:int=Field(1,ge=1,le=366)
@@ -31,7 +32,7 @@ class ScheduleIn(WriteIn):
 
 class ResultIn(WriteIn):
     schedule_version:int
-    outcome:Literal['done','partial','missed']
+    outcome:Literal['done','partial','missed','recorded','skipped']
     content:str=Field('',max_length=10000)
     actual:float|None=Field(None,ge=0,allow_inf_nan=False)
     unit:str=Field('',max_length=40)
@@ -91,7 +92,8 @@ def save_schedule(body:ScheduleIn,schedule_id:int|None=None,db:Session=Depends(g
     if row:version(row,body.expected_version)
     goal=get_owned(db,Goal,body.goal_id) if body.goal_id else None
     if goal and goal.status!='active':raise HTTPException(409,'请选择仍在进行的本人目标。')
-    rule=body.model_dump(mode='json',include={'frequency','start','weekdays','interval','planned_minutes'})
+    rule=body.model_dump(mode='json',include={'frequency','start','weekdays','interval','planned_minutes','category'})
+    if row and 'category' not in body.model_fields_set:rule['category']=row.rule.get('category','plan')
     if row and 'planned_minutes' not in body.model_fields_set:rule['planned_minutes']=row.rule.get('planned_minutes',30)
     rule['timezone']=user.timezone
     if row and body.start<local_day(utc_now(),user.timezone):raise HTTPException(422,'周期修改需明确今天或未来的生效日，历史安排保留。')
@@ -135,18 +137,20 @@ def result(schedule_id:int,day:date,body:ResultIn,db:Session=Depends(get_db)):
     if row and not body.reason.strip():raise HTTPException(422,'纠错需要原因。')
     if schedule.version!=body.schedule_version:raise HTTPException(409,'日程已更新，请重新读取。')
     snapshot=historical(schedule,day)
+    category=(row.schedule_snapshot if row else snapshot or {}).get('rule',{}).get('category','plan')
+    if body.outcome not in (('recorded','skipped') if category=='care' else ('done','partial','missed')):raise HTTPException(422,'请沿用当次项目的实际结果类型，旧记录不转换。')
     if not row and (not snapshot or not snapshot['enabled'] or not due(snapshot['rule'],day)):raise HTTPException(409,'此日没有到期安排。')
     if day>local_day(utc_now(),user.timezone):raise HTTPException(422,'不能提前记录未来结果。')
-    if body.outcome!='missed' and not body.content.strip() and not body.event_id:raise HTTPException(422,'先保存实际事实，不默认完成比例。')
+    if body.outcome not in ('missed','skipped') and not body.content.strip() and not body.event_id:raise HTTPException(422,'先保存实际事实，不默认完成比例。')
     event=None
-    if body.outcome!='missed' and body.event_id:
+    if body.outcome not in ('missed','skipped') and body.event_id:
         event=get_owned(db,Event,body.event_id)
         if event.is_deleted or event.record_kind=='diary' or event.content_version!=body.event_version:raise HTTPException(409,'关联事件无效或版本变化。')
     if not row:row=PlanOccurrence(user_id=user.id,schedule_id=schedule.id,local_date=str(day),schedule_snapshot={**snapshot,'timezone':snapshot['rule']['timezone']},version=0,history=[]);db.add(row)
     old_event=get_owned(db,Event,row.event_id) if row.event_id else None
     booked=bool(old_event and db.query(AIJudgment).filter_by(event_id=old_event.id,status='confirmed').first())
     if booked and event and event.id!=old_event.id:raise HTTPException(409,'当次已结算，纠错不能换成另一事实再次领奖。')
-    if not event and body.outcome!='missed':
+    if not event and body.outcome not in ('missed','skipped'):
         if old_event:
             event=old_event
             if not booked:

@@ -206,7 +206,8 @@ def process(factory, claimed):
                 job.safe_error_code = 'MODEL_FACT_REJECTED' if rejected else 'INPUT_CHANGED'
             else:
                 code = str(exc).split("：",1)[0] if isinstance(exc, LLMError) else "ANALYSIS_FAILED"
-                allowed = {"MODEL_TIMEOUT", "MODEL_UNAVAILABLE", "MODEL_RATE_LIMITED", "MODEL_AUTH_FAILED", "MODEL_BALANCE_INSUFFICIENT", "MODEL_ATTEMPT_LIMIT", "MODEL_NOT_CONFIGURED", "MODEL_DAILY_LIMIT", "MODEL_BUSY", "MODEL_INVALID_RESPONSE", "MODEL_DISABLED", "MODEL_INPUT_LIMIT", "MODEL_SERVICE_ERROR", "MODEL_NOT_FOUND"}
+                from app.services.model_validation import MESSAGES
+                allowed=set(MESSAGES)|{'MODEL_ATTEMPT_LIMIT'}
                 job.safe_error_code = code if code in allowed else "ANALYSIS_FAILED"
                 job.state = "queued" if code in ("MODEL_UNAVAILABLE", "MODEL_RATE_LIMITED", "MODEL_BUSY") and job.attempts < 2 else "failed"
                 job.next_retry_at = utc_now() + timedelta(seconds=30)

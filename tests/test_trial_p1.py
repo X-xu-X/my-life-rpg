@@ -26,7 +26,9 @@ class TrialP1Tests(unittest.TestCase):
             result = self.client.post('/api/llm-config/test', json={'group':'primary','expected_config_version':version})
             self.assertEqual(result.status_code,200,result.text)
             self.assertEqual(result.json()['status'],'passed')
-            self.assertEqual(supplier.call_args.kwargs['max_tokens'],8)
+            self.assertGreaterEqual(supplier.call_args.kwargs['max_tokens'],512)
+            self.assertLessEqual(supplier.call_args.kwargs['max_tokens'],4096)
+            self.assertTrue(supplier.call_args.kwargs['diagnostic_mode'])
             summary = self.client.get('/api/llm-config').json()['primary']
             self.assertEqual(summary['validation']['config_version'],version)
             self.assertNotIn('sk-fake-test-only-key',str(summary))
@@ -131,7 +133,7 @@ class TrialP1Tests(unittest.TestCase):
         for status,code,expected in [(401,None,'MODEL_AUTH_FAILED'),(403,None,'MODEL_NOT_FOUND'),
                                      (404,None,'MODEL_NOT_FOUND'),(429,None,'MODEL_RATE_LIMITED'),
                                      (429,'insufficient_quota','MODEL_BALANCE_INSUFFICIENT'),
-                                     (504,None,'MODEL_TIMEOUT'),(500,None,'MODEL_SERVICE_ERROR'),(400,None,'MODEL_INVALID_RESPONSE')]:
+                                     (504,None,'MODEL_TIMEOUT'),(500,None,'MODEL_SERVICE_ERROR'),(400,None,'MODEL_REQUEST_INCOMPATIBLE')]:
             error=RuntimeError('private-provider-body');error.status_code=status;error.body={'error':{'code':code}}
             self.assertEqual(category(error),expected)
 

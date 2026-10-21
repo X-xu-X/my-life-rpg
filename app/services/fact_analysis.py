@@ -19,7 +19,7 @@ class Suggestion(BaseModel):
     summary:str=Field(min_length=1,max_length=1000)
     grade:Literal['none','small','medium','large']='none'
     changes:list[dict]=Field(default_factory=list,max_length=20)
-    confidence:float=Field(ge=0,le=1,allow_inf_nan=False)
+    confidence:float=Field(ge=0,le=1,allow_inf_nan=False,strict=True)
     relation:Literal['new','same','uncertain']='new'
     related_event_id:int|None=None
     related_fact_id:int|None=None
@@ -59,7 +59,9 @@ def generate(db,job,validate):
     event=db.get(Event,job.event_id);ai_context.require(event)
     user=get_or_create_default_user(db)
     from app.services.review_context import capture
-    context=capture(db,event) if event.record_kind=='diary' else {'sources':[{'id':event.id,'version':event.content_version,'content':event.content}]}
+    from app.services.personal_context import background
+    context=capture(db,event) if event.record_kind=='diary' else {'sources':[{'id':event.id,'version':event.content_version,'content':event.content}],
+        'personal_background':background(db,user.id,'judge')}
     known=[]
     for fragment,source in db.query(FactFragment,Event).join(Event,Event.id==FactFragment.event_id).filter(FactFragment.user_id==user.id,Event.ai_permission=='allowed',Event.is_deleted.is_(False)).order_by(FactFragment.id.desc()).limit(100).all():
         # Old source versions are not reused as content after an edit.

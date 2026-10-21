@@ -20,7 +20,7 @@ def replay(db, user_id, operation, body, *, require_version=True):
     payload=body.model_dump(mode='json')
     if 'reward_preview_id' not in body.model_fields_set:payload.pop('reward_preview_id',None)
     # Preserve the exact pre-upgrade fingerprint of an already accepted request.
-    evolved={'DiaryIn':('ai_permission','correction_reason'),'ScheduleIn':('goal_id','planned_minutes'),'ResultIn':('ai_permission',),'StartIn':('source_version',)}
+    evolved={'DiaryIn':('ai_permission','correction_reason'),'ScheduleIn':('goal_id','planned_minutes','category'),'ResultIn':('ai_permission',),'StartIn':('source_version','source_type'),'QuoteIn':('auto_check',),'SaveIn':('uses',),'ItemIn':('start','interval','category','planned_minutes','goal_id'),'EntryIn':('correction','reason')}
     for name in evolved.get(type(body).__name__,()):
         if name not in body.model_fields_set:payload.pop(name,None)
     fingerprint = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()

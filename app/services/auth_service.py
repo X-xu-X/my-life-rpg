@@ -129,8 +129,7 @@ def initialize_account(db, username, password, role="user"):
         db.add(Attribute(user_id=user.id, name=name, current_value=50,
                          description="未评估；选择基线后才能结算。"))
     db.flush()
-    from app.services.shop_service import seed_preset_items
-    seed_preset_items(db, user, commit=False)
+    # New accounts start with their own wishes; existing goods are never removed.
     return user
 
 

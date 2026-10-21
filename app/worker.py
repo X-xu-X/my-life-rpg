@@ -82,7 +82,10 @@ def main():
         if job:
             process(SessionLocal, job)
         else:
-            time.sleep(1)
+            from app.services import pricing_checks
+            price_job=pricing_checks.claim(SessionLocal)
+            if price_job:pricing_checks.process(SessionLocal,price_job)
+            else:time.sleep(1)
 
 
 if __name__ == "__main__": main()

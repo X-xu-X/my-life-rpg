@@ -25,6 +25,13 @@ def summary(db, user_id, group, version):
 
 
 MESSAGES = {
+    'MODEL_NOT_CONFIGURED':('请先保存并启用本人模型配置。',False),
+    'MODEL_ENDPOINT_BLOCKED':('端点不符合公网HTTPS要求，请核对高级配置。',False),
+    'MODEL_REQUEST_INCOMPATIBLE':('供应商不接受本次请求参数或端点，请核对聊天API支持情况。',False),
+    'MODEL_OUTPUT_TRUNCATED':('输出已截断。请核对模型输出预算和思考模式；本次未自动重试。',False),
+    'MODEL_EMPTY_RESPONSE':('供应商返回空正文；可能有其他输出，请查看诊断并核对模型模式。',False),
+    'MODEL_JSON_INVALID':('聊天已返回，但不是有效业务JSON；请核对模型的结构化输出能力。',False),
+    'MODEL_NETWORK_ERROR':('网络连接失败，请检查端点与网络后主动重试。',True),
     'MODEL_DISABLED':('你已关闭 AI，原文仍可保存。',False),
     'MODEL_INPUT_LIMIT':('内容超过站点模型输入上限，请缩短相关内容。',False),
     'MODEL_AUTH_FAILED': ('认证失败，请检查本供应商的 Key。', False),

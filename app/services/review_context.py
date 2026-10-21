@@ -24,4 +24,7 @@ def capture(db,diary):
         states=list(checklist.payload.get('entries',{}).values())
         legacy={'id':checklist.id,'version':checklist.version,'enabled':bool(checklist.payload.get('enabled')),
             'counts':{state:states.count(state) for state in ('recorded','skipped','not_recorded')}}
-    return {'sources':sources,'plans':plans,'checklist':legacy,'focus_items':focused,'care_entries':entries}
+    from app.services.personal_context import background
+    from app.services.ai_context import CURRENT
+    purpose=(CURRENT.get() or {}).get('purpose','review')
+    return {'sources':sources,'plans':plans,'checklist':legacy,'focus_items':focused,'care_entries':entries,'personal_background':background(db,diary.user_id,purpose)}

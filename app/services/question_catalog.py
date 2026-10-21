@@ -12,3 +12,8 @@ GROUPS=[('stage','近期阶段与目标',[
 ('scope','分析范围与反馈',[
     '愿意把哪些组的答案用于之后主动分析？','哪些内容希望只自己保存？','希望怎样展示判断依据？','希望怎样提示不确定性？','希望多久回看一次阶段安排？','还有哪些愿意补充或明确跳过的内容？'])]
 QUESTIONS=[{'id':f'{group}_{i+1}','group':group,'text':text} for group,label,questions in GROUPS for i,text in enumerate(questions)]
+ALL_QUESTIONS=QUESTIONS
+CATALOG_VERSION='daily-2026-10-21-v1'
+# Scope is an explicit permission control, not six extra prose questions.
+# Stable legacy IDs remain recognized for old archives and saved requests.
+QUESTIONS=[q for q in ALL_QUESTIONS if q['group']!='scope']

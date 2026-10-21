@@ -45,6 +45,8 @@ def answer(body: OnboardingAnswerIn, db: Session = Depends(get_db)):
 @router.post("/onboarding/supplement")
 def supplement(body: SupplementProfileIn, db: Session = Depends(get_db)):
     """补充长期信息，AI 客观评估并返回调整建议（待用户确认）。"""
+    from app.config import settings
+    if settings.cloud:raise HTTPException(409,'请在长期信息中维护背景；重评属性暂不开放。')
     try:
         return onboarding_service.supplement_profile(db, body.detail)
     except ValueError as exc:
@@ -56,6 +58,8 @@ def supplement(body: SupplementProfileIn, db: Session = Depends(get_db)):
 @router.post("/onboarding/supplement/confirm")
 def confirm_supplement(db: Session = Depends(get_db)):
     """确认应用补充信息的属性调整建议。"""
+    from app.config import settings
+    if settings.cloud:raise HTTPException(409,'重评属性暂不开放，原建议与属性保留。')
     return onboarding_service.confirm_adjustment(db)
 
 

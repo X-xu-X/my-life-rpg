@@ -77,6 +77,10 @@ app.include_router(feedback.router,prefix='/api',dependencies=[Depends(current_u
 app.include_router(timers.router,prefix='/api',dependencies=[Depends(current_user)])
 app.include_router(reward_quotes.router,prefix='/api',dependencies=[Depends(current_user)])
 app.include_router(questionnaire.router,prefix='/api',dependencies=[Depends(current_user)])
+from app.routers import daily_use
+app.include_router(daily_use.router,prefix='/api',dependencies=[Depends(current_user)])
+from app.routers import projects
+app.include_router(projects.router,prefix='/api',dependencies=[Depends(current_user)])
 app.include_router(phase.router,prefix='/api',dependencies=[Depends(current_user)])
 app.include_router(review.router, prefix="/api", dependencies=[Depends(current_user)])
 app.include_router(baseline.router, prefix="/api", dependencies=[Depends(current_user)])

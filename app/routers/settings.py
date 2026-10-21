@@ -168,7 +168,7 @@ def put_llm_config(body: LLMConfigIn, db: Session = Depends(get_db)):
 @router.post('/llm-config/test')
 def test_llm_config(body: dict, db: Session = Depends(get_db)):
     from app.services import llm_config
-    from app.services.llm_service import llm_service, LLMError
+    from app.services.llm_service import llm_service, LLMError, LAST_DIAGNOSTIC
     user = get_or_create_default_user(db)
     from app.services.model_validation import snapshot, controlled_error
     from app.services.transactions import lock_profile
@@ -192,11 +192,14 @@ def test_llm_config(body: dict, db: Session = Depends(get_db)):
               'tested_at': utc_now().isoformat(), 'error_code': None,
               'message': '聊天连通测试通过；不代表业务 JSON 分析质量或永久可用。', 'retryable': False}
     try:
-        answer = llm_service.chat([{'role':'user','content':'Reply OK.'}], config=config, max_tokens=8)
-        if not answer.strip(): raise LLMError('MODEL_INVALID_RESPONSE')
+        LAST_DIAGNOSTIC.set(None)
+        answer = llm_service.chat([{'role':'user','content':'Reply only OK.'}], config=config, max_tokens=1024,diagnostic_mode=True)
+        if not answer.strip(): raise LLMError('MODEL_EMPTY_RESPONSE')
     except Exception as exc:
         code, message, retryable = controlled_error(exc)
         result.update(status='failed', error_code=code, message=message, retryable=retryable)
+    result['diagnostic']=LAST_DIAGNOSTIC.get()
+    result['purpose']='chat_connectivity'
     result['tested_at'] = utc_now().isoformat()
     lock_profile(db, user.id)
     if snapshot(db, user.id, group_name) != captured:

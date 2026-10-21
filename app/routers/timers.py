@@ -21,6 +21,7 @@ class StartIn(WriteIn):
     acknowledge_penalty:bool=False
     planned_minutes:int=Field(30,ge=1,le=1440,strict=True)
     source_version:int|None=Field(None,ge=1,strict=True)
+    source_type:Literal['plan','care']='plan'
 
 class EndIn(WriteIn):
     stop_at:datetime|None=None
@@ -42,15 +43,20 @@ def start(body:StartIn,db:Session=Depends(get_db)):
     config=trial_rules.account(db,user);now=utc_now();selected=trial_rules.day(db,user);quota=None
     plan_snapshot=None
     if body.kind=='plan':
-        plan=get_owned(db,PlanSchedule,body.source_id)
+        from app.models.full_system import CareItem
+        plan=get_owned(db,CareItem if body.source_type=='care' else PlanSchedule,body.source_id)
         if body.source_version is None:raise HTTPException(422,'开始计划需携带当前计划版本，请刷新计划后重试。')
         version(plan,body.source_version)
         from app.routers.plans import timing_snapshot
-        effective=timing_snapshot(plan,local_day(now,plan.rule.get('timezone',user.timezone)))
+        from app.routers.care import item_snapshot
+        effective=(item_snapshot if body.source_type=='care' else timing_snapshot)(plan,local_day(now,plan.rule.get('timezone',user.timezone)))
         if not effective or not effective['enabled']:raise HTTPException(409,'此计划尚未生效或已经停用。')
-        minutes=effective['rule'].get('planned_minutes',30)
-        if 'planned_minutes' in body.model_fields_set and body.planned_minutes!=minutes:raise HTTPException(409,'计划预计时长已变化，请刷新后重试。')
-        plan_snapshot={'id':plan.id,'name':effective['name'],'source_version':plan.version,'effective_version':effective['version'],'planned_minutes':minutes,'rule':effective['rule']}
+        if effective.get('removed'):raise HTTPException(409,'项目已移除。')
+        configured=effective['rule'].get('planned_minutes',None if body.source_type=='care' else 30)
+        if configured is None and 'planned_minutes' not in body.model_fields_set:raise HTTPException(422,'此项目没有固定时长，请先填写本次分钟数。')
+        minutes=body.planned_minutes if configured is None else configured
+        if configured is not None and 'planned_minutes' in body.model_fields_set and body.planned_minutes!=configured:raise HTTPException(409,'计划预计时长已变化，请刷新后重试。')
+        plan_snapshot={'id':plan.id,'origin':body.source_type,'name':effective['name'],'source_version':plan.version,'effective_version':effective['version'],'planned_minutes':minutes,'configured_minutes':configured,'rule':effective['rule']}
         limit=minutes*60
     elif body.kind=='base':
         quota=get_owned(db,DailyEntitlement,body.source_id)
@@ -96,7 +102,8 @@ def update(timer_id:int,action:Literal['pause','resume','sync','end-preview','co
         captured={'kind':row.kind,'intervals':row.intervals,'limit_seconds':row.limit_seconds,'explanation':row.explanation};captured_version=row.version
         import json
         from app.services.llm_service import llm_service
-        db.commit()
+        from app.services.model_dispatch import mark
+        mark(db,user,op,body,fp)
         try:
             result=llm_service.chat_json([{'role':'system','content':'仅根据本次计时说明给核对建议，不推定离线违规，不改账。返回JSON {"summary":"依据与不确定性","suggested_seconds":整数或null}。'},
                 {'role':'user','content':json.dumps(captured,ensure_ascii=False)}],config=config)

@@ -37,6 +37,7 @@ async def me(request: Request, db: Session = Depends(get_db)):
     return {"id": user.id, "username": user.username, "role": user.role,
         "timezone": user.timezone, "mode": settings.run_mode, "email":user.email, "email_verified":bool(user.email_verified_at), "credentials_version":user.credentials_version,
         "onboarding_completed": bool(profile and profile.onboarding_completed),
+        "login_session": str(session.id) if session else 'local',
         "csrf_token": session.csrf_secret if session else ""}
 
 

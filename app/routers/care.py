@@ -22,7 +22,12 @@ class ConfigIn(WriteIn):
 class ItemIn(WriteIn):
     name:str=Field(min_length=1,max_length=80)
     position:int=Field(0,ge=0,le=100000)
-    frequency:Literal['daily','weekdays','manual']='daily'
+    frequency:Literal['daily','workdays','weekends','weekdays','interval','once','manual']='daily'
+    start:date|None=None
+    interval:int=Field(1,ge=1,le=366)
+    category:Literal['plan','care']='care'
+    planned_minutes:int|None=Field(None,ge=1,le=1440,strict=True)
+    goal_id:int|None=None
     weekdays:list[int]=Field(default_factory=list,max_length=7)
     enabled:bool=True
     removed:bool=False
@@ -33,11 +38,23 @@ class ItemIn(WriteIn):
 
 class EntryIn(WriteIn):
     item_version:int
-    state:Literal['recorded','skipped']
+    state:Literal['recorded','skipped','done','partial','missed']
+    correction:bool=False
+    reason:str=Field('',max_length=2000)
     content:str=Field('',max_length=20000)
     ai_permission:Literal['private','allowed']='private'
 
-def due(item,day):return item.enabled and not item.removed and (item.rule['frequency']=='daily' or item.rule['frequency']=='weekdays' and day.weekday() in item.rule['weekdays'])
+def item_snapshot(item,day):
+    dated=[h for h in item.history if 'rule' in h]
+    snapshot=next((h for h in reversed(dated) if h['rule'].get('start','0001-01-01')<=str(day)),None)
+    if snapshot is None and not dated and item.rule.get('start','0001-01-01')<=str(day):snapshot=fields(item)
+    return snapshot
+
+
+def due(item,day):
+    from app.routers.plans import due as scheduled
+    snapshot=item_snapshot(item,day)
+    return bool(snapshot and snapshot['enabled'] and not snapshot.get('removed') and scheduled({'start':'0001-01-01','interval':1,**snapshot['rule']},day))
 
 @router.get('/care')
 def read(day:date|None=None,offset:int=0,db:Session=Depends(get_db)):
@@ -95,8 +112,18 @@ def save_item(body:ItemIn,item_id:int|None=None,db:Session=Depends(get_db)):
     if prior is not None:return prior
     row=get_owned(db,CareItem,item_id) if item_id else None
     if row:version(row,body.expected_version)
+    if body.goal_id:
+        from app.models import Goal
+        goal=get_owned(db,Goal,body.goal_id)
+        if goal.status!='active':raise HTTPException(409,'请选择进行中的本人目标。')
+    if row and body.start and body.start<local_day(utc_now(),user.timezone):raise HTTPException(422,'修改请选今天或未来生效。')
     if not row:row=CareItem(user_id=user.id,version=0,history=[]);db.add(row)
-    row.name=body.name;row.position=body.position;row.enabled=body.enabled;row.removed=body.removed;row.rule={'frequency':body.frequency,'weekdays':body.weekdays};row.version+=1
+    elif not any('rule' in h for h in row.history):row.history=[*row.history,{**fields(row),'legacy_baseline':True,'at':utc_now().isoformat()}]
+    old_rule=row.rule or {}
+    rule={'frequency':body.frequency,'weekdays':body.weekdays,'start':str(body.start) if body.start else old_rule.get('start','0001-01-01'),'interval':body.interval,'timezone':user.timezone}
+    for key,default in (('category','care'),('planned_minutes',None),('goal_id',None)):
+        rule[key]=getattr(body,key) if key in body.model_fields_set else old_rule.get(key,default)
+    row.name=body.name;row.position=body.position;row.enabled=body.enabled;row.removed=body.removed;row.rule=rule;row.version+=1
     row.history=[*row.history,{'version':row.version,'name':row.name,'position':row.position,'enabled':row.enabled,'removed':row.removed,'rule':row.rule,'at':utc_now().isoformat()}]
     if not db.query(CareConfig).filter_by(user_id=user.id).first():db.add(CareConfig(user_id=user.id))
     db.flush()
@@ -110,9 +137,14 @@ def save_entry(item_id:int,day:date,body:EntryIn,db:Session=Depends(get_db)):
     if item.version!=body.item_version or item.removed:raise HTTPException(409,'项目已变更，请刷新。')
     if day>local_day(utc_now(),user.timezone):raise HTTPException(422,'不提前记录未来。')
     row=db.query(CareEntry).filter_by(item_id=item.id,local_date=str(day)).first();version(row,body.expected_version)
-    if not row:row=CareEntry(user_id=user.id,item_id=item.id,local_date=str(day),version=0,state=body.state,snapshot=fields(item),history=[]);db.add(row)
+    snapshot=row.snapshot if row else item_snapshot(item,day)
+    if not snapshot:raise HTTPException(409,'此日没有生效的项目。')
+    category=snapshot.get('rule',{}).get('category','care')
+    if body.state not in (('recorded','skipped') if category=='care' else ('done','partial','missed')):raise HTTPException(422,'沿用当次项目结果类型，不转换旧语义。')
+    if row and category=='plan' and (not body.correction or not body.reason.strip()):raise HTTPException(409,'当次结果已锁定；纠正须明确说明原因。')
+    if not row:row=CareEntry(user_id=user.id,item_id=item.id,local_date=str(day),version=0,state=body.state,snapshot=snapshot,history=[]);db.add(row)
     event=get_owned(db,Event,row.event_id) if row.event_id else None
-    if body.state=='recorded':
+    if body.state in ('recorded','done','partial'):
         if not body.content.strip():raise HTTPException(422,'请写下真实内容。')
         if event:
             if event.content!=body.content:
@@ -147,7 +179,9 @@ def suggest(body:SuggestIn,db:Session=Depends(get_db)):
     try:model=llm_config.resolve_llm_config(db,user.id,llm_config.PURPOSE_AUX)
     except LLMError as exc:raise HTTPException(503,str(exc)) from None
     messages=[{'role':'system','content':'根据本人主动提供的关注方向建议可选照顾项目，可以建议零项；不要求固定睡眠/饮食/活动，不替用户添加。必要休息免费。不调用任何历史记录。返回JSON {"items":[最多8个简短名称]}。'},
-        {'role':'user','content':json.dumps({'topic':body.topic,'authorized_current_names':names},ensure_ascii=False)}];db.commit()
+        {'role':'user','content':json.dumps({'topic':body.topic,'authorized_current_names':names},ensure_ascii=False)}]
+    from app.services.model_dispatch import mark
+    mark(db,user,'care-suggest',body,fp)
     try:result=llm_service.chat_json(messages,config=model)
     except LLMError as exc:raise HTTPException(503,str(exc)) from None
     from app.services.transactions import lock_profile

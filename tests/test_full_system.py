@@ -268,7 +268,7 @@ class FullSystemTests(unittest.TestCase):
         result=self.write('/reward-quotes/'+str(quote.json()['id'])+'/accept',version=1)
         self.assertEqual(result.status_code,200,result.text);return result.json()['item']
 
-    def test_reward_quote_no_item_until_accept_invalid_no_fallback_reprice_bounds(self):
+    def test_reward_auto_quote_invalid_no_fallback_and_compatible_accept_reprice_bounds(self):
         self.register();self.configure_model();self.adopt()
         before=len(self.client.get('/api/shop/items').json()['items'])
         with patch('app.services.llm_service.llm_service.chat_json',return_value={'coin_price':0,'pricing_reason':'无效'}):
@@ -276,12 +276,22 @@ class FullSystemTests(unittest.TestCase):
         self.assertEqual(response.status_code,503,response.text)
         self.assertEqual(len(self.client.get('/api/shop/items').json()['items']),before)
         item=self.reward();self.assertEqual(item['duration_seconds'],1800)
+        # An existing price from a previous day can be checked; today's initial price is not checked twice.
+        from app.models import ShopItem
+        with self.Session() as db:
+            stored=db.get(ShopItem,item['id']);stored.repriced_on=None;db.commit()
+        item=next(i for i in self.client.get('/api/shop/items').json()['items'] if i['id']==item['id'])
         with patch('app.services.llm_service.llm_service.chat_json',return_value={'coin_price':1000,'pricing_reason':'合成升价','worth_note':''}):
             response=self.write('/reward-quotes',{'name':item['name'],'item_id':item['id'],'item_version':item['updated_at']})
         self.assertEqual(response.status_code,200,response.text);quote=response.json();self.assertEqual(quote['result']['coin_price'],24)
         key=str(uuid4());first=self.write(f"/reward-quotes/{quote['id']}/accept",version=1,key=key)
         self.assertEqual(first.status_code,200,first.text);self.assertEqual(self.write(f"/reward-quotes/{quote['id']}/accept",version=1,key=key).json(),first.json())
-        self.assertEqual(self.write(f"/reward-quotes/{quote['id']}/accept",version=2).status_code,409)
+        accepted=self.write(f"/reward-quotes/{quote['id']}/accept",version=quote['version'])
+        self.assertEqual(accepted.status_code,200,accepted.text)
+        self.assertEqual(accepted.json()['item']['coin_price'],24)
+        with patch('app.services.llm_service.llm_service.chat_json') as model:
+            self.assertEqual(self.write('/reward-quotes',{'name':item['name'],'item_id':item['id'],'item_version':accepted.json()['item']['updated_at']}).status_code,409)
+            model.assert_not_called()
 
     def test_two_vouchers_independent_five_minutes_then_full_new_thirty(self):
         self.register();self.configure_model();self.adopt();item=self.reward();vouchers=[]
@@ -307,7 +317,7 @@ class FullSystemTests(unittest.TestCase):
 
     def test_questionnaire_all_skipped_preview_only_confirm_once_and_existing_unchanged(self):
         from app.models import UserProfile
-        self.register();catalog=self.client.get('/api/questionnaire').json();self.assertEqual(len(catalog['questions']),36)
+        self.register();catalog=self.client.get('/api/questionnaire').json();self.assertEqual(len(catalog['questions']),30)
         answers={q['id']:{'state':'skipped','value':''} for q in catalog['questions']}
         saved=self.write('/questionnaire',{'answers':answers,'send_groups':[]},0,'PUT').json()
         with patch('app.services.llm_service.llm_service.chat_json') as fake:
@@ -317,13 +327,13 @@ class FullSystemTests(unittest.TestCase):
         key=str(uuid4());result=self.write('/questionnaire/confirm',version=proposed['version'],key=key)
         self.assertEqual(result.status_code,200,result.text);self.assertEqual(self.write('/questionnaire/confirm',version=proposed['version'],key=key).json(),result.json())
         self.assertEqual(self.client.get('/api/coins').json()['balance'],80)
-        again=self.write('/questionnaire',{'answers':{'rewards_1':{'state':'answered','value':'希望换一杯茶'}},'send_groups':['rewards']},result.json()['version'],'PUT').json()
-        preview=self.write('/questionnaire/preview',{'acknowledge_scope':True},again['version']).json()
-        self.assertEqual(self.write('/questionnaire/confirm',version=preview['version']).status_code,200)
+        again=self.write('/questionnaire',{'answers':{'rewards_1':{'state':'answered','value':'不能改写旧答卷'}},'send_groups':['rewards']},result.json()['version'],'PUT')
+        self.assertEqual(again.status_code,409)
+        info=self.write('/personal-information',{'entries':[{'id':str(uuid4()),'text':'希望换一杯茶','uses':['pricing']}]},0,'PUT')
+        self.assertEqual(info.status_code,200,info.text)
         self.assertEqual(self.client.get('/api/coins').json()['balance'],80)
-        with self.Session() as db:
-            profile=db.query(UserProfile).filter_by(user_id=result.json().get('user_id',2)).one()
-            self.assertEqual(profile.basic_profile['questionnaire']['rewards_1']['value'],'希望换一杯茶')
+        history=self.client.get('/api/questionnaire').json()['history']
+        self.assertEqual(len(history),1);self.assertEqual(history[0]['answers'],answers)
         self.assertNotIn('希望换一杯茶',self.client.get('/api/export').text)
         self.assertIn('希望换一杯茶',self.client.get('/api/export?include_questionnaire=true').text)
 
@@ -378,7 +388,7 @@ class FullSystemTests(unittest.TestCase):
 
     def test_report_preview_no_record_day_and_permission_change_prevents_save(self):
         self.register();self.configure_model();event=self.event('允许的运动','allowed');self.event('PRIVATE_REPORT')
-        with patch('app.services.llm_service.llm_service.chat_json',return_value={'summary':'合成回顾'}) as fake:response=self.client.post('/api/reports?period=week')
+        with patch('app.services.llm_service.llm_service.chat_json',return_value={'summary':'合成回顾'}) as fake:response=self.client.post('/api/reports?period=week',json={'request_key':str(uuid4())})
         self.assertEqual(response.status_code,200,response.text);report=response.json()
         self.assertEqual(self.client.get('/api/reports').json()['items'],[])
         self.assertEqual(len(self.client.get('/api/reports/previews').json()['items']),1)
@@ -412,6 +422,10 @@ class FullSystemTests(unittest.TestCase):
             self.assertIsNone(db.execute(text('select record_kind from events')).scalar())
             self.assertIsNone(db.execute(text('select duration_seconds from redemptions')).scalar())
             self.assertEqual(db.execute(text('select count(*) from analysis_jobs')).scalar(),0)
+            self.assertEqual(db.execute(text('select auto_pricing from shop_items')).scalar(),False)
+            self.assertIsNone(db.execute(text('select priced_at from shop_items')).scalar())
+            for table in ('personal_information','return_checkins','important_days','experience_preferences','official_calendars','pricing_checks','model_dispatches'):
+                self.assertEqual(db.execute(text('select count(*) from '+table)).scalar(),0)
             self.assertEqual(db.execute(text('pragma foreign_key_check')).all(),[])
             from alembic.script import ScriptDirectory
             self.assertEqual(db.execute(text('select version_num from alembic_version')).scalar(),ScriptDirectory.from_config(config).get_current_head())

@@ -1,0 +1,11 @@
+{
+  "checked_tools": {
+    "docker": false,
+    "pg_ctl": false,
+    "psql": false
+  },
+  "real_postgres": "NOT_RUN",
+  "real_supplier": "NOT_RUN",
+  "smtp": "NOT_RUN",
+  "production": "NOT_TOUCHED"
+}

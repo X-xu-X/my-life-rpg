@@ -1,0 +1,14 @@
+✔ six items continue only after a known accepted first batch (2.7361ms)
+✔ unknown response survives reload and uses the exact original UUID (1.0508ms)
+✔ separate unknown tab requests never overwrite each other (0.5529ms)
+✔ completed empty first visit does not freeze later added rewards (0.5274ms)
+✔ legacy day receipt is recovered then advanced to current queue metadata (1.0692ms)
+✔ daily budget and hard four-request bound prevent polling loops (3.3429ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 160.6197

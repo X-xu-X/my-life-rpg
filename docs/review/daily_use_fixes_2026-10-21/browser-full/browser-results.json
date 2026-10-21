@@ -1,0 +1,502 @@
+{
+  "status": "PASS",
+  "checks": [
+    {
+      "name": "public title and ICP",
+      "status": "PASS"
+    },
+    {
+      "name": "existing evaluated user no onboarding",
+      "status": "PASS"
+    },
+    {
+      "name": "layout / 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /journal 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /diary 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /plans 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /growth 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /me 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /rewards 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /timers 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /reports 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /achievements 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /challenges 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /special-vouchers 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /personal-information 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /important-days 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /preferences 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /returning 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /onboarding 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /settings 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /security 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /feedback 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /announcements 1440",
+      "status": "PASS"
+    },
+    {
+      "name": "layout / 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /journal 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /diary 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /plans 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /growth 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /me 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /rewards 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /timers 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /reports 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /achievements 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /challenges 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /special-vouchers 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /personal-information 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /important-days 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /preferences 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /returning 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /onboarding 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /settings 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /security 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /feedback 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /announcements 390",
+      "status": "PASS"
+    },
+    {
+      "name": "200 percent core text /",
+      "status": "PASS"
+    },
+    {
+      "name": "200 percent core text /plans",
+      "status": "PASS"
+    },
+    {
+      "name": "200 percent core text /growth",
+      "status": "PASS"
+    },
+    {
+      "name": "200 percent core text /rewards",
+      "status": "PASS"
+    },
+    {
+      "name": "200 percent core text /settings",
+      "status": "PASS"
+    },
+    {
+      "name": "200 percent core text /returning",
+      "status": "PASS"
+    },
+    {
+      "name": "200 percent core text /onboarding",
+      "status": "PASS"
+    },
+    {
+      "name": "private real API save",
+      "status": "PASS"
+    },
+    {
+      "name": "real worker per-fact 79.9% settles 0",
+      "status": "PASS"
+    },
+    {
+      "name": "real worker per-fact 80% settles 6",
+      "status": "PASS"
+    },
+    {
+      "name": "private diary persisted",
+      "status": "PASS"
+    },
+    {
+      "name": "purpose-scoped info saved",
+      "status": "PASS"
+    },
+    {
+      "name": "two categories with nullable minutes",
+      "status": "PASS"
+    },
+    {
+      "name": "explicit chosen minutes focused",
+      "status": "PASS"
+    },
+    {
+      "name": "timer uses chosen 25 minutes",
+      "status": "PASS"
+    },
+    {
+      "name": "return autosave reload",
+      "status": "PASS"
+    },
+    {
+      "name": "annual leap day no birth year",
+      "status": "PASS"
+    },
+    {
+      "name": "immediate purpose-specific wait",
+      "status": "PASS"
+    },
+    {
+      "name": "automatic initial price 23",
+      "status": "PASS"
+    },
+    {
+      "name": "redemption dialog focus 0",
+      "status": "PASS"
+    },
+    {
+      "name": "redemption dialog focus 1",
+      "status": "PASS"
+    },
+    {
+      "name": "each active purchase own 30 minute voucher",
+      "status": "PASS"
+    },
+    {
+      "name": "first voucher 25 second voucher 30",
+      "status": "PASS"
+    },
+    {
+      "name": "new voucher resets actual-time input",
+      "status": "PASS"
+    },
+    {
+      "name": "new voucher starts full30",
+      "status": "PASS"
+    },
+    {
+      "name": "paused timer survives reload",
+      "status": "PASS"
+    },
+    {
+      "name": "feedback actual save",
+      "status": "PASS"
+    },
+    {
+      "name": "no dead mail forms",
+      "status": "PASS"
+    },
+    {
+      "name": "report immediate wait",
+      "status": "PASS"
+    },
+    {
+      "name": "real report persisted",
+      "status": "PASS"
+    },
+    {
+      "name": "four actual API downloads",
+      "status": "PASS",
+      "detail": [
+        "lifexp-records.csv",
+        "lifexp-records.html",
+        "lifexp-records.json",
+        "lifexp-records.md"
+      ]
+    },
+    {
+      "name": "download has actual record lifexp-records.csv",
+      "status": "PASS"
+    },
+    {
+      "name": "no secret lifexp-records.csv",
+      "status": "PASS"
+    },
+    {
+      "name": "download has actual record lifexp-records.html",
+      "status": "PASS"
+    },
+    {
+      "name": "no secret lifexp-records.html",
+      "status": "PASS"
+    },
+    {
+      "name": "download has actual record lifexp-records.json",
+      "status": "PASS"
+    },
+    {
+      "name": "no secret lifexp-records.json",
+      "status": "PASS"
+    },
+    {
+      "name": "download has actual record lifexp-records.md",
+      "status": "PASS"
+    },
+    {
+      "name": "no secret lifexp-records.md",
+      "status": "PASS"
+    },
+    {
+      "name": "illegal civil date rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "keyboard-sized viewport input reachable",
+      "status": "PASS"
+    },
+    {
+      "name": "200 percent text layout",
+      "status": "PASS"
+    },
+    {
+      "name": "permanent hint survives new login",
+      "status": "PASS"
+    },
+    {
+      "name": "permanent hint absent",
+      "status": "PASS"
+    },
+    {
+      "name": "owner automatic isolated workspace",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /admin 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /admin/users 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /admin/announcements 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /admin/site 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /admin/audit 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /admin/feedback 390",
+      "status": "PASS"
+    },
+    {
+      "name": "layout /admin/security 390",
+      "status": "PASS"
+    },
+    {
+      "name": "admin reply saved",
+      "status": "PASS"
+    },
+    {
+      "name": "announcement actual publication",
+      "status": "PASS"
+    },
+    {
+      "name": "announcement actual withdrawal",
+      "status": "PASS"
+    },
+    {
+      "name": "admin actual ordinary filter",
+      "status": "PASS"
+    },
+    {
+      "name": "new ordinary account auto one-question flow",
+      "status": "PASS"
+    },
+    {
+      "name": "questionnaire autosave reload",
+      "status": "PASS"
+    },
+    {
+      "name": "no model neutral preview 80",
+      "status": "PASS"
+    },
+    {
+      "name": "new user one-time readonly history",
+      "status": "PASS"
+    },
+    {
+      "name": "another user cannot see feedback",
+      "status": "PASS"
+    },
+    {
+      "name": "private original absent from every captured payload",
+      "status": "PASS"
+    },
+    {
+      "name": "pricing includes allowed personal context",
+      "status": "PASS"
+    },
+    {
+      "name": "no backend or worker exceptions",
+      "status": "PASS",
+      "detail": []
+    },
+    {
+      "name": "no Vue runtime exceptions",
+      "status": "PASS",
+      "detail": []
+    }
+  ],
+  "errors": [],
+  "exceptions": [],
+  "buildHashes": {
+    "frontend\\dist\\icon.svg": "768f167e44fbf477c23aef28d0b8aa93921635d0f24ad1effaace3caea53799d",
+    "frontend\\dist\\index.html": "7252612b3a09730a5c9fd5a276e5e4eaf03953442e595533de156d11fbe52009",
+    "frontend\\dist\\manifest.webmanifest": "eb5d27f86ee5d23839d4c9b5f483e3359b62ccf98cd336bd323d112c0e96269b",
+    "frontend\\dist\\assets\\AccountSecurity-y4OuReh0.js": "626d532791f9377b95d83834e60222a8069e2b55317d574c94d4cc2096d4d39a",
+    "frontend\\dist\\assets\\AchievementsView-B40TI2uv.js": "c986a0d42a8724b5787de1195ddf35cbe32cd5bf75e2e7f3e777fbb62168c579",
+    "frontend\\dist\\assets\\AdminView-WAxLNnco.js": "5d052884dfffd18d8553a3b90bc5eb73fbdc08e19c32c6aaf87d65bde7b6d4dd",
+    "frontend\\dist\\assets\\AnchorsView-DPDlSFYD.js": "7cc1eef661b762b85530647542c5dcee19bcc7deec0c80a730c1c3ea0b90271f",
+    "frontend\\dist\\assets\\AnnouncementsView-DdFVQjYQ.js": "012111bbf4e25c4c8957be906b15f20086d5ba190b92c4ffaaee0bcae6d05e7d",
+    "frontend\\dist\\assets\\AttributePanel-AnwWGLXc.js": "87c760f2476f3304283a9d65f890a77be5364819790d228e9257017b23eaf55e",
+    "frontend\\dist\\assets\\ChallengeView-Dl36VnQW.js": "67b17fa108832a88fc9a3e41fb9001647036ec91ade4985437c15136d46e3e52",
+    "frontend\\dist\\assets\\ConfirmDialog-BBdcbUiS.js": "538bc295e4d9751ddfd838df5484669555647bc4ae6cf98e43f22ba54a16e0db",
+    "frontend\\dist\\assets\\DiaryView-ChkbQP5Z.js": "3d0f3e436d7f43329a2d6aa1ec1e16d10be38b11d62918014c21504d8abf6154",
+    "frontend\\dist\\assets\\FactAnalysis-JYez32j5.js": "10199424e9aff751023e434ee969f1b9c0ca436daa3e0edbf45c918965113f27",
+    "frontend\\dist\\assets\\FeedbackView-Ci4fhEek.js": "642443841a2b0029db1c577381dcff65642817b904ab8938a9129dc256fa5463",
+    "frontend\\dist\\assets\\HintCard-DcAL_If4.js": "839043241f37d69d1e7a10e60f2bf6f52389c19bd495137b9a225a619a306dd7",
+    "frontend\\dist\\assets\\HomeView-c-2D-txf.js": "50460b3c7fe00d0e79e5f5850bec94fe3fb4e1e8876a88a3495a09bb1ce3f182",
+    "frontend\\dist\\assets\\ImportantDaysView-DbmBfZ21.js": "9b82143bfbcfba012f36832e9c68de82e5b78d594253736a9e67f8fa6d242a56",
+    "frontend\\dist\\assets\\index-BuWURdLd.css": "b30766f8128493502ada95032a78569caf988a80ff3922d4e4c4e83f3a01b0c8",
+    "frontend\\dist\\assets\\index-UBt_5Sen.js": "4c985ab7214cc9d781d31e87aa9c52d22e215d99a23e3067734eb9b815b2604d",
+    "frontend\\dist\\assets\\ItemManager-pkk-4Wg3.js": "2eab4b0b29832f26c98b6fd20e6a804e5420420b264d1ae5b6a1bc60fb342c48",
+    "frontend\\dist\\assets\\JudgmentList-_WxyHYZ4.js": "e6210dea1abd8d9e2f35e582a76504b7b38d7102dedc4c6f7463cbd4dc2d4c72",
+    "frontend\\dist\\assets\\MyView-kEKGvoXf.js": "e0a75c648719e234f8b7cc9215884aba84ac7a3774d40fd57b47ef95cf597190",
+    "frontend\\dist\\assets\\PageHeader-UMFxQqRf.js": "011c7c5e48b4adf9b7f4b3bad392700ac5f58e8b10739dd9f1c05cace84a4062",
+    "frontend\\dist\\assets\\PendingView-yux19Vhw.js": "abc7bdb8f469d6caf2e0ca9464268aeab2ef92cedb64fe6df588569036a844aa",
+    "frontend\\dist\\assets\\PersonalInformationView-D-iAFmxy.js": "405e49ade41bf6a1a7454e80e0826bda65e4dde6d14d013d77e5b6d53b49fd38",
+    "frontend\\dist\\assets\\PhaseBrief-OGZuYxMK.js": "934de70272e26ed1ef0f0f5a986fe0dbbaa385deb464c244e85e3e6c23a25fee",
+    "frontend\\dist\\assets\\PlansView-tNktsuRy.js": "32de1ec6173b622c05e27fcea54c07d0798ddca74efe64127e11ae5ed86ee855",
+    "frontend\\dist\\assets\\PreferencesView-i42Vv1v4.js": "e152d78bd9887920657a62c63271c41f2895df07aea11d3fc39fc34ccb4be7be",
+    "frontend\\dist\\assets\\ProjectManager-VURPYcrN.js": "ea317a9bf85ec88ad200771fca8dfa2b6de5975fe495ce37f09fea77261a0c0b",
+    "frontend\\dist\\assets\\QuestionnaireView-Dbc8WAtp.js": "683fa294c4ecab69d9993113fbc51df18f9239e3cfcc5884816eb2232f62e14f",
+    "frontend\\dist\\assets\\RecordComposer-B71H0MP5.js": "effbe4bee6059e10cde779e4483b8042f5bb7988812848df891ec76dedeb95a3",
+    "frontend\\dist\\assets\\RecordDetail-CXvSX2Wf.js": "3c08cbda86c0945bc9dcc154af39d51f8fba7551f3fc213ddc0cb829eb4029d0",
+    "frontend\\dist\\assets\\RecordList-Cn7aojko.js": "ee6f5118cd23ff444eef6f30fb193e2aec0cd37641f2e6b8a22fa1cae0e1928b",
+    "frontend\\dist\\assets\\RecordPreview-BxkKphue.js": "9c1ad86a18cd54e0954aeae819a053a17acb618bbd450ff9be57e4f4d8a9ed6a",
+    "frontend\\dist\\assets\\ReportHistory-DLrl1W68.js": "fdc83bf2094e77bf275ee201cba79888a9867314aaf59e21bb9cdf2c9df98d3e",
+    "frontend\\dist\\assets\\ReturnView-kCH7bc3c.js": "5dc58703dd186bf3c29b0fccf80ef10a9321dde033979b9c427fa7fc4c278f0e",
+    "frontend\\dist\\assets\\ReviewView-Bzdp1Jhh.js": "b6d40c2fd77a269f923ca1cd99e81bb3e3e0a048f597d70220980838fbfde58c",
+    "frontend\\dist\\assets\\RewardsView-CpcU7C1A.js": "0ab294cdc8d94a17eea78ebcf56c3a942868f74ce43137468a1a3807e4ed68ca",
+    "frontend\\dist\\assets\\SettingsView-Cjd82947.js": "e9d1c0af910e89b9764e956273d2b327f3df64649bae653a9f4e3ea00359ebbc",
+    "frontend\\dist\\assets\\TimerView-vgt4kIeo.js": "0e142f75c9c72a299987a379137976cf4eee4d0588cb13df1364ac443325257d",
+    "frontend\\dist\\assets\\TodayCheckin-CVEAadMX.js": "b6b9396aecee79ad30b8e1ad801fbe5d4554cd9b601693cbb02bcc7e0124ced7",
+    "frontend\\dist\\assets\\TrialRules-ClHrn-Tu.js": "d038c5d2a01bdefdfba4545c875056ccf99228a7046efed9761bd1ed72f86017",
+    "frontend\\dist\\assets\\useWorkflowWrite-OMcVNmne.js": "a3c4d65dea899e8d322f0866c4f74226691ae6b927e843adf7860c4561cbd3ce"
+  },
+  "limitations": [
+    "Temporary synthetic SQLite, fake model callable",
+    "HTTP bridge to HTTPS TestClient: production TLS/browser cookie NOT_RUN",
+    "Desktop Edge emulation, not physical phone",
+    "No real supplier/mail/PG/deployment"
+  ]
+}

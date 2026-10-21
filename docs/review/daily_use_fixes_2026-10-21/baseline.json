@@ -1,0 +1,12 @@
+{
+  "head": "37e74c796b1436c9115e17bdac264f0e9eb7a6f2",
+  "sha256": {
+    "app/routers/projects.py": "0999c9e23048861ab95624e1ccea17126e2aeaf4326dcc80dcede24076555d55",
+    "app/routers/plans.py": "e73bb609e41f0ccc4eb9a462a129845bcb5f1208ce5318a54c4a42b0db8b541e",
+    "app/routers/care.py": "84b844731402ca63a076cb6b9400d0690f19ac46db5e6a9d1d55dc7f982ec707",
+    "app/services/pricing_checks.py": "214a59d68aaca5046935cf66d11d71b7499a6a0884b35d7faf736c442aceb361",
+    "frontend/src/components/ProjectManager.vue": "9361a9bba377ceba3405ca0d7f41a1028426f79061c0e920389e37bbc38a7274",
+    "frontend/src/components/RewardShop.vue": "04aef378c0556d4c732b2e479122d8106945adea9cfe320986025099a174c995",
+    "docs/DAILY_USE_REDESIGN_REVIEW_2026-10-21.md": "c7a163e97f58e252839e0442deee0966c1dec83931bc762ab210a08ec4f38cca"
+  }
+}

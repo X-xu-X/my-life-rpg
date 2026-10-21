@@ -1,0 +1,2485 @@
+[
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 401
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/options",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/login",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/return-checkin",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/daily-prompts",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events?date=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pending",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/discoveries/refresh",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/projects",
+    "status": 200,
+    "body_fields": [
+      "category",
+      "enabled",
+      "expected_version",
+      "frequency",
+      "goal_id",
+      "interval",
+      "name",
+      "planned_minutes",
+      "position",
+      "removed",
+      "request_key",
+      "start",
+      "weekdays"
+    ],
+    "project_input": {
+      "name": "未来一次 plan",
+      "start": "2026-10-28",
+      "category": "plan",
+      "position": 17,
+      "removed": false,
+      "enabled": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "PUT",
+    "path": "/api/projects/plan/1",
+    "status": 200,
+    "body_fields": [
+      "category",
+      "effective_from",
+      "enabled",
+      "expected_version",
+      "frequency",
+      "goal_id",
+      "interval",
+      "name",
+      "planned_minutes",
+      "position",
+      "removed",
+      "request_key",
+      "start",
+      "weekdays"
+    ],
+    "project_input": {
+      "name": "未来改名 plan",
+      "start": "2026-10-28",
+      "effective_from": "2026-10-28",
+      "category": "care",
+      "position": 17,
+      "removed": false,
+      "enabled": false
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/discoveries/refresh",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/projects",
+    "status": 200,
+    "body_fields": [
+      "category",
+      "enabled",
+      "expected_version",
+      "frequency",
+      "goal_id",
+      "interval",
+      "name",
+      "planned_minutes",
+      "position",
+      "removed",
+      "request_key",
+      "start",
+      "weekdays"
+    ],
+    "project_input": {
+      "name": "未来一次 care",
+      "start": "2026-10-28",
+      "category": "care",
+      "position": 17,
+      "removed": false,
+      "enabled": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "PUT",
+    "path": "/api/projects/care/1",
+    "status": 200,
+    "body_fields": [
+      "category",
+      "effective_from",
+      "enabled",
+      "expected_version",
+      "frequency",
+      "goal_id",
+      "interval",
+      "name",
+      "planned_minutes",
+      "position",
+      "removed",
+      "request_key",
+      "start",
+      "weekdays"
+    ],
+    "project_input": {
+      "name": "未来改名 care",
+      "start": "2026-10-28",
+      "effective_from": "2026-10-28",
+      "category": "plan",
+      "position": 17,
+      "removed": false,
+      "enabled": false
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/discoveries/refresh",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/projects",
+    "status": 200,
+    "body_fields": [
+      "category",
+      "enabled",
+      "expected_version",
+      "frequency",
+      "goal_id",
+      "interval",
+      "name",
+      "planned_minutes",
+      "position",
+      "removed",
+      "request_key",
+      "start",
+      "weekdays"
+    ],
+    "project_input": {
+      "name": "历史间隔",
+      "start": "2026-10-14",
+      "category": "plan",
+      "position": 8,
+      "removed": false,
+      "enabled": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-20&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "PUT",
+    "path": "/api/plan-schedules/2/occurrences/2026-10-20",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/4",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-20&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-20",
+    "status": 200
+  },
+  {
+    "method": "PUT",
+    "path": "/api/projects/plan/2",
+    "status": 200,
+    "body_fields": [
+      "category",
+      "effective_from",
+      "enabled",
+      "expected_version",
+      "frequency",
+      "goal_id",
+      "interval",
+      "name",
+      "planned_minutes",
+      "position",
+      "removed",
+      "request_key",
+      "start",
+      "weekdays"
+    ],
+    "project_input": {
+      "name": "历史间隔改名",
+      "start": "2026-10-14",
+      "effective_from": "2026-10-21",
+      "category": "plan",
+      "position": 8,
+      "removed": false,
+      "enabled": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-20&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-23",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-20",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/projects",
+    "status": 200,
+    "body_fields": [
+      "category",
+      "enabled",
+      "expected_version",
+      "frequency",
+      "goal_id",
+      "interval",
+      "name",
+      "planned_minutes",
+      "position",
+      "removed",
+      "request_key",
+      "start",
+      "weekdays"
+    ],
+    "project_input": {
+      "name": "历史每日",
+      "start": "2026-10-11",
+      "category": "plan",
+      "position": 5,
+      "removed": false,
+      "enabled": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-20&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "PUT",
+    "path": "/api/plan-schedules/3/occurrences/2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects",
+    "status": 200
+  },
+  {
+    "method": "PUT",
+    "path": "/api/projects/plan/3",
+    "status": 200,
+    "body_fields": [
+      "category",
+      "effective_from",
+      "enabled",
+      "expected_version",
+      "frequency",
+      "goal_id",
+      "interval",
+      "name",
+      "planned_minutes",
+      "position",
+      "removed",
+      "request_key",
+      "start",
+      "weekdays"
+    ],
+    "project_input": {
+      "name": "明天的新名称",
+      "start": "2026-10-11",
+      "effective_from": "2026-10-22",
+      "category": "plan",
+      "position": 5,
+      "removed": false,
+      "enabled": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/projects",
+    "status": 200,
+    "body_fields": [
+      "category",
+      "enabled",
+      "expected_version",
+      "frequency",
+      "goal_id",
+      "interval",
+      "name",
+      "planned_minutes",
+      "position",
+      "removed",
+      "request_key",
+      "start",
+      "weekdays"
+    ],
+    "project_input": {
+      "name": "排序四十的照顾项目",
+      "start": "2026-10-21",
+      "category": "care",
+      "position": 40,
+      "removed": false,
+      "enabled": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/projects",
+    "status": 200,
+    "body_fields": [
+      "category",
+      "enabled",
+      "expected_version",
+      "frequency",
+      "goal_id",
+      "interval",
+      "name",
+      "planned_minutes",
+      "position",
+      "removed",
+      "request_key",
+      "start",
+      "weekdays"
+    ],
+    "project_input": {
+      "name": "排序二的照顾项目",
+      "start": "2026-10-21",
+      "category": "care",
+      "position": 2,
+      "removed": false,
+      "enabled": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "PUT",
+    "path": "/api/projects/care/2",
+    "status": 200,
+    "body_fields": [
+      "category",
+      "effective_from",
+      "enabled",
+      "expected_version",
+      "frequency",
+      "goal_id",
+      "interval",
+      "name",
+      "planned_minutes",
+      "position",
+      "removed",
+      "request_key",
+      "start",
+      "weekdays"
+    ],
+    "project_input": {
+      "name": "排序四十只改名",
+      "start": "2026-10-21",
+      "effective_from": "2026-10-21",
+      "category": "care",
+      "position": 40,
+      "removed": false,
+      "enabled": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "PUT",
+    "path": "/api/care/config",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/daily-prompts",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events?date=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pending",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/discoveries/refresh",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "PUT",
+    "path": "/api/care/config",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/daily-prompts",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events?date=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pending",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/discoveries/refresh",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "PUT",
+    "path": "/api/care/items/2/entries/2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins",
+    "status": 200
+  },
+  {
+    "method": "PUT",
+    "path": "/api/projects/care/2",
+    "status": 200,
+    "body_fields": [
+      "category",
+      "effective_from",
+      "enabled",
+      "expected_version",
+      "frequency",
+      "goal_id",
+      "interval",
+      "name",
+      "planned_minutes",
+      "position",
+      "removed",
+      "request_key",
+      "start",
+      "weekdays"
+    ],
+    "project_input": {
+      "name": "排序四十只改名",
+      "start": "2026-10-21",
+      "effective_from": "2026-10-21",
+      "category": "care",
+      "position": 40,
+      "removed": true,
+      "enabled": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "PUT",
+    "path": "/api/projects/care/3",
+    "status": 200,
+    "body_fields": [
+      "category",
+      "effective_from",
+      "enabled",
+      "expected_version",
+      "frequency",
+      "goal_id",
+      "interval",
+      "name",
+      "planned_minutes",
+      "position",
+      "removed",
+      "request_key",
+      "start",
+      "weekdays"
+    ],
+    "project_input": {
+      "name": "排序二的照顾项目",
+      "start": "2026-10-21",
+      "effective_from": "2026-10-21",
+      "category": "care",
+      "position": 2,
+      "removed": true,
+      "enabled": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/daily-prompts",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events?date=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pending",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/discoveries/refresh",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/discoveries/refresh",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/discoveries/refresh",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/return-checkin",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  }
+]

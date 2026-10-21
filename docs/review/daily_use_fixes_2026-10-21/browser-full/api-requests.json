@@ -1,0 +1,3378 @@
+[
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 401
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/options",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/login",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/return-checkin",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/daily-prompts",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events?date=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pending",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events?",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/diaries/2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/discoveries/refresh",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/record-metrics",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/attributes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/attributes/history",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/heatmap",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/subdimensions",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/llm-config",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/timers",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reports",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reports/previews",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/achievements",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/dynamic-candidates",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/challenges/current",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/exemptions",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/stagnation",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/redemptions",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/challenges/current",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/exemptions",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/stagnation",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/redemptions",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/personal-information",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/important-days",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/return-checkin",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/questionnaire",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/ai/preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/settings",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/llm-config",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/record-metrics",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/attributes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/sessions",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/options",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/feedback?offset=0",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/announcements",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/daily-prompts",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events?date=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pending",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events?",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/diaries/2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/discoveries/refresh",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/record-metrics",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/attributes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/attributes/history",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/heatmap",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/subdimensions",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/llm-config",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/timers",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reports",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reports/previews",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/achievements",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/dynamic-candidates",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/challenges/current",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/exemptions",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/stagnation",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/redemptions",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/challenges/current",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/exemptions",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/stagnation",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/redemptions",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/personal-information",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/important-days",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/return-checkin",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/questionnaire",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/ai/preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/llm-config",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/record-metrics",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/settings",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/attributes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/options",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/sessions",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/feedback?offset=0",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/announcements",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/announcements",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/daily-prompts",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events?date=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pending",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/daily-prompts",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events?date=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pending",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/discoveries/refresh",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/discoveries/refresh",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/record-metrics",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/attributes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/attributes/history",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/heatmap",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/subdimensions",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/record-metrics",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/attributes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/attributes/history",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/heatmap",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/subdimensions",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/ai/preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/llm-config",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/record-metrics",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/settings",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/attributes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/ai/preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/llm-config",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/record-metrics",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/settings",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/return-checkin",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/attributes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/return-checkin",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/questionnaire",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/questionnaire",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/daily-prompts",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events?date=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pending",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/events",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events?date=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pending",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/events",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/events/5/analysis-jobs",
+    "status": 202
+  },
+  {
+    "method": "GET",
+    "path": "/api/events?date=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pending",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/5",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/judgments",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pending",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/llm-config",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/ai/preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/analysis-jobs/1",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/5/fact-bundles",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/5/analysis-jobs",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/5/fact-notes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/fact-relations",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/event-options?q=",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/5/fact-bundles",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/5/analysis-jobs",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/5/fact-notes",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/fact-bundles/1/preview",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/5/fact-bundles",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/5/analysis-jobs",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/5/fact-notes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/judgments",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/5",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pending",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/fact-bundles/1/confirm",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/analysis-jobs/1",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/5/fact-bundles",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/5/analysis-jobs",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/5/fact-notes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/judgments",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/5",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pending",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/judgments",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/analysis-jobs/1",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/judgments",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/daily-prompts",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events?date=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pending",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/events",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/events/6/analysis-jobs",
+    "status": 202
+  },
+  {
+    "method": "GET",
+    "path": "/api/events?date=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pending",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/6",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/judgments",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pending",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/llm-config",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/ai/preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/analysis-jobs/2",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/6/fact-bundles",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/6/analysis-jobs",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/6/fact-notes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/event-options?q=",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/fact-relations",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/6/fact-bundles",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/6/analysis-jobs",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/6/fact-notes",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/fact-bundles/2/preview",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/6/fact-bundles",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/6/analysis-jobs",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/6/fact-notes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/6",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/judgments",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pending",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/fact-bundles/2/confirm",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/analysis-jobs/2",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/6/fact-bundles",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/6/analysis-jobs",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/6/fact-notes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/judgments",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/judgments",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/6",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pending",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/analysis-jobs/2",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/daily-prompts",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events?date=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pending",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/diaries/2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "PUT",
+    "path": "/api/diaries/2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/diaries/2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/7/fact-bundles",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/7/analysis-jobs",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/7/fact-notes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/personal-information",
+    "status": 200
+  },
+  {
+    "method": "PUT",
+    "path": "/api/personal-information",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/personal-information",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/discoveries/refresh",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/mainlines",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/projects",
+    "status": 200,
+    "body_fields": [
+      "category",
+      "enabled",
+      "expected_version",
+      "frequency",
+      "goal_id",
+      "interval",
+      "name",
+      "planned_minutes",
+      "position",
+      "removed",
+      "request_key",
+      "start",
+      "weekdays"
+    ],
+    "project_input": {
+      "name": "无固定时长的阅读",
+      "start": "2026-10-21",
+      "category": "plan",
+      "position": 0,
+      "removed": false,
+      "enabled": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/projects",
+    "status": 200,
+    "body_fields": [
+      "category",
+      "enabled",
+      "expected_version",
+      "frequency",
+      "goal_id",
+      "interval",
+      "name",
+      "planned_minutes",
+      "position",
+      "removed",
+      "request_key",
+      "start",
+      "weekdays"
+    ],
+    "project_input": {
+      "name": "照顾自己的一杯水",
+      "start": "2026-10-21",
+      "category": "care",
+      "position": 0,
+      "removed": false,
+      "enabled": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21&include_removed=true",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/timers",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/timers",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/timers",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/timers",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/timers/1/end-preview",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/timers",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/timers/1/confirm",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/timers",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/return-checkin",
+    "status": 200
+  },
+  {
+    "method": "PUT",
+    "path": "/api/return-checkin",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/return-checkin",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/return-checkin/complete",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/daily-prompts",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events?date=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pending",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/important-days",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/important-days",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/important-days",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/important-days",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/shop/items/1/redeem",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/shop/items/1/redeem",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/shop/items",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reward-quotes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pricing-checks",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/timers",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/timers",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/timers",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/timers",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/timers/2/end-preview",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/timers",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/timers/2/confirm",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/timers",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/timers",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/timers",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/timers",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/timers",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/timers/3/pause",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/timers",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/timers",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/feedback?offset=0",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/feedback",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/feedback?offset=0",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/feedback",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/options",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/sessions",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reports",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reports/previews",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/report?period=week",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reports",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reports/previews",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reports/1",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/reports/1/save",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reports",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reports/previews",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reports/1",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/reports",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "PUT",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/ai/preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/llm-config",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/record-metrics",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/settings",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/attributes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/export?format=json&kind=all&include_questions=true&include_analysis=true&include_deleted=false&include_history=true&include_game=true&include_questionnaire=false&include_feedback=false&include_personal=false",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/export?format=markdown&kind=all&include_questions=true&include_analysis=true&include_deleted=false&include_history=true&include_game=true&include_questionnaire=false&include_feedback=false&include_personal=false",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/export?format=html&kind=all&include_questions=true&include_analysis=true&include_deleted=false&include_history=true&include_game=true&include_questionnaire=false&include_feedback=false&include_personal=false",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/export?format=csv&kind=all&include_questions=true&include_analysis=true&include_deleted=false&include_history=true&include_game=false&include_questionnaire=false&include_feedback=false&include_personal=false",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/diaries/2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/7/fact-bundles",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/7/analysis-jobs",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events/7/fact-notes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/ai/preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/llm-config",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/record-metrics",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/settings",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/attributes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/logout",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 401
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/options",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/login",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/return-checkin",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/ai/preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/llm-config",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/record-metrics",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/settings",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/attributes",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/experience-preferences",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/trial",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/daily-prompts",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/phase",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/events?date=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/pending",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/coins?limit=50",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/projects?day=2026-10-21",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/goals",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/logout",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 401
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/options",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/login",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/overview?offset=0",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/users?offset=0",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/announcements?offset=0",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/rules/mainline",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/calendar?year=2026",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/holidays",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/site?offset=0",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/rules/dynamic",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/hosted-ai",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/hosted-monitor",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/audit?offset=0",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/feedback?offset=0",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/options",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/sessions",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/feedback?offset=0",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/feedback/1/reply",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/feedback?offset=0",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/feedback",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/announcements?offset=0",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/announcements",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/announcements?offset=0",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/announcements",
+    "status": 200
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/announcements/1",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/announcements?offset=0",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/announcements",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/users?role=user",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/logout",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 401
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/options",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/register",
+    "status": 201
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/questionnaire",
+    "status": 200
+  },
+  {
+    "method": "PUT",
+    "path": "/api/questionnaire",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/questionnaire",
+    "status": 200
+  },
+  {
+    "method": "PUT",
+    "path": "/api/questionnaire",
+    "status": 200
+  },
+  {
+    "method": "PUT",
+    "path": "/api/questionnaire",
+    "status": 200
+  },
+  {
+    "method": "PUT",
+    "path": "/api/questionnaire",
+    "status": 200
+  },
+  {
+    "method": "PUT",
+    "path": "/api/questionnaire",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/questionnaire/analyze",
+    "status": 200
+  },
+  {
+    "method": "POST",
+    "path": "/api/questionnaire/confirm",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/questionnaire",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "path": "/api/feedback",
+    "status": 200
+  }
+]

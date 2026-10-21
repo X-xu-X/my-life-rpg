@@ -1,5 +1,7 @@
 # 游戏人生（Game of Life）
 
+> **2026-10-21 独立审查补修**：已按 R1～R4 修复项目编辑、排期/生效日、价格续批公平性及照顾清单管理，见[补修交付](docs/DAILY_USE_REDESIGN_FIXES_DELIVERY_2026-10-21.md)。后端169通过/2真实PG未运行，原109项与新增修复浏览器验收通过；本地自验供复审，不表示发布。
+
 > **2026-10-21 本地开发交付**：本轮正式 Vue/API/worker 与 b025 迁移已实现，见[逐项交付及 A01～A33](docs/DAILY_USE_REDESIGN_DELIVERY_2026-10-21.md)。新版自动定价、一次问卷、长期信息/回归、项目整合、提示及日期导出已接入；保留旧权益和备案。下条“尚未完成”属于设计时点；本轮未推送/部署，真实 PG/供应商/SMTP/手机等仍单列 NOT_RUN。
 
 > **2026-10-21 当前开发入口**：用户认可新版[完整 Demo](docs/prototypes/life-journal-complete-preview-2026-10-21/index.html)，要求交 Writer 正式开发。[本轮开发规格](docs/DAILY_USE_REDESIGN_DEV_SPEC_2026-10-21.md)及[Writer 任务书](docs/WRITER_DAILY_USE_REDESIGN_2026-10-21.md)替代下文冲突的旧方案。涵盖全站整理、问卷/回归、模型诊断、逐事实 80% 门槛、个人自动定价等；首记 3 币独立，旧权益保留。143 项检查属于本机模拟 Demo，正式应用尚未完成本轮实现/发布；此前已经上云和迁移的事实不由下文历史“未上线”状态推翻。

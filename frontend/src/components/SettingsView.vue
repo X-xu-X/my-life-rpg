@@ -13,7 +13,7 @@ const directory=[['models','AI 模型'],['data','数据导出'],['dimensions','�
 async function locate(id){
   const target=document.getElementById('settings-'+id)
   if(!target)return
-  if(target.tagName==='DETAILS')target.open=true
+  for(let node=target;node;node=node.parentElement)if(node.tagName==='DETAILS')node.open=true
   await nextTick()
   const heading=target.querySelector('h2,h3,summary')
   target.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'})
@@ -163,10 +163,10 @@ onMounted(() => {
 <template><div class="settings-page">
   <PageHeader title="设置" description="模型与数据放在前面，其他设置按需展开。" />
   <nav class="settings-directory" aria-label="设置目录"><button v-for="[id,label] in directory" :key="id" type="button" class="btn" @click="locate(id)">{{ label }}</button></nav>
-    <ModelSettings />
-    <ExportControls/>
-    <div class="card backup-note">
-      <h3>数据备份</h3><p v-if="account?.mode === 'cloud'" class="muted">服务器备份由运营者通过运维命令完成，数据库备份与加密主密钥需要分别保管。</p>
+    <details class="settings-disclosure card"><summary>模型与 AI 配置</summary><ModelSettings /></details>
+    <details class="settings-disclosure card"><summary>数据导出</summary><ExportControls/></details>
+    <details class="card backup-note">
+      <summary>数据备份说明</summary><p v-if="account?.mode === 'cloud'" class="muted">服务器备份由运营者通过运维命令完成，数据库备份与加密主密钥需要分别保管。</p>
       <p v-if="account?.mode !== 'cloud'" class="muted">每次启动自动备份（保留最近 30 份），也可以手动备份。</p>
       <button v-if="account?.mode !== 'cloud'" class="btn primary" :disabled="backingUp" @click="doBackup">
         {{ backingUp ? '备份中…' : '立即备份' }}
@@ -177,7 +177,7 @@ onMounted(() => {
           {{ b.file }}（{{ (b.size / 1024).toFixed(1) }} KB，{{ b.created_at }}）
         </div>
       </div>
-    </div>
+    </details>
     <details class="card settings-section" id="settings-dimensions">
       <summary>属性维度设置 · 修改 {{ changedAttrs.length }} 项</summary>
       <p class="muted">「隐藏」= AI 照判但面板不显示；「关闭判定」= AI 不分析不加点（值冻结，重开从当前值继续）。</p>

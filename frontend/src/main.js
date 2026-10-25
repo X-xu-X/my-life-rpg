@@ -5,5 +5,7 @@ import './design-tokens.css'
 import './styles.css'
 import './ui-layout.css'
 import './daily-use.css'
+import './navigation.css'
+import './record-detail.css'
 
 createApp(App).use(router).mount('#app')

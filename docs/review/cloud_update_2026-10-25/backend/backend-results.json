@@ -1,0 +1,15 @@
+{
+  "status": "PASS",
+  "run": 193,
+  "passed": 191,
+  "skipped": [
+    "test_pg_concurrent_redemption_and_int64_balance (tests.test_next_iteration.CloudTests.test_pg_concurrent_redemption_and_int64_balance): 真实 PostgreSQL 并发用例",
+    "test_pg_import_synthetic_legacy40_atomic_mapping (tests.test_next_iteration.CloudTests.test_pg_import_synthetic_legacy40_atomic_mapping): 真实 PostgreSQL 导入用例"
+  ],
+  "failures": [],
+  "errors": [],
+  "database": "synthetic SQLite; no application lifespan or real data",
+  "real_postgres": "NOT_RUN",
+  "real_supplier": "NOT_RUN",
+  "real_mail": "NOT_RUN"
+}

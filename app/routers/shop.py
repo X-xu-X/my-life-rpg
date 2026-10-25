@@ -120,15 +120,22 @@ def reprice_item(item_id: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/shop/items/{item_id}")
-def disable_item(item_id: int, db: Session = Depends(get_db)):
+def disable_item(item_id: int, body: MutationIn | None = None, db: Session = Depends(get_db)):
     """停用物品（**不做物理删除**，保留历史兑换记录的名称引用）。"""
     user = get_or_create_default_user(db)
     it = _get_item(db, user, item_id)
     lock_profile(db, user.id)
     db.refresh(it)
+    if body is not None:
+        op=f'archive-reward:{item_id}';fp,prior=receipts.replay(db,user.id,op,body)
+        if prior is not None:return prior
+        if body.expected_version!=it.updated_at:raise HTTPException(409,'奖励已变化，请刷新后再移除。')
     it.enabled = False
+    it.auto_pricing = False
+    result={"status": "disabled", "item_id": item_id}
+    if body is not None:receipts.record(db,user.id,op,body,fp,it.id,result)
     db.commit()
-    return {"status": "disabled", "item_id": item_id}
+    return result
 
 
 @router.post("/shop/items/{item_id}/redeem")

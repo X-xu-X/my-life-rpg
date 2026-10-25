@@ -25,6 +25,10 @@ def summary(db, user_id, group, version):
 
 
 MESSAGES = {
+    'MODEL_FACT_FORMAT_INVALID':('模型已返回，但事实字段格式不符合要求，本次未入账；请重新分析。',False),
+    'MODEL_FACT_SOURCE_INVALID':('模型引用的内容未通过原文来源校验，本次未入账；请重新分析。',False),
+    'MODEL_FACT_RELATION_INVALID':('模型建议的关联记录无效，本次未入账；请重新分析。',False),
+    'MODEL_ATTRIBUTE_INVALID':('模型返回了未登记的属性名或不合法点数，本次尚未入账；请重新分析。',False),
     'MODEL_NOT_CONFIGURED':('请先保存并启用本人模型配置。',False),
     'MODEL_ENDPOINT_BLOCKED':('端点不符合公网HTTPS要求，请核对高级配置。',False),
     'MODEL_REQUEST_INCOMPATIBLE':('供应商不接受本次请求参数或端点，请核对聊天API支持情况。',False),
@@ -39,7 +43,7 @@ MESSAGES = {
     'MODEL_BALANCE_INSUFFICIENT': ('余额或调用配额不足，请在官方控制台核对。', False),
     'MODEL_RATE_LIMITED': ('请求受到限流，请稍后主动重试。', True),
     'MODEL_TIMEOUT': ('请求超时，请稍后主动重试。', True),
-    'MODEL_INVALID_RESPONSE': ('请求格式或返回内容不兼容，请核对聊天模型与端点。', False),
+    'MODEL_INVALID_RESPONSE': ('模型响应不符合系统要求，请查看具体提示或重新分析。', False),
     'MODEL_BUSY': ('已有模型请求进行中，请稍后重试。', True),
     'MODEL_DAILY_LIMIT': ('今日调用预算已用完，仍可保存原文。', False),
     'MODEL_UNAVAILABLE': ('请求失败，供应商未提供可确定的原因。', True),

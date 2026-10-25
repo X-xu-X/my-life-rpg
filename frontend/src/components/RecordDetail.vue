@@ -3,6 +3,8 @@ import ConfirmDialog from './ui/ConfirmDialog.vue'
 import { useWorkflowWrite } from '../composables/useWorkflowWrite'
 import RecordPermission from './RecordPermission.vue'
 import FactAnalysis from './FactAnalysis.vue'
+import EventFactAnalysis from './EventFactAnalysis.vue'
+import RecordPermissionDialog from './RecordPermissionDialog.vue'
 import FactLinks from './FactLinks.vue'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -21,7 +23,7 @@ function visibility(){stop();if(!document.hidden)load()}
 const draftKey = storageKey('supplement:' + route.params.id)
 try { detail.value = localStorage.getItem(draftKey) || '' } catch {}
 watch(detail, value => { try { localStorage.setItem(draftKey, value) } catch {} })
-const correctionReason=ref('')
+const correctionReason=ref(''),permissionDialog=ref(false),originalOpen=ref(false)
 const frozen = computed(()=>judgment.value?.status === 'confirmed')
 async function load() {
   reader?.abort();reader=new AbortController();const revision=++generation
@@ -76,11 +78,27 @@ onMounted(()=>{
 onUnmounted(()=>{alive=false;stop();document.removeEventListener('visibilitychange',visibility)})
 </script>
 <template>
-  <div class="reading-page">
+ <div v-if="event?.record_kind==='event'" class="entry-page">
+  <p v-if="error" class="error" role="alert">{{ error }}</p>
+  <header class="entry-heading"><div><p class="entry-date">{{ event.time_precision==='date'?event.occurred_on:displayEventTime(event) }}</p><h1>{{ event.title&&!event.content.trim().startsWith(event.title.trim())?event.title:'事件记录' }}</h1></div><span class="entry-saved">✓ 已保存</span></header>
+  <section class="entry-original-card"><header class="entry-section-title"><h2>我记下的</h2><button v-if="event.origin!=='challenge'" class="text-button" :disabled="busy" @click="editing=!editing">{{ editing?'取消编辑':frozen?'更正原文':'编辑原文' }}</button></header>
+   <template v-if="editing"><label class="entry-editor">原文<textarea v-model="text" rows="5" maxlength="20000" :disabled="busy" aria-label="编辑原文"/></label><label v-if="frozen">更正原因<textarea v-model="correctionReason" maxlength="2000" rows="2"/></label><button class="btn primary" :disabled="busy" @click="saveEdit">{{ busy?'保存中…':'保存修改' }}</button></template>
+   <template v-else><p class="entry-original-text" :class="{'is-collapsed':!originalOpen&&event.content.length>380}">{{ event.content }}</p><button v-if="event.content.length>380" class="text-button" @click="originalOpen=!originalOpen">{{ originalOpen?'收起全文':'展开全文' }}</button></template>
+   <footer class="entry-original-footer"><button class="entry-permission-toggle" @click="permissionDialog=true">{{ event.ai_permission==='allowed'?'AI 分析已开启':'仅保存，不交给 AI' }} <span>设置 ›</span></button></footer>
+   <p v-if="notice" class="entry-notice" role="status">{{ notice }}</p>
+  </section>
+  <EventFactAnalysis :key="'simple-facts:'+event.id" :event="event" :read-only="event.ai_permission!=='allowed'" @confirmed="load"/>
+  <p v-if="event.ai_permission!=='allowed'" class="entry-private-note">本篇只保存。需要分析时，可以在原文下方开启本篇 AI 权限。</p>
+  <details class="entry-more"><summary>记录信息与更多操作</summary><p>内容日期：{{ displayEventTime(event) }}</p><p>保存于 {{ displayTime(event.created_at) }}</p><FactLinks :event="event"/><details class="entry-remove"><summary>撤销这条记录</summary><p>原文与审计保留；属性按实际流水回滚，共享事实仍有有效来源时保留。已发金币保留。</p><button class="btn danger" :disabled="busy" @click="removeChoice=true">撤销记录</button></details></details>
+  <RecordPermissionDialog :event="event" :open="permissionDialog" @cancel="permissionDialog=false" @changed="permissionDialog=false;load()"/>
+  <ConfirmDialog :open="removeChoice" title="确认撤销来源" confirm-label="确认撤销" :busy="busy" @cancel="removeChoice=false" @confirm="remove"><p>原文及审计保留；独立事实属性按实际流水回滚，共享事实仍有有效来源时保留。金币不回滚。</p></ConfirmDialog>
+ </div>
+  <div v-else class="reading-page">
+  <p v-if="!event&&!error" role="status" class="entry-status-note">正在读取记录…</p>
   <p v-if="error" class="error" role="alert">{{ error }}</p>
   <article v-if="event" class="record-detail">
-    <p class="eyebrow">已保存 ✓ · {{ displayEventTime(event) }}</p><h1>{{ event.title }}</h1>
-    <p class="muted small">发生时间与保存时间分开记录；保存于 {{ displayTime(event.created_at) }}</p>
+    <p class="eyebrow">已保存 ✓ · {{ displayEventTime(event) }}</p><h1>{{ event.title&& !event.content.trim().startsWith(event.title.trim())?event.title:"这一件事" }}</h1>
+    <p class="muted small">保存于 {{ displayTime(event.created_at) }}</p>
     <textarea v-if="editing" v-model="text" rows="12" maxlength="20000" :disabled="busy" aria-label="编辑原文" />
     <p v-else class="original-text">{{ event.content }}</p>
     <div class="action-group" v-if="(!frozen||event.record_kind==='event') && event.origin !== 'challenge'"><button class="btn" :disabled="busy" @click="editing = !editing">{{ editing ? '取消编辑' : frozen ? '更正原文，保留结算' : '编辑原文' }}</button><button v-if="editing" class="btn primary" :disabled="busy" @click="saveEdit">保存修改</button></div>
@@ -100,6 +118,6 @@ onUnmounted(()=>{alive=false;stop();document.removeEventListener('visibilitychan
       <div v-if="judgment"><p v-if="judgment.model_provenance" class="muted">本次模型：{{ judgment.model_provenance.provider }} / {{ judgment.model_provenance.model }} · 配置 v{{ judgment.model_provenance.config_version }}</p><p>{{ judgment.summary }}</p><p class="muted">AI 自评置信度：{{ Math.round(judgment.confidence * 100) }}%；不代表经过校准的真实概率。</p><ul><li v-for="change in (frozen ? judgment.final_changes : judgment.suggested_changes)" :key="change.name">{{ change.name }} {{ change.delta >= 0 ? '+' : '' }}{{ change.delta }} · {{ change.reason }}</li></ul><details><summary>查看依据</summary><p v-for="(line,index) in judgment.analysis" :key="index">{{ line }}</p></details><button v-if="!frozen && event.origin !== 'challenge' && event.ai_permission==='allowed'" class="btn" :class="{primary:job?.state!=='needs_input'}" :disabled="busy || judgment.confidence < 0.8 || ['running','queued'].includes(job?.state)" @click="action(()=>api.confirmJudgment(judgment.id,judgment.updated_at),'已确认入账。')">{{ judgment.confidence < 0.8 ? '需补充信息后确认' : '确认入账' }}</button><RouterLink to="/judgments">查看完整判定与审计 →</RouterLink></div>
     </section>
     <FactLinks :event="event"/>
-    <section class="danger-zone"><h2>撤销记录</h2><p class="muted">原文与审计保留；属性按实际流水回滚，已发金币保留。</p><button class="btn danger" :disabled="busy" @click="removeChoice=true">撤销这条记录</button></section>
+    <details class="danger-zone"><summary>更多操作 · 撤销记录</summary><p class="muted">原文与审计保留；属性按实际流水回滚，已发金币保留。</p><button class="btn danger" :disabled="busy" @click="removeChoice=true">撤销这条记录</button></details>
   </article><ConfirmDialog :open="removeChoice" title="确认撤销来源" confirm-label="确认撤销" :busy="busy" @cancel="removeChoice=false" @confirm="remove"><p>原文及审计保留；独立事实属性按实际流水回滚，共享事实仍有有效来源时保留。金币不回滚。</p></ConfirmDialog>
 </div></template>

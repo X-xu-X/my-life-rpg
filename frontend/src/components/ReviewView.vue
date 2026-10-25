@@ -27,7 +27,7 @@ onMounted(load)
 </script>
 <template>
   <div class="reading-page"><RouterLink class="btn" to="/">← 今天</RouterLink><PageHeader title="睡前回顾" description="把今天轻轻收好。" />
-  <div class="review-options"><label>回顾日期<input v-model="day" type="date" :disabled="busy" @change="load" /></label><div><p class="muted">时区：{{ zone }}</p><button type="button" class="btn" :disabled="busy" :aria-expanded="zoneOpen" @click="zoneOpen=!zoneOpen">修改时区</button><label v-if="zoneOpen">回顾时区<input v-model="zone" :disabled="busy" @change="load" /></label></div></div>
+  <div class="review-options"><label>回顾日期<input v-model="day" type="date" :disabled="busy" @change="load" /></label><details><summary>更多日期选项</summary><button type="button" class="btn" :disabled="busy" :aria-expanded="zoneOpen" @click="zoneOpen=!zoneOpen">修改时区</button><label v-if="zoneOpen">回顾时区<input v-model="zone" :disabled="busy" @change="load" /></label></details></div>
   <details v-if="history.length"><summary>已保存的回顾</summary><button v-for="row in history" :key="row.id" class="btn" :disabled="busy" @click="selectReview(row)">{{ row.date }} · {{ row.timezone }}</button></details>
   <p v-if="loading" role="status">正在读取回顾…</p><div v-if="error" class="read-error" role="alert"><p>{{ error }}</p><button class="btn" :disabled="busy || loading" @click="load">重新读取</button></div>
   <template v-if="data"><p class="muted">{{ day }} · {{ zone }}，你留下了 {{ data.events.length }} 段记录。回顾引用原事实，不会再次发奖。</p>

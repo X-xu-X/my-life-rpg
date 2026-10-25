@@ -8,7 +8,7 @@ watch(()=>props.open,async(open)=>{await nextTick();if(open){trigger=document.ac
 function cancel(e){e?.preventDefault();if(!props.busy)emit('cancel')}
 function trap(e){
  if(e.key!=='Tab')return
- const nodes=[...dialog.value.querySelectorAll('button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex="0"]')].filter(node=>node.getClientRects().length)
+ const nodes=[...dialog.value.querySelectorAll('button:not(:disabled),a[href],summary,input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex="0"]')].filter(node=>node.checkVisibility?node.checkVisibility():node.getClientRects().length)
  const index=nodes.indexOf(document.activeElement)
  if(!nodes.length){e.preventDefault();dialog.value.focus()}
  else if(e.shiftKey&&(index<=0)){e.preventDefault();nodes.at(-1).focus()}
@@ -16,4 +16,4 @@ function trap(e){
 }
 onUnmounted(()=>{dialog.value?.close();trigger?.focus()})
 </script>
-<template><dialog ref="dialog" tabindex="-1" class="confirm-dialog" :aria-labelledby="titleId" @keydown="trap" @cancel="cancel"><h2 :id="titleId">{{ title }}</h2><slot /><div class="action-group"><button class="btn" autofocus :disabled="busy" @click="cancel">取消</button><button class="btn primary" :disabled="busy" @click="emit('confirm')">{{ busy?'处理中…':confirmLabel||'确认兑换' }}</button></div></dialog></template>
+<template><dialog ref="dialog" tabindex="-1" class="confirm-dialog" :aria-labelledby="titleId" @keydown="trap" @cancel="cancel"><h2 :id="titleId">{{ title }}</h2><slot /><div class="action-group dialog-actions"><button class="btn" autofocus :disabled="busy" @click="cancel">取消</button><button class="btn primary" :disabled="busy" @click="emit('confirm')">{{ busy?'处理中…':confirmLabel||'确认兑换' }}</button></div></dialog></template>

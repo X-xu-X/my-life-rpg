@@ -354,14 +354,14 @@ onBeforeUnmount(()=>{
         </section>
         <details class="card radar-details" :open="radarOpen" @toggle="radarToggle"><summary @click="radarManual=true">能力雷达图</summary><p class="muted">轴上界随当前数值缩放，不能跨截图只比较面积。完整数值见能力列表。</p><p v-if="!visibleAttrs.length" class="muted">暂无数据。</p><div ref="radarEl" data-chart="radar" class="chart-radar"></div></details>
       </div>
-      <section class="card">
-        <h2>成长趋势</h2>
+      <details class="card" @toggle="handleResize">
+        <summary>成长趋势</summary>
         <label v-if="growthDims.length" class="trend-mobile">维度<select :value="growthDim" @change="switchGrowth($event.target.value)"><option v-for="d in growthDims" :key="d.name" :value="d.name">{{ d.name }} · {{ d.value }}</option></select></label>
         <div v-if="growthDims.length" class="trend-desktop"><button v-for="d in growthDims" :key="d.name" class="seg-btn" :class="{active:growthDim===d.name}" :aria-pressed="growthDim===d.name" @click="switchGrowth(d.name)">{{ d.name }} {{ d.value }}</button></div>
         <p v-if="!history.length" class="muted">暂无成长记录，在「今天」记录并确认入账后可查看趋势。</p>
         <div v-show="history.length" ref="growthEl" data-chart="growth" class="chart-trend"></div>
         <details v-if="history.length"><summary>查看本维度数据</summary><ul class="chart-data"><li v-for="(h,i) in history.filter(h=>h.name===growthDim).slice().sort((a,b)=>new Date(a.created_at)-new Date(b.created_at))" :key="i">{{ h.created_at }} · {{ h.value_after }}</li></ul></details>
-      </section>
+      </details>
     </template>
   </div>
 </template>

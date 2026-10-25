@@ -3,9 +3,9 @@ from pydantic import Field
 from fastapi import APIRouter,Depends,HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import Event
+from app.models import Event,AIJudgment
 from app.models.workflow import FactSettlement,EventFact
-from app.models.full_system import FactBundle,FactFragment,FactNote
+from app.models.full_system import FactBundle,FactFragment,FactNote,ActionAward
 from app.services import fact_analysis,facts
 from app.services.workflow_common import WriteIn,begin,finish,version,fields,get_owned
 from app.services.user_service import get_or_create_default_user
@@ -48,7 +48,25 @@ def supplement(event_id:int,body:NoteIn,db:Session=Depends(get_db)):
 @router.get('/events/{event_id}/fact-bundles')
 def bundles(event_id:int,db:Session=Depends(get_db)):
     event=get_owned(db,Event,event_id)
-    return {'items':[fields(b) for b in db.query(FactBundle).filter_by(event_id=event.id).order_by(FactBundle.id.desc()).limit(30).all()]}
+    rows=db.query(FactBundle).filter_by(event_id=event.id).order_by(FactBundle.id.desc()).limit(30).all()
+    ids={item['fact_id'] for b in rows if b.state=='confirmed' for item in (b.preview or {}).get('items',[]) if item.get('eligible')}
+    applied={fact_id:changes for fact_id,changes in db.query(FactSettlement.fact_id,AIJudgment.final_changes).join(
+        AIJudgment,AIJudgment.id==FactSettlement.judgment_id).filter(FactSettlement.user_id==event.user_id,
+        AIJudgment.event_id==event.id,FactSettlement.fact_id.in_(ids)).all()} if ids else {}
+    awards={fact_id:amount for fact_id,amount in db.query(ActionAward.fact_id,ActionAward.amount).join(
+        AIJudgment,AIJudgment.id==ActionAward.judgment_id).filter(ActionAward.user_id==event.user_id,
+        AIJudgment.user_id==event.user_id,AIJudgment.event_id==event.id,ActionAward.fact_id.in_(ids)).all()} if ids else {}
+    result=[]
+    for bundle in rows:
+        view=fields(bundle)
+        if bundle.state=='confirmed':
+            view['applied_changes']=[{'fragment_id':item['fragment_id'],
+                'coins':awards.get(item['fact_id'],0) if item.get('eligible') else 0,
+                'changes':applied.get(item['fact_id'],[]) if item.get('eligible') else []}
+                for item in (bundle.preview or {}).get('items',[])]
+            view['applied_total']=sum(item['coins'] for item in view['applied_changes'])
+        result.append(view)
+    return {'items':result}
 
 @router.post('/fact-bundles/{bundle_id}/decision')
 def decide(bundle_id:int,body:DecisionIn,db:Session=Depends(get_db)):

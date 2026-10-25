@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Event, AIJudgment
 from app.models.analysis import AnalysisJob
+from app.models.full_system import FactBundle
 from app.services import analysis_jobs
 from app.services.user_service import get_or_create_default_user
 from app.services.transactions import lock_profile
@@ -75,6 +76,24 @@ def pending(db: Session = Depends(get_db)):
     events = db.query(Event).filter(Event.user_id == user.id, Event.ai_permission=='allowed',Event.is_deleted.is_(False), Event.is_pure.is_(False), Event.origin.is_(None)).order_by(Event.id.desc()).all()
     result = []
     for event in events:
+        job = db.query(AnalysisJob).filter_by(event_id=event.id, user_id=user.id).filter(AnalysisJob.operation != 'review').order_by(AnalysisJob.id.desc()).first()
+        bundle = db.query(FactBundle).filter_by(event_id=event.id, user_id=user.id,
+            event_version=event.content_version, permission_version=event.ai_permission_version).order_by(FactBundle.id.desc()).first()
+        if event.record_kind in ('event', 'diary') and (bundle or job and job.operation == 'facts' or event.record_kind == 'diary'):
+            # A confirmed zero-award bundle has no confirmed AIJudgment. The bundle
+            # itself is authoritative; a later deliberate analysis remains pending.
+            if bundle and bundle.state == 'confirmed' and (not job or
+                job.state == 'ready' and (job.result or {}).get('bundle_id') == bundle.id):
+                continue
+            if event.analysis_intent == 'never' and not bundle and not job: continue
+            state = job.state if job else 'saved'
+            if bundle and (not job or job.state == 'ready'):
+                state = 'needs_input' if any(i.get('confidence', 0) < .8 or i.get('decision') == 'unresolved'
+                    for i in bundle.payload.get('items', [])) else 'ready'
+            result.append({'event_id': event.id, 'event_version': event.content_version,
+                'title': event.title, 'content': event.content, 'state': state, 'judgment_id': None,
+                'job': analysis_jobs.output(job) if job else None})
+            continue
         judgment = db.query(AIJudgment).filter_by(event_id=event.id).filter(
             AIJudgment.status.in_(("pending", "adjusted", "confirmed"))).order_by(AIJudgment.id.desc()).first()
         if judgment and judgment.status == "confirmed": continue

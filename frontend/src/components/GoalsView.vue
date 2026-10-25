@@ -6,7 +6,7 @@ import { toast } from '../composables/useToast'
 
 const goals = ref([])
 const form = ref({ description: '', metric: '', deadline: '', related_attribute: '' })
-const busy = ref(false)
+const busy = ref(false),createOpen=ref(false)
 const error = ref('')
 
 const STATUS_LABEL = { active: '进行中', achieved: '已达成', failed: '未达成', cancelled: '已取消' }
@@ -52,7 +52,7 @@ async function create() {
     })
     form.value = { description: '', metric: '', deadline: '', related_attribute: '' }
     await load()
-    toast.success('目标已创建')
+    createOpen.value=false;toast.success('目标已创建')
   } catch (e) {
     error.value = e.message
     toast.error(e.message)
@@ -103,8 +103,8 @@ onMounted(load)
 
 <template>
   <div>
-    <div class="card">
-      <h2>目标系统</h2>
+    <details class="card" :open="createOpen" @toggle="createOpen=$event.target.open">
+      <summary>添加目标</summary>
       <div class="form-grid">
         <div class="field">
           <label for="goalsview-field-1">目标描述</label>
@@ -130,7 +130,7 @@ onMounted(load)
         <template v-else>创建目标</template>
       </button>
       <p class="muted" style="margin-top: 8px">达成奖励规划力 +2 及关联属性，未达成扣规划力 -1，修改/取消均记审计。</p>
-    </div>
+    </details>
 
     <div class="card">
       <h3>目标列表</h3>
@@ -140,7 +140,7 @@ onMounted(load)
           <b>{{ g.description || g.metric }}</b>
           <span class="tag">{{ STATUS_LABEL[g.status] || g.status }}</span>
         </div>
-        <div class="muted">指标：{{ g.metric }}</div><GoalPlanProgress :goal-id="g.id"/>
+        <details><summary>进度与管理</summary><div class="muted">指标：{{ g.metric }}</div><GoalPlanProgress :goal-id="g.id"/>
         <div v-if="g.deadline" class="muted">期限：{{ new Date(g.deadline).toLocaleDateString('zh-CN') }}</div>
         <div v-if="g.audit && g.audit.length" class="muted" style="font-size: 13px; margin-top: 4px">
           最近操作：{{ g.audit[g.audit.length - 1].detail }}
@@ -165,6 +165,7 @@ onMounted(load)
           <button class="btn small" :disabled="busy" @click="setStatus(g.id, 'fail')">未达成</button>
           <button class="btn small danger" :disabled="busy" @click="setStatus(g.id, 'cancel')">取消</button>
         </div>
+        </details>
       </div>
     </div>
   </div>

@@ -1,0 +1,407 @@
+{
+  "status": "PASS",
+  "checks": [
+    {
+      "name": "production title and ICP footer",
+      "status": "PASS"
+    },
+    {
+      "name": "home compact actions not inline editor",
+      "status": "PASS"
+    },
+    {
+      "name": "home retains first record and rest access",
+      "status": "PASS"
+    },
+    {
+      "name": "ability closed by default",
+      "status": "PASS"
+    },
+    {
+      "name": "ability state retained on return",
+      "status": "PASS"
+    },
+    {
+      "name": "real project timed created",
+      "status": "PASS"
+    },
+    {
+      "name": "real project untimed created",
+      "status": "PASS"
+    },
+    {
+      "name": "real care created",
+      "status": "PASS"
+    },
+    {
+      "name": "plans root no expanded forms",
+      "status": "PASS"
+    },
+    {
+      "name": "selected project only",
+      "status": "PASS"
+    },
+    {
+      "name": "plan timer excludes untimed and care",
+      "status": "PASS"
+    },
+    {
+      "name": "entertainment separated from plan timing",
+      "status": "PASS"
+    },
+    {
+      "name": "record detail compact original and reward cards",
+      "status": "PASS"
+    },
+    {
+      "name": "proposed attributes visible",
+      "status": "PASS"
+    },
+    {
+      "name": "normal event earns preview six coins",
+      "status": "PASS"
+    },
+    {
+      "name": "actual attribute and coins visible after confirmation",
+      "status": "PASS"
+    },
+    {
+      "name": "event no longer pending",
+      "status": "PASS"
+    },
+    {
+      "name": "home retained claim action",
+      "status": "PASS"
+    },
+    {
+      "name": "journal search preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "calendar opens date-filtered journal",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /journal",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /plans",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /growth",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /rewards",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /me",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /capture",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /plans/all",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /plans/care",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /plans/goals",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /plans/mainline",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /plans/context",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /plans/legacy",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /growth/attributes",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /growth/history",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /growth/calendar",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /reports",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /diary",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /pending",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /achievements",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /rewards/shop",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /rewards/manage",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /rewards/vouchers",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /rewards/history",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /rewards/ledger",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /rewards/rules",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /rewards/agreements",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /me/personal",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /personal-information",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /important-days",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /preferences",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /settings",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /security",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /feedback",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /announcements",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /challenges",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 1440 /special-vouchers",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /journal",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /plans",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /growth",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /rewards",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /me",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /capture",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /plans/all",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /plans/care",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /plans/goals",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /plans/mainline",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /plans/context",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /plans/legacy",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /growth/attributes",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /growth/history",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /growth/calendar",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /reports",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /diary",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /pending",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /achievements",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /rewards/shop",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /rewards/manage",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /rewards/vouchers",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /rewards/history",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /rewards/ledger",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /rewards/rules",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /rewards/agreements",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /me/personal",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /personal-information",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /important-days",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /preferences",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /settings",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /security",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /feedback",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /announcements",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /challenges",
+      "status": "PASS"
+    },
+    {
+      "name": "reachable no overflow 390 /special-vouchers",
+      "status": "PASS"
+    },
+    {
+      "name": "record mobile no horizontal overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "logout retained",
+      "status": "PASS"
+    },
+    {
+      "name": "admin separate from personal pages",
+      "status": "PASS"
+    },
+    {
+      "name": "admin guard retained",
+      "status": "PASS"
+    },
+    {
+      "name": "no browser exceptions",
+      "status": "PASS"
+    }
+  ],
+  "exceptions": [],
+  "consoleMessages": [],
+  "limits": [
+    "compiled production frontend and actual API with synthetic SQLite and scripted models",
+    "Edge viewport emulation; no physical phone or supplier validation"
+  ]
+}

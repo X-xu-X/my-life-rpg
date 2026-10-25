@@ -14,6 +14,8 @@ const error = ref('')
 const route = useRoute()
 const router = useRouter()
 const personalTabs = [{ key:'today', path:'/', label:'今天' }, { key:'journal', path:'/journal', label:'手账' }, { key:'plans', path:'/plans', label:'计划' }, { key:'growth', path:'/growth', label:'成长' }, { key:'rewards',path:'/rewards',label:'奖励' }, { key:'me', path:'/me', label:'我的' }]
+const backTo=computed(()=>returnTarget(router,route))
+const backLabel=computed(()=>{const target=router.resolve(backTo.value);return target.meta.title||({today:'今天',journal:'手账',plans:'计划',growth:'成长',rewards:'奖励',me:'我的'}[target.meta.section])||'上一页'})
 const tabs=computed(()=>account.value?.role==='owner'?[{key:'today',path:'/admin',label:'概览'},{key:'journal',path:'/admin/users',label:'账号'},{key:'plans',path:'/admin/announcements',label:'公告'},{key:'growth',path:'/admin/site',label:'站点'},{key:'me',path:'/admin/audit',label:'记录'}]:personalTabs)
 function selected(tab){return account.value?.role==='owner'?route.path===tab.path:route.meta.section===tab.key}
 async function initialize() {
@@ -42,17 +44,17 @@ onUnmounted(() => window.removeEventListener('gol-auth-lost', lost))
   <ToastHost />
   <div v-if="loading" class="auth-paper" role="status">正在打开你的手账…</div>
   <AuthView v-else-if="!account" @authenticated="initialize" />
-  <div v-else class="app-shell" :key="account.id">
+  <div v-else class="app-shell journal-navigation" :key="account.id">
     <aside class="desktop-rail">
       <RouterLink class="brand" :to="account.role==='owner'?'/admin':'/'">人生手账<span>LifeXP · {{ account.role==='owner'?'站点管理':'一页一日' }}</span></RouterLink>
       <nav aria-label="主要导航"><RouterLink v-for="tab in tabs" :key="tab.key" :to="tab.path" :class="{selected:selected(tab)}" :aria-current="selected(tab) ? 'page' : undefined"><AppIcon :name="tab.key" /> {{ tab.label }}</RouterLink></nav>
-      <p class="muted">{{ account.username }}<br />{{ account.timezone }}</p>
+      <p class="muted">{{ account.username }}</p>
     </aside>
     <div class="app-body">
       <header class="mobile-heading"><RouterLink :to="account.role==='owner'?'/admin':'/'">人生手账</RouterLink><span class="muted">{{ account.role==='owner'?'站点管理':'一页一日' }}</span></header>
       <p v-if="error" class="error" role="alert">{{ error }}</p>
       <RequestStatus/>
-      <main id="main-content"><RouterLink v-if="route.path!==sectionRoot(route)" class="btn page-back" :to="returnTarget(router,route)" @click="beginReturn(returnTarget(router,route))">← 返回上一页</RouterLink><RouterView :key="account.id + ':' + route.fullPath" /></main>
+      <main id="main-content"><RouterLink v-if="route.path!==sectionRoot(route)||route.query.date" class="btn page-back" :to="backTo" @click="beginReturn(backTo)">← 返回{{ backLabel }}</RouterLink><RouterView v-slot="{ Component }"><KeepAlive :max="12" :include="['RecordList','PageHub']"><component :is="Component" :key="account.id+':'+route.fullPath" /></KeepAlive></RouterView></main>
       <SiteFooter />
     </div>
     <nav class="mobile-nav" aria-label="主要导航"><RouterLink v-for="tab in tabs" :key="tab.key" :to="tab.path" :class="{selected:selected(tab)}" :aria-current="selected(tab) ? 'page' : undefined"><AppIcon :name="tab.key" />{{ tab.label }}</RouterLink></nav>

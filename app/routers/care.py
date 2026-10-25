@@ -27,6 +27,7 @@ class ItemIn(WriteIn):
     effective_from:date|None=None
     interval:int=Field(1,ge=1,le=366)
     category:Literal['plan','care']='care'
+    note:str=Field('',max_length=2000)
     planned_minutes:int|None=Field(None,ge=1,le=1440,strict=True)
     goal_id:int|None=None
     weekdays:list[int]=Field(default_factory=list,max_length=7)
@@ -123,7 +124,7 @@ def save_item(body:ItemIn,item_id:int|None=None,db:Session=Depends(get_db)):
     elif not any('rule' in h for h in row.history):row.history=[*row.history,{**fields(row),'legacy_baseline':True,'at':utc_now().isoformat()}]
     old_rule=row.rule or {}
     rule={'frequency':body.frequency,'weekdays':body.weekdays,'start':str(body.start) if body.start else old_rule.get('start','0001-01-01'),'interval':body.interval,'timezone':user.timezone}
-    for key,default in (('category','care'),('planned_minutes',None),('goal_id',None)):
+    for key,default in (('category','care'),('planned_minutes',None),('goal_id',None),('note','')):
         rule[key]=getattr(body,key) if key in body.model_fields_set else old_rule.get(key,default)
     row.name=body.name;row.position=body.position;row.enabled=body.enabled;row.removed=body.removed;row.rule=rule;row.version+=1
     row.history=[*row.history,{'version':row.version,'name':row.name,'position':row.position,'enabled':row.enabled,'removed':row.removed,'rule':row.rule,'effective_from':str(effective),'at':utc_now().isoformat()}]

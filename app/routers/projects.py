@@ -1,13 +1,13 @@
 """One project editor over stable plan/care identities; old results stay in place."""
 from datetime import date
 from typing import Literal
-from fastapi import APIRouter,Depends
-from pydantic import Field
+from fastapi import APIRouter,Depends,HTTPException
+from pydantic import Field,BaseModel
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.workflow import PlanSchedule,PlanOccurrence
 from app.models.full_system import CareItem,CareEntry,CareConfig
-from app.services.workflow_common import fields,WriteIn
+from app.services.workflow_common import fields,WriteIn,begin,finish,version
 from app.services.user_service import get_or_create_default_user
 from app.services.time_service import utc_now,local_day
 from app.routers import plans,care
@@ -19,6 +19,37 @@ class ProjectIn(plans.ScheduleIn):
     planned_minutes:int|None=Field(None,ge=1,le=1440,strict=True)
     position:int=Field(0,ge=0,le=100000)
     removed:bool=False
+
+
+class OrderItem(BaseModel):
+    key:str
+    version:int=Field(ge=1,strict=True)
+
+
+class OrderIn(WriteIn):
+    items:list[OrderItem]=Field(min_length=1,max_length=1000)
+
+
+@router.post('/projects/reorder')
+def reorder(body:OrderIn,db:Session=Depends(get_db)):
+    user=get_or_create_default_user(db);fp,prior=begin(db,user,'project-order',body,create=True)
+    if prior is not None:return prior
+    current={}
+    for origin,model in (('plan',PlanSchedule),('care',CareItem)):
+        for row in db.query(model).filter_by(user_id=user.id).populate_existing().all():
+            if not (row.removed if origin=='care' else row.rule.get('removed',False)):
+                current[f'{origin}:{row.id}']=(origin,row)
+    keys=[item.key for item in body.items]
+    if len(set(keys))!=len(keys) or set(keys)!=set(current):
+        raise HTTPException(409,'项目列表已有变化，请重新读取后排序。')
+    for item in body.items:version(current[item.key][1],item.version)
+    for position,item in enumerate(body.items):
+        origin,row=current[item.key]
+        if origin=='care':row.position=position
+        else:row.rule={**row.rule,'position':position}
+        row.version+=1
+        # Order is presentation only. Do not replace dated schedule snapshots.
+    return finish(db,user,'project-order',body,fp,current[keys[0]][1],{'order':keys})
 
 
 @router.get('/projects')

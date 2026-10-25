@@ -53,7 +53,7 @@ async function save() {
       status.value = '原文已保存，正在提交分析…'
       try {
         await api.submitJob(event.id, { request_key:crypto.randomUUID(), event_version:event.content_version, operation:'facts' })
-        status.value = '已保存 · 分析已排队，可离开页面'
+        status.value = '已保存 · AI 将分析属性与金币，核对后入账';emit('saved',event)
       } catch (e) { status.value = '记录已保存，分析未完成。'; error.value = e.message }
     }
   } catch (e) {

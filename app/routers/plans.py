@@ -20,6 +20,7 @@ class ScheduleIn(WriteIn):
     goal_id:int|None=None
     planned_minutes:int|None=Field(30,ge=1,le=1440,strict=True)
     category:Literal['plan','care']='plan'
+    note:str=Field('',max_length=2000)
     effective_from:date|None=None
     position:int=Field(0,ge=0,le=100000,strict=True)
     removed:bool=False
@@ -95,7 +96,8 @@ def save_schedule(body:ScheduleIn,schedule_id:int|None=None,db:Session=Depends(g
     if row:version(row,body.expected_version)
     goal=get_owned(db,Goal,body.goal_id) if body.goal_id else None
     if goal and goal.status!='active':raise HTTPException(409,'请选择仍在进行的本人目标。')
-    rule=body.model_dump(mode='json',include={'frequency','start','weekdays','interval','planned_minutes','category','position','removed'})
+    rule=body.model_dump(mode='json',include={'frequency','start','weekdays','interval','planned_minutes','category','position','removed','note'})
+    if row and 'note' not in body.model_fields_set:rule['note']=row.rule.get('note','')
     if row and 'category' not in body.model_fields_set:rule['category']=row.rule.get('category','plan')
     if row and 'planned_minutes' not in body.model_fields_set:rule['planned_minutes']=row.rule.get('planned_minutes',30)
     for key,default in (('position',0),('removed',False)):

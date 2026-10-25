@@ -43,8 +43,16 @@ def judgment_version(judgment):
 
 
 def output(job):
-    return {name: getattr(job, name) for name in ("id", "event_id", "event_version", "operation", "state", "attempts",
+    result = {name: getattr(job, name) for name in ("id", "event_id", "event_version", "operation", "state", "attempts",
         "safe_error_code", "result", "created_at", "updated_at")}
+    from app.services.model_validation import MESSAGES
+    extra = {'MODEL_FACT_REJECTED': '建议未通过事实校验，原文已保留，请核对后重新分析。',
+        'INPUT_CHANGED': '原文或授权背景已变化，请重新分析。',
+        'LEASE_EXPIRED': '分析任务未能及时完成，请主动重试。',
+        'MODEL_ATTEMPT_LIMIT': '本次请求已达到尝试上限，请核对模型后再主动分析。'}
+    result['safe_error_message'] = MESSAGES.get(job.safe_error_code, (extra.get(job.safe_error_code,
+        '分析未完成，原文已保留；可查看错误编号后主动重试。'), False))[0] if job.safe_error_code else ''
+    return result
 
 
 def submit(db, user, event, body):

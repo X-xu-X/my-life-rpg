@@ -9,6 +9,7 @@ import contextlib,json,unittest,argparse
 parser=argparse.ArgumentParser()
 parser.add_argument('--repairs',action='store_true')
 parser.add_argument('--daily-use',action='store_true')
+parser.add_argument('--cloud-update',action='store_true')
 parser.add_argument('--output',default='docs/review/full_system_2026-10-18')
 args=parser.parse_args()
 root=Path(args.output);root.mkdir(parents=True,exist_ok=True)
@@ -16,6 +17,7 @@ os.environ['FULL_SYSTEM_EVIDENCE_DIR']=str(root)
 names=['tests.test_full_system','tests.test_continuation','tests.test_trial_p1','tests.test_next_iteration','tests.test_v1_11_safety','tests.test_ops_next','tests.test_account_identity']
 if args.repairs:names.append('tests.test_review_repairs')
 if args.daily_use:names.extend(['tests.test_daily_use_redesign','tests.test_daily_use_review_fixes'])
+if args.cloud_update:names.extend(['tests.test_fact_effort_contract','tests.test_reward_incident','tests.test_fact_response_diagnostic','tests.test_usability_repairs'])
 with (root/'backend-tests.log').open('w',encoding='utf-8') as log,contextlib.redirect_stdout(log),contextlib.redirect_stderr(log):
     result=unittest.TextTestRunner(stream=log,verbosity=2).run(unittest.defaultTestLoader.loadTestsFromNames(names))
 report={'status':'PASS' if result.wasSuccessful() else 'FAIL','run':result.testsRun,

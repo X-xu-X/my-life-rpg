@@ -13,7 +13,7 @@ const loading = ref(true)
 const error = ref('')
 const route = useRoute()
 const router = useRouter()
-const personalTabs = [{ key:'today', path:'/', label:'今天' }, { key:'journal', path:'/journal', label:'手账' }, { key:'plans', path:'/plans', label:'计划' }, { key:'growth', path:'/growth', label:'成长' }, { key:'rewards',path:'/rewards',label:'奖励' }, { key:'me', path:'/me', label:'我的' }]
+const personalTabs = [{ key:'today', path:'/', label:'今天' }, { key:'plans', path:'/plans', label:'计划' }, { key:'growth', path:'/growth', label:'成长' }, { key:'rewards',path:'/rewards',label:'奖励' }, { key:'me', path:'/me', label:'我的' }]
 const backTo=computed(()=>returnTarget(router,route))
 const backLabel=computed(()=>{const target=router.resolve(backTo.value);return target.meta.title||({today:'今天',journal:'手账',plans:'计划',growth:'成长',rewards:'奖励',me:'我的'}[target.meta.section])||'上一页'})
 const tabs=computed(()=>account.value?.role==='owner'?[{key:'today',path:'/admin',label:'概览'},{key:'journal',path:'/admin/users',label:'账号'},{key:'plans',path:'/admin/announcements',label:'公告'},{key:'growth',path:'/admin/site',label:'站点'},{key:'me',path:'/admin/audit',label:'记录'}]:personalTabs)

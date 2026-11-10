@@ -15,9 +15,9 @@ const ReviewView = () => import('./components/ReviewView.vue')
 const scrolls=new Map()
 export const router = createRouter({ history: createWebHashHistory(), scrollBehavior(to,from,saved){return saved||{top:scrolls.get(to.fullPath)||0}}, routes: [
   { path: '/', component: () => import('./components/PageHub.vue'), meta: { section: 'today' } },
-  { path: '/journal', component: RecordList, meta: { section: 'journal' } },
+  { path: '/journal', component: RecordList, meta: { section: 'today', title: '手账' } },
   { path: '/plans', component: () => import('./components/PageHub.vue'), meta: { section:'plans' } },
-  { path: '/events/:id', component: RecordDetail, meta: { section: 'journal' } },
+  { path: '/events/:id', component: RecordDetail, meta: { section: 'today' } },
   { path: '/growth', component: () => import('./components/PageHub.vue'), meta: { section: 'growth' } },
   { path: '/reports', component: () => import('./components/ReportHistory.vue'), meta: {section:'growth'} },
   { path: '/admin/security',component:()=>import('./components/AccountSecurity.vue'),meta:{section:'admin',workspace:'admin'} },

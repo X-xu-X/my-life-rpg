@@ -22,6 +22,8 @@ class ExperiencePreference(Base):
     user_id:Mapped[int]=mapped_column(ForeignKey('users.id'),unique=True)
     version:Mapped[int]=mapped_column(Integer,default=1)
     suppressed:Mapped[list]=mapped_column(JSON,default=list)
+    # v1 UI-IA：行级说明句的关闭清单（TipLine）。可空列，老行为 NULL → 读取处一律 `or []`
+    suppressed_lines:Mapped[list|None]=mapped_column(JSON,default=list,nullable=True)
     return_disabled:Mapped[bool]=mapped_column(Boolean,default=False)
     review_snoozed_until:Mapped[datetime|None]=mapped_column(UTCDateTime,nullable=True)
 

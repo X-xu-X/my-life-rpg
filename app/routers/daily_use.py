@@ -1,8 +1,8 @@
 from datetime import date,timedelta
-from typing import Literal
+from typing import Annotated,Literal
 from uuid import UUID
 from fastapi import APIRouter,Depends,HTTPException
-from pydantic import BaseModel,Field,model_validator
+from pydantic import BaseModel,Field,StringConstraints,model_validator
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Event,Goal
@@ -16,6 +16,8 @@ from app.services.time_service import utc_now,local_day
 router=APIRouter()
 Hint=Literal['record-help','plans-help','rewards-help','growth-help','daily-reflection','questionnaire-help']
 Use=Literal['judge','review','report','pricing']
+# v1 UI-IA：行级提示 id —— <页面>.<短横线语义>，允许 2~3 段（如 journal.pure-flag）
+LineId=Annotated[str,StringConstraints(pattern=r'^[a-z][a-z0-9-]*(\.[a-z0-9-]+){1,2}$',max_length=48)]
 
 
 class InformationEntry(BaseModel):
@@ -48,13 +50,18 @@ def save_information(body:InformationIn,db:Session=Depends(get_db)):
 
 class PreferenceIn(WriteIn):
     suppressed:list[Hint]=Field(default_factory=list,max_length=6)
+    # v1 UI-IA：行级提示 id（<页面>.<语义>，2~3 段）。上限 40 条，超限 422 不做静默截断。
+    suppressed_lines:list[LineId]=Field(default_factory=list,max_length=40)
     return_disabled:bool=False
 
 
 @router.get('/experience-preferences')
 def preferences(db:Session=Depends(get_db)):
     user=get_or_create_default_user(db);row=db.query(ExperiencePreference).filter_by(user_id=user.id).first()
-    return fields(row) if row else {'version':0,'suppressed':[],'return_disabled':False}
+    data=fields(row) if row else {'version':0,'suppressed':[],'return_disabled':False}
+    # 老行的 suppressed_lines 为 NULL（migrate 不回填 JSON 默认值），统一回 [] 保证响应契约稳定
+    data['suppressed_lines']=data.get('suppressed_lines') or []
+    return data
 
 
 @router.put('/experience-preferences')
@@ -63,7 +70,13 @@ def save_preferences(body:PreferenceIn,db:Session=Depends(get_db)):
     if prior is not None:return prior
     row=db.query(ExperiencePreference).filter_by(user_id=user.id).first();version(row,body.expected_version)
     if not row:row=ExperiencePreference(user_id=user.id,version=0);db.add(row)
-    row.suppressed=list(dict.fromkeys(body.suppressed));row.return_disabled=body.return_disabled;row.version+=1
+    row.suppressed=list(dict.fromkeys(body.suppressed));row.return_disabled=body.return_disabled
+    # 向后兼容：旧客户端只发 suppressed 时**不得清空**已关闭的行级提示
+    if 'suppressed_lines' in body.model_fields_set:
+        row.suppressed_lines=list(dict.fromkeys(body.suppressed_lines))
+    else:
+        row.suppressed_lines=row.suppressed_lines or []
+    row.version+=1
     db.flush();return finish(db,user,'experience-preferences',body,fp,row,fields(row))
 
 

@@ -390,3 +390,30 @@ class DailyUseTests(unittest.TestCase):
             self.assertNotIn('PRIVATE_',payload)
         if os.environ.get('FULL_SYSTEM_EVIDENCE_DIR'):
             Path(os.environ['FULL_SYSTEM_EVIDENCE_DIR'],'captured-model-payloads.json').write_text(json.dumps(captured,ensure_ascii=False,indent=2),encoding='utf-8')
+
+    def test_A27_tipline_suppressed_lines_roundtrip_and_backward_compat(self):
+        """UI-IA F7：行级提示清单可写可读；不带字段的旧 PUT 不得清空。"""
+        self.register()
+        saved=self.write('/experience-preferences',{'suppressed':['plans-help'],'suppressed_lines':['journal.pure-flag','growth.ability-note'],'return_disabled':False},0,'PUT')
+        self.assertEqual(saved.status_code,200,saved.text)
+        got=self.client.get('/api/experience-preferences').json()
+        self.assertEqual(got['suppressed_lines'],['journal.pure-flag','growth.ability-note'])
+        # 旧客户端只发 suppressed → suppressed_lines 必须保持原值（核心防回归）
+        again=self.write('/experience-preferences',{'suppressed':['growth-help'],'return_disabled':False},got['version'],'PUT')
+        self.assertEqual(again.status_code,200,again.text)
+        got2=self.client.get('/api/experience-preferences').json()
+        self.assertEqual(got2['suppressed'],['growth-help'])
+        self.assertEqual(got2['suppressed_lines'],['journal.pure-flag','growth.ability-note'])
+        # 显式传 [] = 清空（偏好页「恢复一般提示」走这条）
+        cleared=self.write('/experience-preferences',{'suppressed':[],'suppressed_lines':[],'return_disabled':False},got2['version'],'PUT')
+        self.assertEqual(cleared.status_code,200,cleared.text)
+        self.assertEqual(self.client.get('/api/experience-preferences').json()['suppressed_lines'],[])
+
+    def test_A27b_tipline_rejects_bad_id_and_over_limit(self):
+        """UI-IA F7：非法 id 与超 40 条均 422，不做静默截断。"""
+        self.register()
+        bad=self.write('/experience-preferences',{'suppressed':[],'suppressed_lines':['Bad_ID'],'return_disabled':False},0,'PUT')
+        self.assertEqual(bad.status_code,422,bad.text)
+        many=[f'page.item-{i}' for i in range(41)]
+        over=self.write('/experience-preferences',{'suppressed':[],'suppressed_lines':many,'return_disabled':False},0,'PUT')
+        self.assertEqual(over.status_code,422,over.text)

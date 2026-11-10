@@ -34,6 +34,9 @@ onActivated(()=>{load();document.addEventListener('visibilitychange',visibility)
 onDeactivated(()=>{active=false;sequence++;document.removeEventListener('visibilitychange',visibility)})
 async function logout(){try{await api.logout();clearAccount()}catch(e){error.value=e.message}}
 const todayProjects=computed(()=>projects.value.filter(p=>p.show_today&&!p.removed&&p.enabled))
+// v1 UI-IA F3：今日安排——角标只表达总量，列表只留「未记录」且最多 2 条
+const planToday=computed(()=>todayProjects.value.filter(p=>p.category==='plan'))
+const pendingToday=computed(()=>planToday.value.filter(p=>!p.entry).slice(0,2))
 const planRows=computed(()=>projects.value.filter(p=>p.category==='plan'&&!p.removed))
 const careRows=computed(()=>projects.value.filter(p=>p.category==='care'&&!p.removed))
 const activeGoals=computed(()=>goals.value.filter(g=>g.status==='active'))
@@ -51,8 +54,10 @@ const sign=n=>Number(n)>0?'+':''
  <template v-if="page==='today'">
   <section class="hub-write-card"><div><span class="hub-kicker">留下一笔</span><h2>今天发生了什么？</h2><p>一件小事，或一篇晚间日记。</p></div><div class="hub-write-actions"><RouterLink class="btn primary" to="/capture">＋ 记一件事</RouterLink><RouterLink class="btn" to="/diary">写日记</RouterLink></div></section>
   <div class="hub-today-grid"><div class="hub-main-column">
-   <section class="hub-card"><div class="hub-section-heading"><h2>今天的安排 <span class="hub-count">{{ todayProjects.filter(p=>p.category==='plan').length }}</span></h2><RouterLink to="/plans/today">查看全部 ›</RouterLink></div>
-    <RouterLink v-for="p in todayProjects.filter(p=>p.category==='plan').slice(0,3)" :key="p.key" :to="projectLink(p)" class="hub-row"><span class="hub-row-icon"><AppIcon name="plans"/></span><span class="hub-row-text"><strong>{{ p.name }}</strong><small>{{ p.rule?.planned_minutes ? p.rule.planned_minutes+' 分钟 · ':'' }}{{ completion(p) }}</small></span><span class="hub-chevron">›</span></RouterLink><p v-if="!loading&&!todayProjects.some(p=>p.category==='plan')" class="hub-empty">今天没有排期，按自己的节奏来。</p>
+   <section class="hub-card"><div class="hub-section-heading"><h2>今天的安排</h2><RouterLink to="/plans/today">全部 {{ planToday.length }} 条 ›</RouterLink></div>
+    <template v-if="pendingToday.length"><RouterLink v-for="p in pendingToday" :key="p.key" :to="projectLink(p)" class="hub-row"><span class="hub-row-icon"><AppIcon name="plans"/></span><span class="hub-row-text"><strong>{{ p.name }}</strong><small v-if="p.rule?.planned_minutes">{{ p.rule.planned_minutes }} 分钟</small></span><span class="hub-chevron">›</span></RouterLink></template>
+    <p v-else-if="planToday.length" class="hub-empty">今天的安排都记下了，剩下的时间交给休息。</p>
+    <p v-else class="hub-empty">今天没有排期，按自己的节奏来。</p>
    </section>
    <details class="hub-card hub-care-disclosure"><summary><span><AppIcon name="today"/> 照顾自己 <small>{{ todayProjects.filter(p=>p.category==='care').length }} 项</small></span><span class="hub-chevron">⌄</span></summary><div class="hub-disclosure-body"><RouterLink v-for="p in todayProjects.filter(p=>p.category==='care')" :key="p.key" :to="projectLink(p)" class="hub-row"><span class="hub-row-text"><strong>{{ p.name }}</strong><small>{{ p.rule?.note||completion(p) }}</small></span><span class="hub-chevron">›</span></RouterLink><RouterLink class="hub-inline-link" to="/plans/care">管理照顾清单 ›</RouterLink></div></details>
   </div><aside class="hub-side-column">

@@ -514,7 +514,7 @@ onMounted(loadAll)
 </script>
 
 <template>
-  <header class="page-intro"><h1>{{ segment==='shop'?'特殊券与原有兑换':'挑战与合同' }}</h1></header>
+  <header class="page-intro"><h1>{{ segment==='shop'?'特殊券与原有兑换':'挑战' }}</h1></header>
   <div>
     <p v-if="exemptionPurchase.warning.value" class="error">{{ exemptionPurchase.warning.value }}</p>
     <p v-if="exemptionPurchase.pending.value?.state === 'unknown'" class="card">上次豁免购买结果待确认：{{ exemptionPurchase.pending.value.body.target_date }} · {{ exemptionPurchase.pending.value.body.period }}。<button class="btn" :disabled="anyBusy || exemptionPurchase.busy.value" @click="buyExemption">恢复购买结果</button></p>
@@ -593,7 +593,7 @@ onMounted(loadAll)
       <button class="btn small" style="margin-top: 8px" @click="stagnationResult = null">知道了</button>
     </div>
 
-    <nav class="section-links"><RouterLink to="/plans">计划与目标</RouterLink><RouterLink to="/rewards">奖励与休息</RouterLink></nav>
+    <nav class="section-links"><RouterLink to="/plans">计划与目标</RouterLink><RouterLink to="/rewards">奖励</RouterLink></nav>
     <p v-if="error" class="conn-banner conn-error" style="margin-bottom: 12px">{{ error }}</p>
 
     <!-- ============================================================ -->

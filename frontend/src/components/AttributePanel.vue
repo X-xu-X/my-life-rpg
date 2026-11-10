@@ -288,7 +288,7 @@ onBeforeUnmount(()=>{
 
 <template>
   <div class="growth-page">
-    <PageHeader title="成长" description="从记录里，看见慢慢发生的积累。"><template #actions><button class="btn" :disabled="loading" @click="load">重新读取</button><RouterLink class="btn" to="/reports">历史报告 →</RouterLink></template></PageHeader><HintCard id="growth-help"><p>游戏数值用于回看积累。变化以你自己的初始快照为基准，历史与子维度仍可查看。</p></HintCard><RecordMetrics/><nav class="section-links"><RouterLink to="/achievements">全部成就 →</RouterLink><RouterLink to="/reports">周期报告 →</RouterLink></nav>
+    <PageHeader title="成长" description="从记录里，看见慢慢发生的积累。"><template #actions><button class="btn" :disabled="loading" @click="load">重新读取</button><RouterLink class="btn" to="/reports">成长报告 →</RouterLink></template></PageHeader><HintCard id="growth-help"><p>游戏数值用于回看积累。变化以你自己的初始快照为基准，历史与子维度仍可查看。</p></HintCard><RecordMetrics/><nav class="section-links"><RouterLink to="/achievements">全部成就 →</RouterLink><RouterLink to="/reports">成长报告 →</RouterLink></nav>
     <p v-if="loading" role="status">正在读取成长数据…</p>
     <div v-if="error" role="alert" class="read-error"><p>{{ error }}{{ loaded?' · 显示上次读取的数据，本次未刷新成功。':'' }}</p><button class="btn" :disabled="loading" @click="load">重新读取</button></div>
     <template v-if="loaded">

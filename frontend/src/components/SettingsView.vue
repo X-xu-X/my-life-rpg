@@ -161,7 +161,7 @@ onMounted(() => {
 </script>
 
 <template><div class="settings-page">
-  <PageHeader title="设置" description="模型与数据放在前面，其他设置按需展开。" />
+  <PageHeader title="AI 与数据" description="模型与数据放在前面，其他设置按需展开。" />
   <nav class="settings-directory" aria-label="设置目录"><button v-for="[id,label] in directory" :key="id" type="button" class="btn" @click="locate(id)">{{ label }}</button></nav>
     <details class="settings-disclosure card"><summary>模型与 AI 配置</summary><ModelSettings /></details>
     <details class="settings-disclosure card"><summary>数据导出</summary><ExportControls/></details>

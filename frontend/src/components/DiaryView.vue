@@ -35,7 +35,7 @@ function visibility(){clearTimeout(timer);reader?.abort();if(!document.hidden&&s
 onMounted(()=>{load();document.addEventListener('visibilitychange',visibility)})
 onUnmounted(()=>{alive=false;serial++;clearTimeout(timer);reader?.abort();document.removeEventListener('visibilitychange',visibility)})
 </script>
-<template><div class="reading-page"><PageHeader title="晚间日记" description="先留下自己的原文，再选择回顾。"/>
+<template><div class="reading-page"><PageHeader title="日记" description="先留下自己的原文，再选择回顾。"/>
 <label>内容所属日期<input type="date" v-model="day" @change="load" :disabled="writes.busy.value||!!writes.pending.value"/></label>
 <p v-if="error" class="error" role="alert">{{ error }}</p><p v-if="notice" role="status">{{ notice }}</p>
 <p v-if="writes.pending.value" role="status">上次操作结果未知；再次操作会恢复原请求，保留当前输入。</p>

@@ -58,7 +58,7 @@ const sign=n=>Number(n)>0?'+':''
   </div><aside class="hub-side-column">
    <RouterLink class="hub-card hub-mini-card" to="/pending"><span class="hub-mini-icon violet"><AppIcon name="journal"/></span><div><strong>{{ pending.length }} 项待确认</strong><p>查看分析建议与入账</p></div><span class="hub-chevron">›</span></RouterLink>
    <RouterLink class="hub-card hub-mini-card" to="/rewards"><span class="hub-mini-icon peach"><AppIcon name="rewards"/></span><div><strong>{{ wallet?.balance??'—' }} 金币</strong><p>去看看想要的奖励</p></div><span class="hub-chevron">›</span></RouterLink>
-   <section class="hub-card hub-latest"><div class="hub-section-heading"><h2>最近记下的</h2><RouterLink to="/journal">手账 ›</RouterLink></div><RouterLink v-for="e in latest" :key="e.id" :to="'/events/'+e.id" class="hub-row"><span class="hub-row-text"><strong>{{ e.title||e.content }}</strong><small>{{ e.occurred_on||String(e.created_at).slice(0,10) }}</small></span><span class="hub-chevron">›</span></RouterLink></section>
+   <section class="hub-card hub-latest"><div class="hub-section-heading"><h2>最近记下的</h2><RouterLink to="/journal">搜索 ›</RouterLink></div><RouterLink v-for="e in latest" :key="e.id" :to="'/events/'+e.id" class="hub-row"><span class="hub-row-text"><strong>{{ e.title||e.content }}</strong><small>{{ e.occurred_on||String(e.created_at).slice(0,10) }}</small></span><span class="hub-chevron">›</span></RouterLink></section>
    <TrialRules compact summary-only @changed="load"/><DailyPrompts/><HolidayGift/>
   </aside></div>
  </template>

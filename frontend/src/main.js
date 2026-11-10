@@ -6,6 +6,7 @@ import './styles.css'
 import './ui-layout.css'
 import './daily-use.css'
 import './navigation.css'
+import './tips.css'
 import './record-detail.css'
 
 createApp(App).use(router).mount('#app')

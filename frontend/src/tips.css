@@ -1,0 +1,28 @@
+/* 行级提示（TipLine，v1 UI-IA F7）：一句说明 + 行尾淡「×」，可逐条永久关闭 */
+.tip-line {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  margin: 0;
+}
+.tip-line-text {
+  min-width: 0;
+}
+.tip-line-close {
+  border: 0;
+  background: none;
+  color: var(--text-sub);
+  opacity: 0.55;
+  font-size: 15px;
+  line-height: 1;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.tip-line-close:hover,
+.tip-line-close:focus-visible {
+  opacity: 1;
+  color: var(--primary);
+}

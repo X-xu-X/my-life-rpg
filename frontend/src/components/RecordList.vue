@@ -6,6 +6,7 @@ import { displayTime, displayEventTime } from '../session'
 import { strictDate } from '../dateInput'
 import PageHeader from './ui/PageHeader.vue'
 import RecordPreview from './ui/RecordPreview.vue'
+import TipLine from './ui/TipLine.vue'
 const rows=ref([]),query=ref(''),filter=ref(''),dateFilter=ref(useRoute().query.date||''),error=ref('')
 const loading=ref(false),loaded=ref(false),exhausted=ref(false)
 let generation=0,failedMore=false
@@ -28,7 +29,7 @@ onMounted(()=>load())
 <template><div class="reading-page">
   <PageHeader title="手账" description="原文一直在这里。是否分析，都可以回看。" />
   <form class="record-search" @submit.prevent="load()"><label>搜索记录<input v-model="query" type="search" placeholder="一句话、一件事…" /></label><button class="btn" :disabled="loading">搜索</button><label class="search-filter">筛选<select v-model="filter" @change="load()"><option value="">全部</option><option value="event">事件</option><option value="diary">晚间日记</option><option value="legacy">旧记录 · 未分类</option><option value="pure">历史纯享记录</option><option value="ordinary">其他记录</option></select></label><label>内容日期<input type="text" v-model="dateFilter" maxlength="10" placeholder="全部日期" aria-label="内容日期" title="填写完整日期，例如 2026-10-22；留空查看全部日期" @change="load()"/></label><button v-if="dateFilter" type="button" class="btn" @click="dateFilter='';load()">清除日期</button></form>
-  <p class="muted">历史纯享标记与当前是否分析是两种设置。</p>
+  <TipLine id="journal.pure-flag" class="muted">历史纯享标记与当前是否分析是两种设置。</TipLine>
   <p v-if="loading" role="status">正在读取记录…</p>
   <div v-if="error" class="read-error" role="alert"><p>{{ error }}{{ loaded?' · 显示上次读取的记录，本次未刷新成功。':'' }}</p><button class="btn" :disabled="loading" @click="load(failedMore)">重新读取</button></div>
   <p v-if="loaded && !rows.length && !loading && !error" class="empty-note">{{ query || filter || dateFilter?'没有找到匹配的记录。':'这里还没有记录。从今天的一句话开始。' }}<button v-if="query || filter || dateFilter" type="button" class="btn" @click="clearSearch">清除搜索与筛选</button></p>

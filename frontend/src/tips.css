@@ -1,10 +1,11 @@
-/* 行级提示（TipLine，v1 UI-IA F7）：一句说明 + 行尾淡「×」，可逐条永久关闭 */
+/* 行级提示（TipLine，v1 UI-IA F7）：一句说明 + 行尾淡「×」，可逐条永久关闭
+   样式以规格 4.3 为准；仅补三处渲染必需项（见注释），不引入额外视觉。 */
 .tip-line {
   display: flex;
   gap: 8px;
   align-items: baseline;
-  margin: 0;
 }
+/* 必需：flex 子项默认 min-width:auto，长句会撑破容器 */
 .tip-line-text {
   min-width: 0;
 }
@@ -17,8 +18,10 @@
   line-height: 1;
   min-width: 28px;
   min-height: 28px;
+  /* 必需：浏览器默认按钮内边距会让「×」偏离基线并撑大触控盒 */
   padding: 0;
   cursor: pointer;
+  /* 必需：防止窄屏下「×」被文本挤压 */
   flex-shrink: 0;
 }
 .tip-line-close:hover,

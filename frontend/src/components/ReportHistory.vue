@@ -13,7 +13,7 @@ async function save(){try{await writes.send('/reports/'+report.value.id+'/save',
 onMounted(load)
 </script>
 <template>
-  <div class="reading-page"><RouterLink class="btn" to="/growth">← 成长</RouterLink><PageHeader title="成长报告" description="主动生成后先预览，确认保存后进入历史。阅读历史不调用模型，来源保留当时版本。" />
+  <div class="reading-page"><PageHeader title="成长报告" description="主动生成后先预览，确认保存后进入历史。阅读历史不调用模型，来源保留当时版本。" />
   <div class="action-group"><button class="btn" :disabled="busy||writes.busy.value||!!writes.pending.value" @click="generate('week')">生成周报（可能计费）</button><button class="btn" :disabled="busy||writes.busy.value||!!writes.pending.value" @click="generate('month')">生成月报（可能计费）</button></div>
   <button v-if="writes.pending.value" class="btn" :disabled="writes.busy.value||busy" @click="generate('week')">恢复上次报告请求</button><p v-if="loading" role="status">正在读取成长报告…</p><div v-if="error" class="read-error" role="alert"><p>{{ error }}{{ loaded?' · 保留上次读取内容。':'' }}</p><button class="btn" :disabled="loading" @click="load">重新读取</button></div><p v-if="loaded && !loading && !error && !items.length" class="empty-note">还没有保存的历史报告。</p>
   <button v-for="item in items" :key="item.id" class="btn" :disabled="busy" @click="open(item.id)">{{ item.period==='week'?'周报':'月报' }} · {{ displayTime(item.created_at) }} · #{{ item.id }}</button>

@@ -48,7 +48,7 @@ const sign=n=>Number(n)>0?'+':''
 </script>
 <template>
 <div class="journal-page" :data-hub="page">
- <header class="hub-heading"><div><p class="hub-eyebrow">{{ page==='today'?localDate():'LifeXP · 一页一日' }}</p><h1>{{ title }}</h1><p class="hub-subtitle">{{ subtitle }}</p></div><RouterLink v-if="page==='today'" class="hub-round-link" to="/pending" aria-label="查看待确认事项"><AppIcon name="plans"/><span v-if="pending.length" class="hub-dot">{{ pending.length }}</span></RouterLink><RouterLink v-else-if="page==='me'" class="hub-round-link" to="/security" aria-label="账号安全"><AppIcon name="me"/></RouterLink></header>
+ <header class="hub-heading"><div><p class="hub-eyebrow">{{ page==='today'?localDate():'LifeXP · 一页一日' }}</p><h1>{{ title }}</h1><p class="hub-subtitle">{{ subtitle }}</p></div><RouterLink v-if="page==='today'" class="hub-round-link" to="/pending" aria-label="查看待确认事项"><AppIcon name="plans"/><span v-if="pending.length" class="hub-dot">{{ pending.length }}</span></RouterLink></header>
  <p v-if="loading" class="hub-loading" role="status">正在读取摘要…</p><p v-if="error" class="error">{{ error }} <button class="text-button" @click="load">重新读取</button></p>
 
  <template v-if="page==='today'">
@@ -92,7 +92,7 @@ const sign=n=>Number(n)>0?'+':''
  </template>
 
  <template v-else-if="page==='me'">
-  <section v-if="!account.onboarding_completed" class="hub-card"><h2>选择游戏起点</h2><p class="hub-small-note">可以继续问卷，也可以先用未评估基线开始。</p><RouterLink class="hub-inline-link" to="/me/baseline">选择基线 ›</RouterLink></section><section class="hub-profile"><span class="hub-avatar">{{ account.username?.slice(0,1) }}</span><div><h2>{{ account.username }}</h2><p>一页一日，按自己的节奏。</p></div><RouterLink to="/me/account">账号 ›</RouterLink></section>
+  <section v-if="!account.onboarding_completed" class="hub-card"><h2>选择游戏起点</h2><p class="hub-small-note">可以继续问卷，也可以先用未评估基线开始。</p><RouterLink class="hub-inline-link" to="/me/baseline">选择基线 ›</RouterLink></section><section class="hub-profile"><span class="hub-avatar">{{ account.username?.slice(0,1) }}</span><div><h2>{{ account.username }}</h2><p>一页一日，按自己的节奏。</p></div></section>
   <section class="hub-card hub-menu-group"><RouterLink class="hub-row" to="/me/personal"><span class="hub-row-icon"><AppIcon name="me"/></span><span class="hub-row-text"><strong>个人资料与问卷</strong><small>长期信息、问卷历史与近期近况</small></span><span class="hub-chevron">›</span></RouterLink><RouterLink class="hub-row" to="/settings"><span class="hub-row-icon"><AppIcon name="growth"/></span><span class="hub-row-text"><strong>AI 与数据</strong><small>模型配置、数据导出</small></span><span class="hub-chevron">›</span></RouterLink><RouterLink class="hub-row" to="/preferences"><span class="hub-row-icon"><AppIcon name="plans"/></span><span class="hub-row-text"><strong>显示与提示</strong><small>提示是否继续显示，由你决定</small></span><span class="hub-chevron">›</span></RouterLink><RouterLink class="hub-row" to="/important-days"><span class="hub-row-icon peach"><AppIcon name="today"/></span><span class="hub-row-text"><strong>重要日子</strong><small>生日、纪念日及其他日子</small></span><span class="hub-chevron">›</span></RouterLink></section>
   <section class="hub-card hub-menu-group"><RouterLink class="hub-row" to="/announcements"><span>站内公告</span><span>›</span></RouterLink><RouterLink class="hub-row" to="/feedback"><span>意见与问题</span><span>›</span></RouterLink><RouterLink class="hub-row" to="/security"><span>账号安全</span><span>›</span></RouterLink></section>
   <button v-if="account.mode==='cloud'" class="btn" @click="logout">退出登录</button>

@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { api } from '../api'
 
 /**
@@ -8,6 +8,8 @@ import { api } from '../api'
  * 失败时宁可继续显示提示，也不让内容凭空消失。
  */
 const prefs = ref(null)
+// 就绪门：异步拉取完成前不渲染提示行，避免"已关闭的提示先闪一下再消失"
+const ready = computed(() => prefs.value !== null)
 const loading = ref(false)
 const error = ref('')
 let inflight = null
@@ -70,5 +72,5 @@ async function refresh() {
 }
 
 export function useTipPrefs() {
-  return { prefs, loading, error, ensure, hidden, hide, refresh }
+  return { prefs, loading, error, ready, ensure, hidden, hide, refresh }
 }

@@ -8,7 +8,7 @@ const props = defineProps({
   label: { type: String, default: '不再显示这行说明' },
 })
 const tips = useTipPrefs()
-const shown = computed(() => !tips.hidden(props.id))
+const shown = computed(() => tips.ready.value && !tips.hidden(props.id))
 // 失败反馈：保持可见，并把按钮标题换成「这次没保存成功，再试一次」
 const failed = ref(false)
 const closeLabel = computed(() =>

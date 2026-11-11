@@ -258,9 +258,7 @@ onMounted(load)
           <span v-if="it.category" class="tag">{{ it.category }}</span>
           <span v-if="it.related_attribute" class="tag">{{ it.related_attribute }}</span>
           <span v-if="!it.enabled" class="tag" style="background: #f0f0f0; color: var(--text-sub)">已停用</span>
-          <span class="muted" style="margin-left: auto; font-size: 13px">
-            <template v-if="it.goal_id">已挂目标 · </template>#{{ it.id }}
-          </span>
+          <span v-if="it.goal_id" class="muted" style="margin-left: auto; font-size: 13px">已挂目标</span>
         </div>
         <div class="action-group" style="margin-top: 8px">
           <button class="btn small" :disabled="busy" @click="startEdit(it)">编辑</button>

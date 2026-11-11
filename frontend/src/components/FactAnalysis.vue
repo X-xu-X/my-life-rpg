@@ -47,6 +47,6 @@ onBeforeUnmount(()=>{alive=false;serial++;clearTimeout(timer);document.removeEve
   <details><summary>本次模型与版本</summary><p>原文 v{{ group.event_version }} · 建议 v{{ group.version }}</p><p>{{ group.provenance.provider }} / {{ group.provenance.model }} · 配置 v{{ group.provenance.config_version }}</p></details>
  </details>
  <details v-if="jobs.length"><summary>分析任务记录 · {{ jobs.length }}</summary><p v-for="task in jobs" :key="task.id">{{ displayTime(task.created_at) }} · {{ {queued:'排队中',running:'分析中',ready:'分析完成',failed:'失败',cancelled:'已取消',superseded:'来源已变化'}[task.state]||task.state }}<span v-if="task.safe_error_code"> · {{ task.safe_error_message||task.safe_error_code }}（{{ task.safe_error_code }}）</span></p></details>
- <details v-if="bundles.length>1"><summary>历史分析（只读）</summary><article v-for="group in bundles.slice(1)" :key="group.id"><p>原文 v{{ group.event_version }} · {{ group.state }}</p><p v-for="item in group.payload.items" :key="item.fragment_id">{{ item.excerpt }} · {{ item.summary }}</p></article></details>
+ <details v-if="bundles.length>1"><summary>历史分析（只读）</summary><article v-for="group in bundles.slice(1)" :key="group.id"><p>原文 v{{ group.event_version }} · {{ {draft:'草稿',confirmed:'已确认'}[group.state]||group.state }}</p><p v-for="item in group.payload.items" :key="item.fragment_id">{{ item.excerpt }} · {{ item.summary }}</p></article></details>
 </section>
 </template>

@@ -14,6 +14,22 @@ const loading = ref(false)
 const error = ref('')
 let inflight = null
 
+/**
+ * 生成 UUID v4。crypto.randomUUID 只在安全上下文（HTTPS / localhost）存在，
+ * 手机通过局域网 http://10.x.x.x 访问时为 undefined，直接调用会抛错。
+ * 后端 WriteIn.request_key 的类型是 UUID，降级结果必须是合法 UUID 格式。
+ */
+function uuid4() {
+  if (globalThis.crypto?.randomUUID) return crypto.randomUUID()
+  const b = new Uint8Array(16)
+  if (globalThis.crypto?.getRandomValues) globalThis.crypto.getRandomValues(b)
+  else for (let i = 0; i < 16; i += 1) b[i] = Math.floor(Math.random() * 256)
+  b[6] = (b[6] & 0x0f) | 0x40
+  b[8] = (b[8] & 0x3f) | 0x80
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('')
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`
+}
+
 async function ensure() {
   if (prefs.value) return prefs.value
   if (inflight) return inflight
@@ -48,7 +64,7 @@ async function hide(id) {
       '/experience-preferences',
       {
         // WriteIn 要求 request_key（幂等键）；缺了会 422
-        request_key: crypto.randomUUID(),
+        request_key: uuid4(),
         expected_version: p.version,
         suppressed: p.suppressed || [],
         suppressed_lines: next,

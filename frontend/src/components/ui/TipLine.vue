@@ -23,6 +23,7 @@ async function dismiss() {
     <button
       type="button"
       class="tip-line-close"
+      :class="{ 'is-failed': failed }"
       aria-label="不再显示这行说明"
       :title="failed ? '这次没保存成功，再试一次' : '不再显示这行说明'"
       @click="dismiss"

@@ -29,3 +29,9 @@
   opacity: 1;
   color: var(--primary);
 }
+
+/* 关闭失败：保持可见并把 × 标红，让触屏（无 hover）也能收到信号 */
+.tip-line-close.is-failed {
+  opacity: 1;
+  color: var(--danger);
+}

@@ -56,7 +56,7 @@ function hidden(id) {
   return (prefs.value?.suppressed_lines || []).includes(id)
 }
 
-async function hide(id) {
+async function doHide(id) {
   const p = await ensure()
   const next = [...new Set([...(p.suppressed_lines || []), id])]
   try {
@@ -78,6 +78,15 @@ async function hide(id) {
     error.value = e.message
     return false
   }
+}
+
+// 串行队列：偏好接口是 PUT 全量替换 + 乐观锁，两次并发会读到同一个 expected_version，
+// 后到的那次必然 409。串行化后第二次能读到第一次返回的新 version。
+let chain = Promise.resolve()
+function hide(id) {
+  const run = chain.then(() => doHide(id))
+  chain = run.then(() => {}, () => {})
+  return run
 }
 
 /** 强制重新拉取（偏好页保存/恢复后调用，让其他页面本次会话立即生效）。 */

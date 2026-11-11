@@ -69,6 +69,10 @@ class EventOptionScopeTests(unittest.TestCase):
         searched = [row['id'] for row in self.client.get('/api/event-options?q=上个月的阅读').json()['items']]
         self.assertIn(old['id'], searched, '关键词搜索应能取回更早的记录')
 
+        backdated = [row['id'] for row in self.client.get('/api/event-options?day=2026-10-01').json()['items']]
+        self.assertIn(old['id'], backdated, '补记那天的记录要按那一天列出')
+        self.assertNotIn(today['id'], backdated)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

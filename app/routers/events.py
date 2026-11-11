@@ -169,19 +169,23 @@ def list_events(
 
 
 @router.get('/event-options')
-def event_options(q:str='',cursor:int|None=None,db:Session=Depends(get_db)):
+def event_options(q:str='',cursor:int|None=None,day:str|None=None,db:Session=Depends(get_db)):
     user=get_or_create_default_user(db)
     from app.models.workflow import EventFact,FactSettlement
     query=db.query(Event).filter(Event.user_id==user.id,Event.is_deleted.is_(False),or_(Event.record_kind.is_(None),Event.record_kind=='event'))
     if q:query=query.filter(or_(Event.title.contains(q,autoescape=True),Event.content.contains(q,autoescape=True)))
     else:
-        # 默认只看当天：“这条是不是已经记过的那件事”本来就是当天的问题。
+        # 默认只给同一天：“这条是不是已经记过的那件事”本来就是当天的问题。
         # 把几个月前的事件铺在首屏，只会让人在一堆无关记录里挑。更早的用关键词搜。
+        # day 跟随当前记录的发生日——补记前天的事，就列前天的记录，不是今天。
         from app.services.time_service import local_day,utc_now
-        day=local_day(utc_now(),user.timezone);today=str(day)
-        start,end=date_range(day,user.timezone)
-        # 老数据可能没有 occurred_on，退回按发生时刻落在本日判断。
-        query=query.filter(or_(Event.occurred_on==today,
+        anchor=local_day(utc_now(),user.timezone)
+        if day:
+            try:anchor=Date.fromisoformat(day)
+            except ValueError:pass  # 参数不成日期时退回今天，不让整页报错
+        start,end=date_range(anchor,user.timezone)
+        # 老数据可能没有 occurred_on，退回按发生时刻落在当日判断。
+        query=query.filter(or_(Event.occurred_on==anchor.isoformat(),
             Event.occurred_on.is_(None)&(Event.occurred_at>=start)&(Event.occurred_at<end)))
     if cursor:query=query.filter(Event.id<cursor)
     rows=query.order_by(Event.id.desc()).limit(20).all()

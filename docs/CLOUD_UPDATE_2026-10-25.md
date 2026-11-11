@@ -60,3 +60,14 @@
 事件35实际补发已取得生产REPAIRED输出：增加24币，余额55→79，四项行动产生7条属性明细（规划力分两次），真实模型为本人deepseek-flash配置v6，入账过程未再调用模型。补发前方案与新备份已存服务器私有目录。独立只读对账、网页实际显示和事件36新事实分析仍待验收。私人原文和完整模型方案不写入本交付文档。
 
 生产只读对账已通过：balance=79、repair_coin_rows=4、repair_coins=24、attribute_history_rows=7、repair_receipts=1，未发现重复补发流水。外网HTTPS /service-status已实际返回ready。部署及补发完成；网页事件35实际展示、事件36真实事实分析仍待用户验收。
+
+## 彩排探针通用化（2026-11-11）
+
+原探针 `ops/rehearse_reward_repair.py` 是为本次事件35补发写的一次性自检：硬编码用户与事件、断言"恰好补24币/4条属性"。事件35已在生产完成补发，恢复副本携带既有补发回执，后续任何发布复跑该探针都会触发幂等保护（不同方案摘要）而失败，导致所有后续发布拿不到 ISOLATED_PG_REHEARSAL_PASS。
+
+2026-11-11 起通用化，仅本地静态与假模块验证，真实PG仍在发布前于服务器执行：
+
+- 删除 `ops/rehearse_reward_repair.py`，新增 `ops/rehearse_public_update.py`：复用 `ops/cloud_update_snapshot.capture()`（只读事务、强制 host=db/库=game_of_life/角色=gol_app、head=b025、表与序列计数、凭据可解密），不做任何业务写入、不调用真实模型；环境标记改为 `public-update-copy-only`。一次性断言可从 `9a18e43` 历史找回。
+- `ops/rehearse-public-update.sh`：阶段名 `repair-proof`→`restore-health-proof`，同步上述标记；隔离网络/独立卷/随机密码/资源限制/失败留证/生产容器不变自证全部不变。
+- `ops/update-public.sh`：彩排结果校验输出更名 `RESTORE_REHEARSAL_VERIFIED`；强制校验字段（status、release_id、production_containers_unchanged、head、备份sha256）不变。
+- 本地验证：`py_compile`、`bash -n` 通过；假模块三分支测试通过（环境守卫拒绝错误标记 / 只读PASS且模型被禁 / 空恢复拒绝）。

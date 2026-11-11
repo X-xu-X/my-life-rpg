@@ -8,7 +8,7 @@ if (( $# != 4 )); then
 fi
 source_dir=$(realpath -e -- "$1")
 expected_sha=$2
-old_env=$(realpath -e -- "$3")
+old_env=$(sudo -n realpath -e -- "$3")
 rehearsal=$(realpath -e -- "$4")
 [[ "$expected_sha" =~ ^[0-9a-f]{40}$ ]]
 [[ "$source_dir" = /home/admin/lifexp-*/* && "$old_env" = /etc/game-of-life/*.env ]]
@@ -67,7 +67,7 @@ r=json.loads(p.read_text());assert r['status']=='ISOLATED_PG_REHEARSAL_PASS' and
 assert r['production_containers_unchanged'] and r['head']==['b025_daily_use']
 backup=Path(r['backup_file']);assert backup.parent==Path('/home/admin') and backup.is_file()
 assert hashlib.sha256(backup.read_bytes()).hexdigest()==r['backup_sha256']
-print('RESTORE_AND_REPAIR_REHEARSAL_VERIFIED')
+print('RESTORE_REHEARSAL_VERIFIED')
 PY
 image_manifest="$source_dir/images-$release.manifest.jsonl"
 sudo -n python3 -B "$source_dir/ops/image_identity.py" verify --manifest "$image_manifest" --release-id "$release" --platform linux/amd64

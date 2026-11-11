@@ -597,7 +597,7 @@ export function useDateGroups(items, { storageKey, getTime = (item) => item.crea
 
 | 编号 | 现象 | 当前结论 |
 | --- | --- | --- |
-| [B-79](#b79) | 每天记录的「阅读」都被问是不是同一次行动 | 已修：跨天不再进入合并候选，只在同一内容日内比较；同天同文本仍提示防重复结算 |
+| [B-79](#b79) | 每天记录的「阅读」都被问是不是同一次行动 | 已修：跨天不再进入合并候选，只在同一内容日内比较；同天同文本仍提示防重复结算；选已有事件的列表默认只列当天 |
 
 
 ### B-01 · 补充/追问后 AI"失忆"，维度漂移、置信度虚低被拦截
@@ -1998,7 +1998,7 @@ grep -rn "query(Attribute)" app/     # 列出所有读取点，逐个判断
 
 **根因**：**把“去重”做成了“跨天全文查重”**。同一次行动的判断本来就是当天范围内的问题：每日重复的安排，每天都是独立的一次行动，昨天那次与今天这次没有任何合并价值。代码把三个月历史塞给模型还不给日期，等于逼模型按字面猜，再把猜测变成一次人工追问。
 
-**修复实现**：① 新增 `content_day(event)`——`occurred_on` 优先，否则按 `timezone_at_capture` 换算本地日，取不到返回 `None` 且不与任何日期相等；② `known` 只收**同一内容日**、且排除本文事件自身的 fragment，并带上 `day` 字段；③ 硬兜底：模型给的 `related_event_id`/`related_fact_id` 若不在当日集合 `same_day` 内，直接丢弃为 `None`（不报错、不弹窗）；④ `needs_review` 的 `relation!='new'` 分支加上 `and same_day` 门槛——当天没有可比事实时，“不确定”降级为新的一次行动；⑤ 提示词写明 known_facts 只含同一内容日、每天重复安排各自 `relation=new`、不跨天比较。
+**修复实现**：① 新增 `content_day(event)`——`occurred_on` 优先，否则按 `timezone_at_capture` 换算本地日，取不到返回 `None` 且不与任何日期相等；② `known` 只收**同一内容日**、且排除本文事件自身的 fragment，并带上 `day` 字段；③ 硬兜底：模型给的 `related_event_id`/`related_fact_id` 若不在当日集合 `same_day` 内，直接丢弃为 `None`（不报错、不弹窗）；④ `needs_review` 的 `relation!='new'` 分支加上 `and same_day` 门槛——当天没有可比事实时，“不确定”降级为新的一次行动；⑤ 提示词写明 known_facts 只含同一内容日、每天重复安排各自 `relation=new`、不跨天比较；⑥ 同一口径延伸到「选一条已有事件」的选择器：`GET /event-options` 无关键词时默认只返回**当天**记录（`occurred_on` 匹配，老数据按 `occurred_at` 落在本日兜底），只有输入关键词才跨天检索——首屏不再铺几个月前的记录。
 
 **防复发**：① 凡是“是不是同一件事”的判断，候选集必须自带比较范围（同一天/同一事件）和日期字段，不给范围就是让模型瞎猜；② 让模型“谨慎”的措辞要和人工介入成本对齐——标 uncertain 会直接弹窗打扰用户，不能一边鼓励不确定一边强制追问；③ 用户口头的业务口径要落成可执行的断言，`tests/test_fact_same_day_scope.py` 固定两例：跨天同文本 `candidate_fact_id is None` 且 `decision=='keep'`，同天同文本仍 `unresolved`（保住防重复结算）。
 

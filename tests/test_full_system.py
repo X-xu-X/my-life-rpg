@@ -197,7 +197,7 @@ class FullSystemTests(unittest.TestCase):
         self.write(f"/events/{private['id']}/ai-permission",{'permission':'allowed','acknowledge':True,'content_version':1},1,'PUT')
         group=self.facts(private,[self.suggestion('读完一章数学')])
         item=group['payload']['items'][0]
-        self.assertEqual(item['decision'],'unresolved')
+        self.assertEqual(item['decision'],'keep')
         group=self.write(f"/fact-bundles/{group['id']}/decision",{'fragment_id':item['fragment_id'],'decision':'same'},group['version']).json()
         group=self.preview(group)
         self.assertEqual(group['preview']['total'],0);self.assertTrue(group['preview']['items'][0]['booked'])
@@ -341,7 +341,7 @@ class FullSystemTests(unittest.TestCase):
         self.register();self.configure_model();self.adopt()
         first=self.event('学习英语二十分钟','allowed');first_group=self.preview(self.facts(first,[self.suggestion(first['content'])]));self.assertEqual(self.settle(first_group).status_code,200)
         second=self.event('学习英语二十分钟','allowed');group=self.facts(second,[self.suggestion(second['content'])])
-        item=group['payload']['items'][0];self.assertEqual(item['decision'],'unresolved')
+        item=group['payload']['items'][0];self.assertEqual(item['decision'],'keep')
         group=self.write(f"/fact-bundles/{group['id']}/decision",{'fragment_id':item['fragment_id'],'decision':'distinct'},group['version']).json()
         # A later model proposes same; explicit user correction still wins at confirmation.
         group=self.facts(second,[self.suggestion(second['content'],relation='same',related_event_id=first['id'])])
@@ -450,7 +450,7 @@ class FullSystemTests(unittest.TestCase):
         self.assertEqual(self.write(f"/events/{diary['id']}/fact-notes",{'content':'完成一幅速写'},1,key=key).json(),note.json())
         group=self.facts(diary,[self.suggestion('散步十分钟',source_kind='review_answer',source_id=turn_id),self.suggestion('完成一幅速写',source_kind='note',source_id=note.json()['id'])])
         new_item=next(i for i in group['payload']['items'] if i['source_kind']=='note')
-        self.assertEqual(new_item['decision'],'unresolved')
+        self.assertEqual(new_item['decision'],'keep')
         group=self.write(f"/fact-bundles/{group['id']}/decision",{'fragment_id':new_item['fragment_id'],'decision':'distinct'},group['version']).json()
         self.assertEqual(self.settle(self.preview(group)).json()['coins_gained'],6)
         self.assertEqual(self.client.get('/api/events').json()[0]['content'],'今天心情低落')
@@ -557,14 +557,17 @@ class FullSystemTests(unittest.TestCase):
             with patch('app.services.trial_rules.utc_now',return_value=now):self.assertEqual(trial_rules.zone_for(db,user),'Asia/Shanghai')
             with patch('app.services.trial_rules.utc_now',return_value=now+timedelta(hours=5)):self.assertEqual(trial_rules.zone_for(db,user),'America/Los_Angeles')
 
-    def test_rewriting_booked_diary_requires_explicit_fact_relation_not_automatic_second_award(self):
+    def test_rewriting_booked_diary_defaults_no_second_award_without_blocking(self):
         self.register();self.configure_model();self.adopt();day=str(local_day(utc_now(),'Asia/Shanghai'))
         diary=self.write('/diaries/'+day,{'content':'跑步两公里','ai_permission':'allowed'},0,'PUT').json()['diary']
         group=self.facts(diary,[self.suggestion('跑步两公里')]);self.settle(self.preview(group));balance=self.client.get('/api/coins').json()['balance']
         diary=self.write('/diaries/'+day,{'content':'晚上进行了两公里慢跑','ai_permission':'allowed','correction_reason':'重写表达，原事实未变'},1,'PUT').json()['diary']
-        group=self.facts(diary,[self.suggestion('晚上进行了两公里慢跑')]);self.assertEqual(group['payload']['items'][0]['decision'],'unresolved')
-        preview=self.preview(group);self.assertEqual(preview['preview']['total'],0);self.assertEqual(self.settle(preview).status_code,409)
-        item=group['payload']['items'][0];group=self.write(f"/fact-bundles/{group['id']}/decision",{'fragment_id':item['fragment_id'],'decision':'same','related_fact_id':item['candidate_options'][0]['fact_id']},preview['version']).json()
+        group=self.facts(diary,[self.suggestion('晚上进行了两公里慢跑')]);self.assertEqual(group['payload']['items'][0]['decision'],'keep')
+        preview=self.preview(group);self.assertEqual(preview['preview']['total'],0);self.assertEqual(self.settle(preview).status_code,200)
+        self.assertEqual(self.client.get('/api/coins').json()['balance'],balance)
+        diary=self.write('/diaries/'+day,{'content':'夜里完成两公里慢跑','ai_permission':'allowed','correction_reason':'再次重写表达'},2,'PUT').json()['diary']
+        group=self.facts(diary,[self.suggestion('夜里完成两公里慢跑')]);item=group['payload']['items'][0]
+        group=self.write(f"/fact-bundles/{group['id']}/decision",{'fragment_id':item['fragment_id'],'decision':'same','related_fact_id':item['candidate_options'][0]['fact_id']},group['version']).json()
         self.assertEqual(self.settle(self.preview(group)).json()['coins_gained'],0)
         self.assertEqual(self.client.get('/api/coins').json()['balance'],balance)
 

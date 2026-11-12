@@ -88,7 +88,8 @@ def pending(db: Session = Depends(get_db)):
             if event.analysis_intent == 'never' and not bundle and not job: continue
             state = job.state if job else 'saved'
             if bundle and (not job or job.state == 'ready'):
-                state = 'needs_input' if any(i.get('confidence', 0) < .8 or i.get('decision') == 'unresolved'
+                # Relation review is optional; only insufficient evidence keeps this pending.
+                state = 'needs_input' if any(i.get('confidence', 0) < .8
                     for i in bundle.payload.get('items', [])) else 'ready'
             result.append({'event_id': event.id, 'event_version': event.content_version,
                 'title': event.title, 'content': event.content, 'state': state, 'judgment_id': None,

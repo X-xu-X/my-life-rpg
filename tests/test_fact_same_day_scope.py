@@ -33,15 +33,38 @@ class SameDayScopeTests(RewardIncidentTests):
         self.assertEqual(item['decision'], 'keep')
         self.assertEqual(item['candidate_options'], [])
 
-    def test_identical_text_on_the_same_day_still_asks_before_double_booking(self):
+    def test_same_day_candidate_is_optional_and_never_blocks_settlement(self):
         self.ready()
         first = self.event('阅读30分钟', 'allowed')
         self.settle(self.preview(self.facts(first, [self.suggestion('阅读30分钟')])))
 
         second = self.event('阅读30分钟', 'allowed')
-        item = self.facts(second, [self.suggestion('阅读30分钟', relation='same', related_event_id=first['id'])])['payload']['items'][0]
-        self.assertIsNotNone(item['candidate_fact_id'])
-        self.assertEqual(item['decision'], 'unresolved')
+        group = self.facts(second, [self.suggestion('阅读30分钟', relation='same', related_event_id=first['id'])])
+        item = group['payload']['items'][0]
+        self.assertIsNotNone(item['candidate_fact_id'], '候选仍可供用户主动合并')
+        self.assertEqual(item['decision'], 'keep', '候选不得再把流程置为待核对')
+
+        preview = self.preview(group)
+        self.assertTrue(preview['preview']['items'][0]['eligible'])
+        self.assertEqual(preview['preview']['total'], 6)
+        self.assertEqual(self.settle(preview).status_code, 200, '不回答关系问题也应能确认属性和金币')
+
+    def test_legacy_unresolved_item_can_continue_without_answering(self):
+        self.ready()
+        event = self.event('旧记录仍被关系核对卡住', 'allowed')
+        group = self.facts(event, [self.suggestion('旧记录仍被关系核对卡住', relation='uncertain')])
+        with self.Session() as db:
+            from app.models.full_system import FactBundle
+            row = db.get(FactBundle, group['id'])
+            payload = {**row.payload, 'items': [dict(i) for i in row.payload['items']]}
+            payload['items'][0]['decision'] = 'unresolved'
+            row.payload = payload
+            db.commit()
+
+        preview = self.preview(group)
+        self.assertTrue(preview['preview']['items'][0]['unresolved'], '保留旧建议的原始审计信息')
+        self.assertTrue(preview['preview']['items'][0]['eligible'])
+        self.assertEqual(self.settle(preview).status_code, 200)
 
 
 class EventOptionScopeTests(unittest.TestCase):

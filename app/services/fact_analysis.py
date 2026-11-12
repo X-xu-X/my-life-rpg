@@ -172,9 +172,10 @@ def generate(db,job,validate):
                 fact_id=identity_id,excerpt=proposal.excerpt,decision='new',history=[]);db.add(fragment);db.flush()
         if previous and not candidate and not fragment.history:candidate=previous.fact_id
         options=list({r['fact_id']:r for r in prior_bookings if r['fact_id']!=fragment.fact_id}.values()) if new_fragment and not fragment.history else []
-        needs_review=bool(candidate or options or (proposal.relation!='new' and same_day)) and not fragment.history
+        # Relation candidates are optional evidence, never a gate on analysis or settlement.
+        # Only an explicit user choice of "same" merges identities; otherwise this is a new action.
         item=proposal.model_dump();item['changes']=normalized_changes(db,user,item['changes']);item.update(fragment_id=fragment.id,fact_id=fragment.fact_id,fragment_version=fragment.version,
-            candidate_fact_id=candidate,candidate_options=options,decision='unresolved' if needs_review else 'keep',mainline=False)
+            candidate_fact_id=candidate,candidate_options=options,decision='keep',mainline=False)
         if any(w['fact_index']==index for w in warnings):item['reason']=(item['reason']+' '+EFFORT_NOTE).strip()
         items.append(item)
     bundle=FactBundle(user_id=user.id,event_id=event.id,event_version=event.content_version,permission_version=event.ai_permission_version,
@@ -194,8 +195,13 @@ def preview(db,user,bundle):
         fragment=db.get(FactFragment,item['fragment_id'])
         if fragment.version!=item['fragment_version'] or fragment.fact_id!=item['fact_id']:raise HTTPException(409,'事实关系已变化，请重新核对。')
         booked=db.query(FactSettlement).filter_by(fact_id=fragment.fact_id).first()
-        unresolved=item['decision']=='unresolved';skipped=item['decision']=='skip'
-        eligible=not booked and fragment.fact_id not in seen and not unresolved and not skipped and item['confidence']>=0.8
+        # Legacy drafts may still say "unresolved". That was only an optional relation
+        # prompt, not evidence of duplication; keep those old records movable too.
+        # A rewritten source with its own prior bookings is different: default to no
+        # second award, but allow the rest of the group to confirm without a 409.
+        prior_booking_pending=bool(item.get('candidate_options')) and fragment.decision not in ('distinct','same')
+        unresolved=item['decision']=='unresolved' or prior_booking_pending;skipped=item['decision']=='skip'
+        eligible=not booked and fragment.fact_id not in seen and not prior_booking_pending and not skipped and item['confidence']>=0.8
         seen.add(fragment.fact_id)
         mainline=None
         if item['mainline'] and item['goal_id']:
@@ -217,7 +223,6 @@ def preview(db,user,bundle):
 
 def confirm(db,user,bundle):
     if bundle.state!='preview' or bundle.preview!=preview(db,user,bundle):raise HTTPException(409,'结算或额度已有变化，请刷新整组预览再核对。')
-    if any(i['unresolved'] for i in bundle.preview['items']):raise HTTPException(409,'请核对不确定关系，或暂不结算该项。')
     event=source_valid(db,bundle);original={i['fragment_id']:i for i in bundle.payload['items']}
     if any(item['eligible'] for item in bundle.preview['items']):
         from app.services.coin_service import require_baseline

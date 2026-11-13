@@ -1008,3 +1008,50 @@
 **复核确认与规格一致的项**：F1 五处改动、F2、F3 全部判定口径、F5 四处删除、F6 两处、
 4.2 字段与校验（nullable / LineId 正则 / max_length=40 / touched 兼容 / GET 缺省 []）、
 6 条 TipLine id 全部落地、技术约束（无新依赖、无新断点、RouterLink 导航、aria-label 齐备）。
+
+---
+
+## Backlog：v1.12 上线后实测反馈（2026-11-13，用户真实使用，全部登记待排期）
+
+> 背景：`3fa0de7` 上线后用户实测发现。**本文档为唯一账本，不使用 GitHub Issues**（单人开发 + writer 闭环，
+> 两份账本会漏；Issues 留给将来开源后接收外部反馈）。登记时一律带代码位置与数据诊断，方便直接开批次。
+
+- [ ] **F1 关系候选不再强制后，仍有碎片级噪音**（`frontend/src/components/FactAnalysis.vue:43`）
+  日记被拆成多个 fragment，每条都渲染完整操作按钮组（`与已结算事实相同` / `是同一次行动` / `是另一件事` / `本项暂不结算` / 主线关联）。
+  用户口径（2026-11-13）：**AI 怎么拆自己知道就行，不要每条都跳出来**；只在「与当天已有记录可能重复」的碎片上显示关系按钮，其余只展示结果。
+  诊断：`candidate_fact_id` 已有条件渲染，但 `是另一件事`（`item.candidate_fact_id||item.decision==='unresolved'`）与 `本项暂不结算`（无条件）仍全量出现。
+
+- [ ] **F2「原文已变化，请重新分析」提示位置错误**（`FactAnalysis.vue:30` 状态行；文案来自 `app/services/fact_analysis.py:103` 的 409）
+  该提示出现在卡片最顶部标题下方，离真正要点的按钮很远，用户「一开始根本没看到」。
+  目标：挪到主操作按钮附近（按钮上方一行），仍是 role=alert。
+
+- [ ] **F3「又/再」类措辞被误判为不确定关系**（`app/prompts/judge.py` 关系判定段；`app/services/fact_analysis.py` known_facts 注入段）
+  用户记录「我又读了 30min」，仍被问「是否与已有事件 51 为同一次阅读」。字面已表「又一次」→ 必然是新行动。
+  目标：提示词写死"又/再/再次/还/第二次 + 数量或时长"视为独立新行动，`relation` 直接 `new`，且不生成该条 `questions`。
+  **注意**：与 `test_fact_same_day_scope` 的当日防重复口径不冲突——那条保护针对"完全同描述的重复提交"。
+
+- [ ] **F4 金币面额偏小（6 / 15 这种）**（`app/services/trial_rules.py` 档位表 `split()`）
+  用户口径：「日记这里面的金币奖励还是 6、15 这种，没改好」。属于**面额/档位**问题，与 F5 展示形式是两件事。
+  待定：是整体上调档位，还是改为按投入时长/成果强度分档（需先与用户确认口径，不要擅自改数值）。
+
+- [ ] **F5 金币流水页改版**（`frontend/src/components/SectionDetail.vue:69`，`view==='ledger'`；数据 `GET /api/coins`）
+  现状：每行 `reason || source` + 时间 + 金额，一屏几十行全是「经本人确认的有效行动；trial-2026-10-18-v1」，看不出哪件事赚的。
+  两层问题：① **内容层（必做）**——`trial_rules.py:44` 把内部规则版本号拼进了 reason，应改为行动摘要（可经 `ref_type='judgment'` + `ref_id` 关联回原事件/事实）；
+  ② **形式层（待用户选）**——已出三方案：A 按天分组（推荐，与 `view==='history'` 同款）、B 同类合并可展开、C 仅换文案。用户 2026-11-13 尚未选定。
+
+- [ ] **F6 奖励心愿的「形式」字段应删除，由 AI 从文本判断**（`RewardShop.vue` 表单 `form.reward_kind` / `minutes`；后端 `QuoteIn.reward_kind`、`minutes`）
+  用户口径：「加一个其他吧，或者干脆不要了，AI 根据我填写的内容自行判断就好了」→ 取**删除**方案（三选一本身答不全，"休息半个下午和晚上"既非物品也非纯计时娱乐）。
+  目标：去掉形式下拉与分钟输入；AI 自行判断是否计时类，若判为计时类则从文本估算分钟数并在定价结果中展示可改。
+
+- [ ] **F7 BUG：心愿定价必然失败 `int_parsing`，且错误原文直出界面**（`RewardShop.vue:8/12/18`；`app/routers/reward_quotes.py:34`）
+  现象：`{"type":"int_parsing","loc":["body","minutes"],"msg":"Input should be a valid integer","input":""}` 显示在表单上方。
+  根因链：① `@input="cache"` 把整表单写进 localStorage；② 用户曾清空分钟输入框，`v-model.number` 对空串保留 `""` 并被缓存；
+  ③ 再选「物品」时分钟输入框被 `v-if` 隐藏，用户看不见也改不了，但仍在提交体里；④ `minutes:int` 校验失败；
+  ⑤ 前端把 Pydantic 原始错误体（含 `loc`/`type`/`input`）当作 message 渲染 → 用户看到机器语言。
+  修复口径：提交前 `minutes` 空值兜底为默认值（或判为计时类才发送）；localStorage 还原时做类型清洗；错误统一转成中文可读文案，绝不透出校验 JSON。
+  **用户当前可用的绕过**：形式切到「计时娱乐」→ 分钟框出现 → 填 30 → 切回物品提交。
+
+- [ ] **F8 页脚补公安备案号（合规）**（footer 组件，与 ICP 行并列）
+  `浙公网安备33018502002724号`（2026-11-12 获准，有效）。要求：展示备案号 + 国徽图标 + 链接到 `https://beian.mps.gov.cn/#/query/webSearch?code=33018502002724`。
+
+**排期建议**：F2 / F7 是"看得见的不合理"，优先；F1 / F3 是同一主题（关系判定噪音）一起做；F5 + F4 涉及金币展示与面额，需用户先定口径；F6 与 F5 的改动都碰 `RewardShop`/流水，可同批；F8 单独小改动，随批带上。

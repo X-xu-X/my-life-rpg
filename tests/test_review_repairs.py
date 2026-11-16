@@ -246,8 +246,8 @@ class ReviewRepairTests(unittest.TestCase):
             return TimeSession(user_id=uid,kind=kind,source_id=1,state='ended',started_at=now,last_sync_at=now,timezone='Asia/Shanghai',local_date=day,limit_seconds=1800,contract={'mode':'gentle'},intervals=[],settlement={'day':day,'actual_seconds':seconds,'penalty_charged':0,'ontime_awarded':0,'consumed_seconds':0},history=[])
         sent=[]
         def price():
-            def fake(messages,**kw):sent.append(messages);return {'coin_price':20,'pricing_reason':'合成依据','worth_note':''}
-            with patch('app.services.llm_service.llm_service.chat_json',side_effect=fake):response=self.write('/reward-quotes',{'name':'额外娱乐','reward_kind':'entertainment','minutes':30})
+            def fake(messages,**kw):sent.append(messages);return {'coin_price':20,'pricing_reason':'合成依据','worth_note':'','is_timed':True,'minutes_estimate':30}
+            with patch('app.services.llm_service.llm_service.chat_json',side_effect=fake):response=self.write('/reward-quotes',{'name':'额外娱乐','description':'想玩半小时'})
             self.assertEqual(response.status_code,200,response.text)
             messages=sent[-1];label='【近30天购买与实际娱乐用量】\n'
             text=next(m['content'] for m in messages if label in m['content']).split(label)[1].split('\n【')[0]

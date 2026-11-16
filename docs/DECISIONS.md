@@ -1016,21 +1016,21 @@
 > 背景：`3fa0de7` 上线后用户实测发现。**本文档为唯一账本，不使用 GitHub Issues**（单人开发 + writer 闭环，
 > 两份账本会漏；Issues 留给将来开源后接收外部反馈）。登记时一律带代码位置与数据诊断，方便直接开批次。
 
-- [ ] **F1 关系候选不再强制后，仍有碎片级噪音**（`frontend/src/components/FactAnalysis.vue:43`）
+- [x] **F1 关系候选不再强制后，仍有碎片级噪音**（`frontend/src/components/FactAnalysis.vue:43`）
   日记被拆成多个 fragment，每条都渲染完整操作按钮组（`与已结算事实相同` / `是同一次行动` / `是另一件事` / `本项暂不结算` / 主线关联）。
   用户口径（2026-11-13）：**AI 怎么拆自己知道就行，不要每条都跳出来**；只在「与当天已有记录可能重复」的碎片上显示关系按钮，其余只展示结果。
   诊断：`candidate_fact_id` 已有条件渲染，但 `是另一件事`（`item.candidate_fact_id||item.decision==='unresolved'`）与 `本项暂不结算`（无条件）仍全量出现。
 
-- [ ] **F2「原文已变化，请重新分析」提示位置错误**（`FactAnalysis.vue:30` 状态行；文案来自 `app/services/fact_analysis.py:103` 的 409）
+- [x] **F2「原文已变化，请重新分析」提示位置错误**（`FactAnalysis.vue:30` 状态行；文案来自 `app/services/fact_analysis.py:103` 的 409）
   该提示出现在卡片最顶部标题下方，离真正要点的按钮很远，用户「一开始根本没看到」。
   目标：挪到主操作按钮附近（按钮上方一行），仍是 role=alert。
 
-- [ ] **F3「又/再」类措辞被误判为不确定关系**（`app/prompts/judge.py` 关系判定段；`app/services/fact_analysis.py` known_facts 注入段）
+- [x] **F3「又/再」类措辞被误判为不确定关系**（`app/prompts/judge.py` 关系判定段；`app/services/fact_analysis.py` known_facts 注入段）
   用户记录「我又读了 30min」，仍被问「是否与已有事件 51 为同一次阅读」。字面已表「又一次」→ 必然是新行动。
   目标：提示词写死"又/再/再次/还/第二次 + 数量或时长"视为独立新行动，`relation` 直接 `new`，且不生成该条 `questions`。
   **注意**：与 `test_fact_same_day_scope` 的当日防重复口径不冲突——那条保护针对"完全同描述的重复提交"。
 
-- [ ] **F4 金币改由 AI 直接定价，档位表整体废弃**（`app/services/trial_rules.py:8-9,34-39`；`app/services/fact_analysis.py:40,213`；`app/routers/trial.py:27`）
+- [x] **F4 金币改由 AI 直接定价，档位表整体废弃**（`app/services/trial_rules.py:8-9,34-39`；`app/services/fact_analysis.py:40,213`；`app/routers/trial.py:27`）
   用户口径（2026-11-13）：「金币也是让 AI 定，不要定死，不要 6 15 什么的了……那个分档，最多是和主线任务挂钩再用，或者干脆不用了」。
   **已拍板**：① 单次 40 / 每日 100 **上限全部取消**；② **主线也交给 AI 定**（不再有 4/10/15 固定加成）；③ `BASE` / `MAIN` / `grade` 整体废弃。
   现链：模型只给 `grade ∈ {none,small,medium,large}` → `split()` 映射 6/15/25 + 主线 4/10/15 + 节日 5% → `min(40, remaining, …)` 截断。**钱不是 AI 算的**，这是"定死"的根源。
@@ -1040,7 +1040,7 @@
   **边界**：金币发放现存在两套并列链路——老的计划/挑战判定走 `event_confirm`（`judgments.py:188`，+2 币/条），手账事实确认走 `trial_action`。**本项只改后者，前者不动**。
   连带：F10 的「金币解释」须等本项定型后再做，否则解释的是将被废弃的档位逻辑。
 
-- [ ] **F5 金币流水页改版**（`frontend/src/components/SectionDetail.vue:69`，`view==='ledger'`；数据 `GET /api/coins`）
+- [x] **F5 金币流水页改版**（`frontend/src/components/SectionDetail.vue:69`，`view==='ledger'`；数据 `GET /api/coins`）
   现状：每行 `reason || source` + 时间 + 金额，一屏几十行全是「经本人确认的有效行动；trial-2026-10-18-v1」，看不出哪件事赚的。
   两层问题：① **内容层（必做）**——`trial_rules.py:44` 把内部规则版本号拼进了 reason，应改为行动摘要（可经 `ref_type='judgment'` + `ref_id` 关联回原事件/事实）；
   ② **形式层（2026-11-13 用户定稿）**——**按天分组，组内再分「日记」与「事件」两类**：
@@ -1049,11 +1049,11 @@
   **已否决**：「流水页给原因/归因」（归因属分析结果，见 F10，不放在流水页）。
   技术前提：一条流水属日记还是事件，需经 `ref_type='judgment'` → `judgment.event_id` → `event.origin` 判定，现接口未返回，属后端改动。
 
-- [ ] **F6 奖励心愿的「形式」字段应删除，由 AI 从文本判断**（`RewardShop.vue` 表单 `form.reward_kind` / `minutes`；后端 `QuoteIn.reward_kind`、`minutes`）
+- [x] **F6 奖励心愿的「形式」字段应删除，由 AI 从文本判断**（`RewardShop.vue` 表单 `form.reward_kind` / `minutes`；后端 `QuoteIn.reward_kind`、`minutes`）
   用户口径：「加一个其他吧，或者干脆不要了，AI 根据我填写的内容自行判断就好了」→ 取**删除**方案（三选一本身答不全，"休息半个下午和晚上"既非物品也非纯计时娱乐）。
   目标：去掉形式下拉与分钟输入；AI 自行判断是否计时类，若判为计时类则从文本估算分钟数并在定价结果中展示可改。
 
-- [ ] **F7 BUG：心愿定价必然失败 `int_parsing`，且错误原文直出界面**（`RewardShop.vue:8/12/18`；`app/routers/reward_quotes.py:34`）
+- [x] **F7 BUG：心愿定价必然失败 `int_parsing`，且错误原文直出界面**（`RewardShop.vue:8/12/18`；`app/routers/reward_quotes.py:34`）
   现象：`{"type":"int_parsing","loc":["body","minutes"],"msg":"Input should be a valid integer","input":""}` 显示在表单上方。
   根因链：① `@input="cache"` 把整表单写进 localStorage；② 用户曾清空分钟输入框，`v-model.number` 对空串保留 `""` 并被缓存；
   ③ 再选「物品」时分钟输入框被 `v-if` 隐藏，用户看不见也改不了，但仍在提交体里；④ `minutes:int` 校验失败；
@@ -1061,10 +1061,10 @@
   修复口径：提交前 `minutes` 空值兜底为默认值（或判为计时类才发送）；localStorage 还原时做类型清洗；错误统一转成中文可读文案，绝不透出校验 JSON。
   **用户当前可用的绕过**：形式切到「计时娱乐」→ 分钟框出现 → 填 30 → 切回物品提交。
 
-- [ ] **F8 页脚补公安备案号（合规）**（footer 组件，与 ICP 行并列）
+- [x] **F8 页脚补公安备案号（合规）**（footer 组件，与 ICP 行并列）
   `浙公网安备33018502002724号`（2026-11-12 获准，有效）。要求：展示备案号 + 国徽图标 + 链接到 `https://beian.mps.gov.cn/#/query/webSearch?code=33018502002724`。
 
-- [ ] **F9 奖励定价不应参照【商店价位】**（`app/services/economy_service.py:78-80`；`app/prompts/shop.py:36-37`、`:13`；`app/prompts/challenge.py:109`）
+- [x] **F9 奖励定价不应参照【商店价位】**（`app/services/economy_service.py:78-80`；`app/prompts/shop.py:36-37`、`:13`；`app/prompts/challenge.py:109`）
   用户口径（2026-11-13）：「这个定价应该不用和商店的价格参考吧？感觉没什么用」。
   根因是**循环参照**，不是"多余"：`apply_quote()`（`app/routers/reward_quotes.py:99`）每定一个新心愿都写入 `ShopItem`，
   而 `shop_price_range()`（`economy_service.py:42`）取所有在售 `ShopItem.coin_price` 的 min/max 喂回 prompt 当参照
@@ -1075,14 +1075,64 @@
   `shop.py` 删「购买力参照」段；`challenge.py:109` 同步改口径。**保留**余额与近 7 天收支——这才是"相当于几天努力"的真实基线。
   注意：`economy_context()` 的 hash 只含 ledger_max/vouchers/activity/mainlines，不读 snapshot 文本，故本次改动不会让已有 `PricingQuote` 失效。
 
-- [ ] **F10 分析结果不解释「属性和金币怎么来的」**（`frontend/src/components/FactAnalysis.vue:36/38/42/44`；`EventFactAnalysis.vue:73/74`）
+- [x] **F10 分析结果不解释「属性和金币怎么来的」**（`frontend/src/components/FactAnalysis.vue:36/38/42/44`；`EventFactAnalysis.vue:73/74`）
   用户口径（2026-11-13）：「我分析了，那最终的属性和获取的金币，我不知道咋获得的，可能需要 AI 告诉我原因」。
   诊断（数据其实都在，是展示问题）：① 每维 `change.reason` 埋在 `<details>原文引用与判断依据` 第二层；
   ② 金币有 `<details>金币计算详情`，但只有 `基础 15 · 主线 0 · 节日 0 · 封顶减 0` 纯数字，没有一句人话；
   ③ `group.state==='confirmed'` 后整块默认折叠（第 36 行 `:open` 条件）→ **确认完反而再也看不到解释**，这是"不知道咋获得"的直接原因。
-  方案（口径已定）：① **金币解释必须由 `breakdown` 确定性生成，禁止让模型编**——金额来自 `trial_rules.split()`
-  （`BASE=小6/中15/大25` + 主线 + 节日 + 上限截断），模型不参与金额，AI 事后解释会编出不存在的规则；
+  方案（口径已定，已随 F4 调整）：① 金额由模型直接给（F4 已废弃档位表），**每条金币必须同时带一句模型自己写的理由**——
+  金额与理由同源，不再出现"规则算钱、模型事后编解释"的错位；前端只做校验与展示，不得自行编造构成；
   ② 属性沿用模型给出的 `change.reason`，从折叠区提升到默认可见；
-  ③ 确认后保留一段可回看的「本组入账说明」（几项、单件档位、首记、是否触达单次40/每日100）。
+  ③ 确认后保留一段可回看的「本组入账说明」（几项计入、几项未计入及原因、合计多少币）。
 
-**排期建议**：F2 / F7 是"看得见的不合理"，优先；F4 口径已定且是金币体系地基（F5 展示、F10 解释都依赖它），应排在最前；F1 / F3 是同一主题（关系判定噪音）一起做；F10 必须排在 F4 之后；F9 是 prompt 单点删除、无迁移，可随时插入；F5 需在 F4 定型后做；F6 与 F5 都碰 `RewardShop`/流水，可同批；F8 单独小改动，随批带上。
+- [x] **F11 商店重定价不该被 ±20% 硬截断**（`app/routers/reward_quotes.py:77-80 bounded_price`、`:96-97 apply_quote`）
+  用户口径（2026-11-16）：「商店那个幅度要限制嘛？感觉没必要」。
+  根因不是"限制太严"，而是**截断让理由和数字对不上**：`row.result['coin_price']` 是模型原值（如 168），
+  `bounded_price()` 把它压成 144 才写进 `ShopItem.coin_price`，而 `pricing_reason` 里模型写的是"约 168 币、相当于一天收入"
+  → 界面出现"依据说 168、价格 144"的自相矛盾。二是 ±20% **不阻止偏离，只把偏离摊成多次 20%**：
+  连续几次都"只涨了两成"，累计翻倍时用户看不出是哪一次涨的。
+  修复：**删 `bounded_price()` 及 `apply_quote` 的 bounds 分支**（前端从未读过 `bounds`/`model_price`，无兼容问题）；
+  `result` 改记 `previous_price` 与 `change_pct`，商品卡展示「今天 30 · 昨天 28 ↑7%」。
+  **保留的三条底线**（与幅度无关，防的是重复扣费与脏数据）：同一件每天最多定一次价（`repriced_on`）、
+  每天最多 10 次模型调用（`pricing_checks.MAX_DAILY`）、`coin_price` 必须是 1~10^9 正整数。
+  展示替代截断：商品卡标涨跌，点开是「今天为什么是这个价」（旧价 → 新价 + 涨跌幅 + 依据），并给「退回并冻结」把价钉回昨天。
+  **不再有"接受 / 保持"二选一**——每日自动更新若每早都要点一次确认，等于把判断权收回用户手上，与 F12 的"每天显示最新价"冲突。
+
+- [x] **F12 定价时选一次：只用于这一次 / 加入常用兑换券**（`app/models/__init__.py:431 auto_pricing`；`app/services/pricing_checks.py:34,67`；`app/routers/shop.py:26-34`；`reward_quotes.py QuoteIn/apply_quote`；`shop_service.seed_preset_items`）
+  用户口径（2026-11-16 第一次）：「商店那个幅度要限制嘛？感觉没必要……第一次定价的时候，可以选择只判断一次，
+  或者加入长期的奖励兑换区，因为感觉有一些事情不是经常性的，只需要判定一次，但是我总不能每次定好，然后再删除吧」。
+  **更正口径（同日第二次，以此为准）**：「不是定了就不变，是我输入一个东西，给我定价，然后出现，只定价一次，
+  还是加入常用的兑换券，下次点一下即可，不需要重新输入，然后加入常用的兑换券之后，每天 ai 就重新评估一次进行更新，
+  每天显示的就是最新的价格」。
+  → 两个值**不是"价格会不会浮动"**，而是**这件奖励要不要长期留在货架上**：
+  - `once`：只用于这一次。定完价锁住，兑换后进历史（不占常用列表），不参与每日重估。
+  - `recurring`：常用兑换券。进常设列表，以后点一下就能兑换（不用重写名称/描述/参考价），**每天重估一次，界面显示今天的价**。
+  现状：唯一开关 `auto_pricing` 的语义是「允许模型每天早上查一次价」，缺 `once` 这一半，于是想保住一次性价格只能靠"停用/移除"躲开。
+  修复：`ShopItem.pricing_mode`（`once` / `recurring`，默认 `once`），迁移 `auto_pricing=True → recurring`、`False → once`；
+  `seed_preset_items()` 预置的两件（奶茶 / 额外娱乐半小时）设为 `recurring`；
+  `pricing_checks.enqueue` 取 `pricing_mode='recurring'` 且 `repriced_on != today` 的商品，
+  **并把 `eligible[:min(3,budget)]` 放开**——现在每天最多只排 3 件，做不到"每天显示最新价"；
+  改为当天符合条件的全部排队，仍受 `MAX_DAILY=10` 约束；超过 10 件按最久没评估的轮询，界面标"其余明天更新"。
+  `QuoteIn` **不加字段**：新建的商品一律先落 `once`（默认值），定价结果卡出来之后再让用户选；
+  选「加入常用兑换券」时调 `PATCH /shop/items/{id}/pricing-mode`（`{mode}` + `expected_version`，仍要求 `acknowledge`，
+  因为切到 `recurring` 等于授权每天一次模型调用）。原来的 `/shop/items/{id}/automatic-pricing` 由这个接口取代。
+  **选择发生在定价之后**（用户原话是"给我定价，然后出现，只定价一次，还是加入常用的兑换券"）：先看到 120 币，
+  再决定值不值得把它留成常用；表单里不多一步。
+  **auto 那次调价仍然自动生效**（沿用现状），不等用户确认；成本是每件每天 1 次调用，界面必须写明。
+  ⚠️ **"每天"的真实触发点是打开商店页**：`queuePriceSweep`（`frontend/src/pricingSweep.js`）在进入 `RewardShop` 时
+  按 `price-check:<日期>` 去重后 `POST /pricing-checks`，服务端没有定时任务。所以现状是"哪天打开、哪天更新"，
+  不打开就不烧钱。本轮**保持这个模型**（看到的仍是当天价），不改为服务端每日定时；若用户要求真正的后台每日跑，另行开工。
+  prompt（`app/prompts/shop.py`）补一条：**没有新证据时保持原价，不得为了"有变化"而改数字**——
+  否则每天重估会变成每天抖动。
+
+- [x] **F13 商店分「常用兑换券」/「只用这一次」两个小节**（`frontend/src/components/RewardShop.vue`；纯展示层）
+  同上口径。同一个商店页内两个小节，不新增页面、不新增 tab：常用券显示「今天 30 · 昨天 28 ↑7%」并可直接兑换；
+  一次性显示「11/16 定价 · 换完就进历史」。已兑完的 `once` 商品归入「已用过的」折叠区（复用 `/redemptions`，不改表；
+  若不想让前端自己 join，在 `_item_out`（`app/routers/shop.py:37`）加 `redeemed_count`，由后端按 `shop_item_id` 计数更稳）。
+  每件商品可在「依据与操作」里换组。**已随 demo 确认（2026-11-16）**，保留两个小节。
+
+**排期**：已排出 `docs/DEV_PLAN_v1.13.md`（六批，一批一 commit），demo 七屏已获确认（2026-11-16）：
+A 批次基金币 AI 定价（F4）→ B 入账解释与流水（F10 + F5）→ C 分析页降噪（F1 + F2 + F3）→
+D 心愿表单（F7 + F6）→ E 商店定价方式（F9 + F11 + F12 + F13）→ F 目标/计时/备案号（FT + TM + F8）。
+**新增 UI 铁律**：不写说明性小字（用户 2026-11-16：「那种没必要的说明性小字记得去掉」）——
+不解释设计意图、同一含义不说两遍、不为"友好"再加灰字。

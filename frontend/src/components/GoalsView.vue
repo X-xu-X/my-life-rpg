@@ -1,6 +1,6 @@
 <script setup>
 import GoalPlanProgress from './GoalPlanProgress.vue'
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { api } from '../api'
 import { toast } from '../composables/useToast'
 
@@ -10,6 +10,13 @@ const busy = ref(false),createOpen=ref(false)
 const error = ref('')
 
 const STATUS_LABEL = { active: '进行中', achieved: '已达成', failed: '未达成', cancelled: '已取消' }
+// v1.13 FT：主列表只放进行中；已结束的折成一行，取消的可以恢复
+const activeGoals = computed(() => goals.value.filter((g) => g.status === 'active'))
+const endedGoals = computed(() => goals.value.filter((g) => g.status !== 'active'))
+function cancelTime(g) {
+  const row = [...(g.audit || [])].reverse().find((a) => a.action === 'cancel')
+  return row?.created_at || ''
+}
 
 // C3（v1.7）：目标进度展示。数据来自 GET /api/goals 的 progress 字段。
 // 老目标没有关联打卡项目 → progress 为空数组，此时整块进度不渲染（不显示 0%）。
@@ -88,6 +95,9 @@ async function setStatus(id, action) {
     } else if (action === 'cancel') {
       await api.cancelGoal(id,version)
       toast.info('目标已取消')
+    } else if (action === 'restore') {
+      await api.restoreGoal(id,version)
+      toast.success('目标已恢复')
     }
     await load()
   } catch (e) {
@@ -134,8 +144,8 @@ onMounted(load)
 
     <div class="card">
       <h3>目标列表</h3>
-      <p v-if="goals.length === 0" class="muted">暂无目标。</p>
-      <div v-for="g in goals" :key="g.id" class="judgment-item">
+      <p v-if="activeGoals.length === 0" class="muted">暂无进行中的目标。</p>
+      <div v-for="g in activeGoals" :key="g.id" class="judgment-item">
         <div class="action-group" style="align-items: center; margin-bottom: 6px">
           <b>{{ g.description || g.metric }}</b>
           <span class="tag">{{ STATUS_LABEL[g.status] || g.status }}</span>
@@ -167,6 +177,17 @@ onMounted(load)
         </div>
         </details>
       </div>
+      <details v-if="endedGoals.length" class="goal-ended">
+        <summary>已结束 · {{ endedGoals.length }}</summary>
+        <div v-for="g in endedGoals" :key="g.id" class="judgment-item">
+          <div class="action-group" style="align-items: center; margin-bottom: 4px">
+            <b>{{ g.description || g.metric }}</b>
+            <span class="tag">{{ STATUS_LABEL[g.status] || g.status }}</span>
+            <button v-if="g.status === 'cancelled'" class="text-button" :disabled="busy" @click="setStatus(g.id, 'restore')">恢复</button>
+          </div>
+          <p v-if="g.status === 'cancelled' && cancelTime(g)" class="muted">取消于 {{ cancelTime(g) }}</p>
+        </div>
+      </details>
     </div>
   </div>
 </template>

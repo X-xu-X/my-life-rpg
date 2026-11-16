@@ -127,7 +127,7 @@ def terminal(db, goal_id, action, body):
     try:
         value=getattr(goal_service,action+'_goal')(db,goal,commit=False)
         db.flush()
-        result=jsonable_encoder(_goal_out(value) if action=='cancel' else {'goal':_goal_out(value[0]),'applied':value[1]})
+        result=jsonable_encoder(_goal_out(value) if action in ('cancel','restore') else {'goal':_goal_out(value[0]),'applied':value[1]})
         receipts.record(db,user.id,operation,body,fingerprint,goal_id,result);db.commit()
         return result
     except ValueError as exc:
@@ -152,3 +152,9 @@ def fail_goal(goal_id: int, db: Session = Depends(get_db), body: receipts.Mutati
 def cancel_goal(goal_id: int, db: Session = Depends(get_db), body: receipts.MutationIn = receipts.MutationIn()):
     """取消目标（记审计，不结算）。"""
     return terminal(db,goal_id,'cancel',body)
+
+
+@router.post("/goals/{goal_id}/restore")
+def restore_goal(goal_id: int, db: Session = Depends(get_db), body: receipts.MutationIn = receipts.MutationIn()):
+    """恢复已取消的目标（v1.13 FT，不物理删除）。"""
+    return terminal(db,goal_id,'restore',body)

@@ -147,6 +147,7 @@ export const api = {
   achieveGoal: (id, version) => request(`/goals/${id}/achieve`, { method: 'POST',body:JSON.stringify({request_key:crypto.randomUUID(),expected_version:version}) }),
   failGoal: (id, version) => request(`/goals/${id}/fail`, { method: 'POST',body:JSON.stringify({request_key:crypto.randomUUID(),expected_version:version}) }),
   cancelGoal: (id, version) => request(`/goals/${id}/cancel`, { method: 'POST',body:JSON.stringify({request_key:crypto.randomUUID(),expected_version:version}) }),
+  restoreGoal: (id, version) => request(`/goals/${id}/restore`, { method: 'POST',body:JSON.stringify({request_key:crypto.randomUUID(),expected_version:version}) }),
 
   // 设置
   getSettings: () => request('/settings'),

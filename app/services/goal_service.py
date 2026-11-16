@@ -173,6 +173,22 @@ def cancel_goal(db: Session, goal: Goal, *, commit=True) -> Goal:
 
 
 @rollback_on_error
+def restore_goal(db: Session, goal: Goal, *, commit=True) -> Goal:
+    """恢复已取消的目标（不重算任何点数，只留审计）。"""
+    lock_profile(db, goal.user_id)
+    changed = db.query(Goal).filter(Goal.id == goal.id, Goal.user_id == goal.user_id,
+        Goal.status == "cancelled").update({Goal.status: "active"}, synchronize_session=False)
+    db.refresh(goal)
+    if changed != 1:
+        raise ValueError("只有已取消的目标可以恢复。")
+    _append_audit(goal, "restore", "用户恢复目标")
+    if commit:
+        db.commit()
+        db.refresh(goal)
+    return goal
+
+
+@rollback_on_error
 def update_goal(db: Session, goal: Goal, data: dict, *, commit=True) -> Goal:
     """修改目标（记审计）。"""
     _claim_goal(db, goal, "active")

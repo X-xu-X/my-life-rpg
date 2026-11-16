@@ -264,8 +264,9 @@ class FullSystemTests(unittest.TestCase):
         self.assertEqual(self.client.get('/api/admin/feedback').status_code,403)
 
     def reward(self,kind='entertainment'):
-        with patch('app.services.llm_service.llm_service.chat_json',return_value={'coin_price':20,'pricing_reason':'合成模型按期望频率建议','worth_note':'可自行决定'}):
-            quote=self.write('/reward-quotes',{'name':'额外娱乐半小时','reward_kind':kind,'minutes':30})
+        timed=kind=='entertainment'
+        with patch('app.services.llm_service.llm_service.chat_json',return_value={'coin_price':20,'pricing_reason':'合成模型按期望频率建议','worth_note':'可自行决定','is_timed':timed,'minutes_estimate':30 if timed else None}):
+            quote=self.write('/reward-quotes',{'name':'额外娱乐半小时'})
         self.assertEqual(quote.status_code,200,quote.text)
         result=self.write('/reward-quotes/'+str(quote.json()['id'])+'/accept',version=1)
         self.assertEqual(result.status_code,200,result.text);return result.json()['item']

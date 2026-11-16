@@ -226,7 +226,7 @@ class DailyUseTests(unittest.TestCase):
         from app.services import pricing_checks,trial_rules
         from app.models import Redemption
         self.register();self.configure_model();self.adopt()
-        with patch('app.services.llm_service.llm_service.chat_json',return_value={'coin_price':23,'pricing_reason':'本人期望频率','worth_note':''}):q=self.write('/reward-quotes',{'name':'周末娱乐','reward_kind':'entertainment','minutes':30,'auto_check':True}).json()
+        with patch('app.services.llm_service.llm_service.chat_json',return_value={'coin_price':23,'pricing_reason':'本人期望频率','worth_note':'','is_timed':True,'minutes_estimate':30}):q=self.write('/reward-quotes',{'name':'周末娱乐','auto_check':True}).json()
         item=q['item'];first=self.client.post(f"/api/shop/items/{item['id']}/redeem",json={'request_key':str(uuid4()),'expected_version':item['updated_at']})
         self.assertEqual(first.status_code,200,first.text)
         tomorrow=str(local_day(utc_now(),'Asia/Shanghai')+timedelta(days=1))

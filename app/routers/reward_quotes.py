@@ -30,8 +30,7 @@ def economy_context(db,user):
 
 class QuoteIn(WriteIn):
     name:str=Field(min_length=1,max_length=120)
-    reward_kind:Literal['item','experience','entertainment']='item'
-    minutes:int=Field(30,ge=1,le=1440)
+    # 由 AI 判断是否计时类；前端不再让用户选形式，也不再要求填分钟。
     price_yuan:float|None=Field(None,ge=0,allow_inf_nan=False)
     description:str=Field('',max_length=2000)
     item_id:int|None=None
@@ -96,8 +95,11 @@ def apply_quote(db,user,row):
         price,bounds=bounded_price(max(1,item.coin_price),row.result['coin_price'])
         row.result={**row.result,'model_price':row.result['coin_price'],'coin_price':price,'bounds':bounds}
     else:
-        item=ShopItem(user_id=user.id,name=row.payload['name'],kind='custom',reward_kind=row.payload['reward_kind'],
-            duration_seconds=row.payload['minutes']*60 if row.payload['reward_kind']=='entertainment' else None,
+        timed=bool(row.result.get('is_timed'))
+        minutes=row.result.get('minutes_estimate')
+        duration=int(minutes)*60 if timed and type(minutes) is int and 1<=minutes<=1440 else None
+        item=ShopItem(user_id=user.id,name=row.payload['name'],kind='custom',reward_kind='entertainment' if duration else 'item',
+            duration_seconds=duration,
             price_yuan=row.payload['price_yuan'],base_coin_price=row.result['coin_price'],description=row.payload.get('description',''),auto_pricing=row.payload.get('auto_check',False))
         db.add(item);db.flush();row.item_id=item.id
     item.coin_price=row.result['coin_price'];item.pricing_reason=row.result['pricing_reason'];item.worth_note=row.result['worth_note']
@@ -132,7 +134,7 @@ def quote(body:QuoteIn,db:Session=Depends(get_db)):
         context={'config':versions,'item_version':item_version,'day':trial_rules.day(db,user),'sources':ai_context.sources(),
             'background':ai_context.CURRENT.get()['background'],'economy':economic,'automatic_permission':body.auto_check})
     db.add(row);db.flush();row_id=row.id;db.commit()
-    detail=body.name+('；每次 '+str(body.minutes)+' 分钟' if body.reward_kind=='entertainment' else '')+'；'+body.description
+    detail=body.name+('；'+body.description if body.description else '')
     try:
         priced=shop_service.price_item(db,user,detail,body.price_yuan)
         lock_profile(db,user.id);assert_lease(db)

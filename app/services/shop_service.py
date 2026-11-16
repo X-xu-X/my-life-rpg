@@ -154,11 +154,20 @@ def price_item(db: Session, user: User, name: str, price_yuan: float | None) -> 
     if type(coin_price) is not int or not 1<=coin_price<=10**9 or not isinstance(result.get('pricing_reason'),str) or not result['pricing_reason'].strip():
         from app.services.llm_service import LLMError
         raise LLMError('MODEL_INVALID_RESPONSE：未生成有效价格与依据，请保留草稿后重试。')
+    # 是否计时类由模型判断；估值只用于日后计时额度，不参与定价。
+    is_timed = result.get('is_timed') is True
+    minutes = result.get('minutes_estimate')
+    if type(minutes) is not int or not 1 <= minutes <= 1440:
+        minutes = None
+    if is_timed and minutes is None:
+        is_timed = False
     return {
         "coin_price": coin_price,
         "model_provenance": provenance(config),
         "pricing_reason": str(result.get("pricing_reason", "")).strip(),
         "worth_note": str(result.get("worth_note", "")).strip(),
+        "is_timed": is_timed,
+        "minutes_estimate": minutes,
     }
 
 

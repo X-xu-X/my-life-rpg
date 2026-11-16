@@ -386,6 +386,8 @@ class ShopItemUpdateIn(BaseModel):
     coin_price: int | None = None
     enabled: bool | None = None
     sort_order: int | None = None
+    # 计时类奖励的预估时长：用户可改，只影响日后计时额度，不参与定价。
+    duration_minutes: int | None = Field(None, ge=1, le=1440)
 
 
 class ShopItemOut(BaseModel):

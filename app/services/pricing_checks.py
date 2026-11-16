@@ -66,8 +66,8 @@ def process(factory,claimed):
             item=db.get(ShopItem,row.item_id)
             if user.status!='active' or not item or not item.enabled or not item.auto_pricing or row.local_date!=trial_rules.day(db,user):raise HTTPException(409,'价格检查的日期或授权已变化。')
             from app.routers.reward_quotes import QuoteIn,quote
-            result=quote(QuoteIn(request_key=row.request_key,expected_version=0,name=item.name,reward_kind=item.reward_kind or 'item',
-                minutes=max(1,(item.duration_seconds or 1800)//60),description=item.description,price_yuan=item.price_yuan,
+            result=quote(QuoteIn(request_key=row.request_key,expected_version=0,name=item.name,
+                description=item.description,price_yuan=item.price_yuan,
                 item_id=item.id,item_version=item.updated_at,auto_check=True),db)
             lock_profile(db,user.id);db.refresh(row);assert_lease(db)
             row.state='completed';row.quote_id=result['id'];row.completed_at=utc_now();row.lease_token=None;row.version+=1;db.commit()

@@ -22,7 +22,11 @@ async function request(path, options = {}) {
     if (epoch !== accountEpoch) throw new Error('账号已切换，请重新打开此页面。')
     if (!resp.ok) {
       if (resp.status === 401 && !['/auth/login', '/auth/register', '/auth/recover'].includes(path)) window.dispatchEvent(new Event('gol-auth-lost'))
-      const msg = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)
+      const raw = data.detail
+      // 后端校验失败返回的是 [{loc,type,input}]，绝不能把这段 JSON 直接摆到界面上。
+      const msg = typeof raw === 'string' ? raw
+        : Array.isArray(raw) ? '填写内容没有通过校验，请检查后重试。'
+        : raw && typeof raw === 'object' ? '请求没有通过校验，请检查后重试。' : ''
       const error = new Error(msg || `请求失败（${resp.status}）`)
       error.status = resp.status
       throw error

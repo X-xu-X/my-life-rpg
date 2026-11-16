@@ -107,6 +107,9 @@ def update_item(item_id: int, body: ShopItemUpdateIn, db: Session = Depends(get_
         it.enabled = fields["enabled"]
     if "sort_order" in fields and fields["sort_order"] is not None:
         it.sort_order = int(fields["sort_order"])
+    if "duration_minutes" in fields and fields["duration_minutes"] is not None:
+        # 只改预计计时额度，不动价格与定价理由
+        it.duration_seconds = int(fields["duration_minutes"]) * 60
     db.commit()
     db.refresh(it)
     return _item_out(it)

@@ -42,6 +42,21 @@ const attrChips=computed(()=>{const map=new Map();historyVisible.value.forEach(r
 const historyFiltered=computed(()=>picked.value?historyVisible.value.filter(r=>attrName(r)===picked.value):historyVisible.value)
 const historyGroups=computed(()=>{const out=[];historyFiltered.value.forEach(r=>{const key=localDate(r._t);let g=out[out.length-1];if(!g||g.key!==key){g={key,label:dayLabel(r._t),net:0,rows:[]};out.push(g)}g.rows.push(r);g.net+=Number(r.delta)||0});return out.map(g=>({...g,net:Math.round(g.net*100)/100}))})
 function toggleOlder(){expanded.value=!expanded.value;picked.value=''}
+// 金币流水：一天一张卡；日记只出当日总额，事件各一行，旧数据（kind 缺失）归其他。
+const ledgerGroups=computed(()=>{
+  const map=new Map()
+  for(const r of wallet.value?.ledger||[]){
+    const day=r.day||localDate(r.created_at)
+    if(!map.has(day))map.set(day,{day,total:0,diaries:[],events:[],others:[]})
+    const g=map.get(day);g.total+=Number(r.delta)||0
+    if(r.kind==='diary')g.diaries.push(r);else if(r.kind==='event')g.events.push(r);else g.others.push(r)
+  }
+  const today=localDate(),d=new Date();d.setDate(d.getDate()-1);const yesterday=localDate(d)
+  return [...map.values()].sort((a,b)=>b.day.localeCompare(a.day)).map(g=>({
+    ...g,label:g.day===today?'今天':g.day===yesterday?'昨天':g.day,
+    diaryTotal:Math.round(g.diaries.reduce((s,r)=>s+(Number(r.delta)||0),0)*100)/100,
+    open:g.day===today||g.day===yesterday}))
+})
 async function load(){try{
  if(view==='ledger'){wallet.value=await api.getCoins(200);rows.value=wallet.value.ledger||[]}
  if(['vouchers','redemptions'].includes(view)){const [result,timers]=await Promise.all([api.listRedemptions(),api.flow('/timers')]);rows.value=(result.redemptions||[]).map(r=>({...r,duration_seconds:timers.vouchers.find(v=>v.redemption.id===r.id)?.redemption.duration_seconds}))}
@@ -66,7 +81,19 @@ async function fulfill(){busy.value=true;try{await api.fulfillRedemption(selecte
  <TrialRules v-else-if="view==='rules'"/>
  <PhaseBrief v-else-if="view==='agreements'" constraints/>
  <section v-else-if="view==='personal'" class="hub-card hub-menu-group"><RouterLink class="hub-row" to="/personal-information"><span class="hub-row-text"><strong>补充长期信息</strong><small>兴趣、偏好与自愿提供的背景</small></span><span>›</span></RouterLink><RouterLink class="hub-row" to="/onboarding"><span>回看问卷</span><span>›</span></RouterLink><RouterLink class="hub-row" to="/returning"><span>更新近期近况</span><span>›</span></RouterLink><RouterLink class="hub-row" to="/anchors"><span>AI 如何判断</span><span>›</span></RouterLink></section>
- <template v-else-if="view==='ledger'"><section class="hub-wallet"><span>当前余额</span><strong>{{ wallet?.balance??'—' }}<small> 币</small></strong></section><section class="hub-card"><p v-if="loading">正在读取收支…</p><div v-for="r in rows" :key="r.id" class="hub-row"><span class="hub-row-text"><strong>{{ r.reason||r.source }}</strong><small>{{ displayTime(r.created_at) }}</small></span><span :class="r.delta>0?'hub-change':'hub-spend'">{{ r.delta>0?'+':'' }}{{ r.delta }}</span></div></section></template>
+ <template v-else-if="view==='ledger'">
+  <section class="hub-wallet"><span>当前余额</span><strong>{{ wallet?.balance??'—' }}<small> 币</small></strong></section>
+  <p v-if="loading">正在读取收支…</p>
+  <p v-else-if="!ledgerGroups.length" class="hub-empty">还没有金币记录。</p>
+  <section v-for="g in ledgerGroups" :key="g.day" class="hub-card">
+   <details :open="g.open">
+    <summary class="hub-row"><span class="hub-row-text"><strong>{{ g.label }}</strong></span><span :class="g.total>=0?'hub-change':'hub-spend'">{{ g.total>0?'+':'' }}{{ g.total }}</span></summary>
+    <RouterLink v-if="g.diaries.length" class="hub-row" :to="'/diary?date='+g.day"><span class="hub-row-text"><strong>日记</strong><small>查看原文 ›</small></span><span :class="g.diaryTotal>=0?'hub-change':'hub-spend'">{{ g.diaryTotal>0?'+':'' }}{{ g.diaryTotal }}</span></RouterLink>
+    <div v-for="r in g.events" :key="r.id" class="hub-row"><span class="hub-row-text"><strong>{{ r.reason||'事件' }}</strong></span><span :class="r.delta>0?'hub-change':'hub-spend'">{{ r.delta>0?'+':'' }}{{ r.delta }}</span></div>
+    <div v-for="r in g.others" :key="r.id" class="hub-row"><span class="hub-row-text"><strong>{{ r.reason||r.source }}</strong></span><span :class="r.delta>0?'hub-change':'hub-spend'">{{ r.delta>0?'+':'' }}{{ r.delta }}</span></div>
+   </details>
+  </section>
+ </template>
  <template v-else-if="view==='history'">
   <p v-if="loading">正在读取变化…</p>
   <p v-else-if="!rows.length" class="hub-empty">还没有确认的属性变化。</p>

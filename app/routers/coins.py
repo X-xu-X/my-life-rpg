@@ -18,19 +18,7 @@ def get_coins(limit: int = 50, db: Session = Depends(get_db)):
     rows = coin_service.ledger(db, user, limit=limit)
     return {
         "balance": profile_balance,
-        "ledger": [
-            {
-                "id": r.id,
-                "delta": r.delta,
-                "balance_after": r.balance_after,
-                "source": r.source,
-                "reason": r.reason,
-                "ref_type": r.ref_type,
-                "ref_id": r.ref_id,
-                "created_at": r.created_at,
-            }
-            for r in rows
-        ],
+        "ledger": coin_service.ledger_detail(db, user, rows),
     }
 
 

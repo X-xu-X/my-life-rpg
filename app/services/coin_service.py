@@ -123,6 +123,40 @@ def ledger(db: Session, user: User, limit: int = 50) -> list[CoinLedger]:
     )
 
 
+def ledger_detail(db: Session, user: User, rows: list[CoinLedger]) -> list[dict]:
+    """只读增强：给每条流水补 kind（diary/event/other）与 day（本地日）。
+
+    日记与事件要按天分组展示，而旧流水只存了 reason 字符串；这里通过
+    judgment → event 回查记录类型，取不到就归 other，老数据不会报错。
+    """
+    from datetime import date
+    from app.models import AIJudgment
+    from app.models.full_system import ActionAward
+    from app.services.time_service import local_day
+    out = []
+    for row in rows:
+        kind, day = 'other', None
+        if row.ref_type == 'judgment' and row.ref_id:
+            judgment = db.get(AIJudgment, row.ref_id)
+            event = db.get(Event, judgment.event_id) if judgment else None
+            if event is not None:
+                if event.record_kind in ('diary', 'event'):
+                    kind = event.record_kind
+                day = event.occurred_on or (
+                    str(local_day(event.occurred_at or event.created_at, event.timezone_at_capture))
+                    if (event.occurred_at or event.created_at) else None)
+            award = db.query(ActionAward).filter_by(user_id=user.id, judgment_id=row.ref_id).first()
+            if award is not None and award.local_date:
+                day = str(award.local_date)
+        if not day and row.created_at:
+            day = str(local_day(row.created_at, user.timezone))
+        out.append({'id': row.id, 'delta': row.delta, 'balance_after': row.balance_after,
+                    'source': row.source, 'reason': row.reason, 'ref_type': row.ref_type,
+                    'ref_id': row.ref_id, 'created_at': row.created_at,
+                    'kind': kind, 'day': day or ''})
+    return out
+
+
 def grant_startup_bonus_if_needed(db: Session, user: User, amount: int = STARTUP_BONUS, reason: str = "") -> bool:
     """幂等发放启动资金：仅当从未发过（ledger 无 onboarding_bonus 记录）时发放。
 

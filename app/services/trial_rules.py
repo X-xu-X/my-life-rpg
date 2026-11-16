@@ -39,4 +39,9 @@ def validate(coins,reason=''):
 def award(db,user,fact_id,judgment_id,breakdown,selected):
     amount=breakdown['amount']
     db.add(ActionAward(user_id=user.id,fact_id=fact_id,judgment_id=judgment_id,local_date=selected,amount=amount,breakdown=breakdown,rule_version=VERSION))
-    if amount:coin_service.grant(db,user,amount,'trial_action','经本人确认的有效行动；'+VERSION,'judgment',judgment_id)
+    if amount:
+        from app.models import AIJudgment
+        judgment=db.get(AIJudgment,judgment_id)
+        # 台账写行动摘要，版本另存 rule_version，不再把规则号塞进人读的那一行。
+        reason=((judgment.summary if judgment else '') or '经本人确认的有效行动')[:200]
+        coin_service.grant(db,user,amount,'trial_action',reason,'judgment',judgment_id)

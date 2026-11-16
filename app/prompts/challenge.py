@@ -106,7 +106,7 @@ def build_challenge_messages(
     已给出或已完成的挑战标题（防重复）/ **经济行情快照**（v1.10 定价用）。
 
     `economy_context` 由 `economy_service.snapshot()` 生成，**与商店定价共用同一套**
-    ——否则挑战奖励上调后商店价位会显得失衡（v1.10 N1-7）。
+    ——两者都只看余额与真实收支，不互相参照价位（v1.13 F9）。
     """
     if scope == "weekly":
         scope_text = "周挑战（本周内完成）"

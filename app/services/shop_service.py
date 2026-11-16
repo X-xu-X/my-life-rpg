@@ -49,6 +49,7 @@ def seed_preset_items(db: Session, user: User, *, commit: bool = True) -> int:
                 coin_price=PRESET_DEFAULT_COIN.get(item["name"], 30),
                 base_coin_price=PRESET_DEFAULT_COIN[item['name']],reward_kind='entertainment' if item['name']=='额外娱乐半小时' else 'item',
                 duration_seconds=1800 if item['name']=='额外娱乐半小时' else None,
+                pricing_mode='recurring',
                 pricing_reason="已批准的新账号试用参考价格；不是模型定价结果，可主动请求价格建议。",
                 worth_note="",
                 enabled=True,

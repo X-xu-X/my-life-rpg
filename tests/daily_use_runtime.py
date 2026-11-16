@@ -120,7 +120,7 @@ class Handler(BaseHTTPRequestHandler):
                 with factory() as db:
                     offset=db.query(ShopItem).filter_by(user_id=uid).count()
                     for n in range(min(30,max(0,values['count']))):
-                        db.add(ShopItem(user_id=uid,name=('QUEUE_FAIL_' if values.get('fail_index')==n else 'QUEUE_CASE_')+str(offset+n+1),coin_price=23,enabled=True,auto_pricing=True))
+                        db.add(ShopItem(user_id=uid,name=('QUEUE_FAIL_' if values.get('fail_index')==n else 'QUEUE_CASE_')+str(offset+n+1),coin_price=23,enabled=True,auto_pricing=True,pricing_mode='recurring'))
                     db.commit()
             if self.path=='/__qa__/advance':clock['now']+=timedelta(seconds=json.loads(body)['seconds'])
             if self.path=='/__qa__/shutdown':threading.Thread(target=server.shutdown,daemon=True).start()

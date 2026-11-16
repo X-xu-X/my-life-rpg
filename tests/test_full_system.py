@@ -286,12 +286,12 @@ class FullSystemTests(unittest.TestCase):
         item=next(i for i in self.client.get('/api/shop/items').json()['items'] if i['id']==item['id'])
         with patch('app.services.llm_service.llm_service.chat_json',return_value={'coin_price':1000,'pricing_reason':'合成升价','worth_note':''}):
             response=self.write('/reward-quotes',{'name':item['name'],'item_id':item['id'],'item_version':item['updated_at']})
-        self.assertEqual(response.status_code,200,response.text);quote=response.json();self.assertEqual(quote['result']['coin_price'],24)
+        self.assertEqual(response.status_code,200,response.text);quote=response.json();self.assertEqual(quote['result']['coin_price'],1000)
         key=str(uuid4());first=self.write(f"/reward-quotes/{quote['id']}/accept",version=1,key=key)
         self.assertEqual(first.status_code,200,first.text);self.assertEqual(self.write(f"/reward-quotes/{quote['id']}/accept",version=1,key=key).json(),first.json())
         accepted=self.write(f"/reward-quotes/{quote['id']}/accept",version=quote['version'])
         self.assertEqual(accepted.status_code,200,accepted.text)
-        self.assertEqual(accepted.json()['item']['coin_price'],24)
+        self.assertEqual(accepted.json()['item']['coin_price'],1000)
         with patch('app.services.llm_service.llm_service.chat_json') as model:
             self.assertEqual(self.write('/reward-quotes',{'name':item['name'],'item_id':item['id'],'item_version':accepted.json()['item']['updated_at']}).status_code,409)
             model.assert_not_called()

@@ -74,15 +74,16 @@ class DailyReviewFixTests(unittest.TestCase):
     def seed_rewards(self,count):
         self.register();self.configure_model();uid=self.user_id()
         with self.Session() as db:
-            items=[ShopItem(user_id=uid,name='reward '+str(n+1),coin_price=23,enabled=True,auto_pricing=True) for n in range(count)]
+            items=[ShopItem(user_id=uid,name='reward '+str(n+1),coin_price=23,enabled=True,auto_pricing=True,pricing_mode='recurring') for n in range(count)]
             db.add_all(items);db.commit();return [i.id for i in items]
 
     def test_R3_six_items_bounded_batches_dedup_failed_no_automatic_retry(self):
         from app.services import pricing_checks
         ids=self.seed_rewards(6);key=str(uuid4())
-        first=self.write('/pricing-checks',key=key);self.assertEqual(first.json()['queued'],3);self.assertTrue(first.json()['has_more'])
+        # v1.13 F12：当天全部排队（不再每次只排 3 件），仍受每日 10 件上限
+        first=self.write('/pricing-checks',key=key);self.assertEqual(first.json()['queued'],6);self.assertFalse(first.json()['has_more'])
         self.assertEqual(self.write('/pricing-checks',key=key).json(),first.json())
-        second=self.write('/pricing-checks');self.assertEqual(second.json()['queued'],3);self.assertFalse(second.json()['has_more'])
+        self.assertEqual(self.write('/pricing-checks').json()['queued'],0)
         with patch('app.services.llm_service.llm_service.chat_json',return_value={'coin_price':23,'pricing_reason':'合成本人价格','worth_note':''}) as supplier:
             for n in range(6):pricing_checks.process(self.Session,pricing_checks.claim(self.Session))
         self.assertEqual(supplier.call_count,6)
@@ -93,19 +94,22 @@ class DailyReviewFixTests(unittest.TestCase):
 
     def test_R3_daily_limit_and_next_day_fairness_include_failed_attempts(self):
         ids=self.seed_rewards(13);today=local_day(utc_now(),'Asia/Shanghai')
-        self.assertEqual([self.write('/pricing-checks').json()['queued'] for n in range(4)],[3,3,3,1])
+        # 13 件 → 当天先排满 10 件，再请求就撞 daily_limit；次日补剩下的 3 件
+        self.assertEqual([self.write('/pricing-checks').json()['queued'] for n in range(2)],[10,0])
         capped=self.write('/pricing-checks').json();self.assertEqual((capped['queued'],capped['reason']),(0,'daily_limit'))
         with self.Session() as db:
             first=db.query(PricingCheck).order_by(PricingCheck.id).first();first.state='failed';db.commit()
         with patch('app.services.trial_rules.day',return_value=str(today+timedelta(days=1))):
-            next_batch=self.write('/pricing-checks').json();self.assertEqual(next_batch['queued'],3)
+            next_batch=self.write('/pricing-checks').json();self.assertEqual(next_batch['queued'],10)
         with self.Session() as db:
-            tomorrow=db.query(PricingCheck).filter_by(local_date=str(today+timedelta(days=1))).all();self.assertEqual([r.item_id for r in tomorrow],ids[10:])
+            tomorrow=db.query(PricingCheck).filter_by(local_date=str(today+timedelta(days=1))).all()
+            # 最久没评估的（从未评估过的那 3 件）排在最前
+            self.assertEqual([r.item_id for r in tomorrow][:3],ids[10:])
             self.assertEqual(db.query(PricingCheck).filter_by(local_date=str(today)).count(),10)
 
     def test_R3_empty_first_then_new_permission_gets_a_fresh_finite_batch(self):
         self.seed_rewards(0);empty=self.write('/pricing-checks').json();self.assertEqual((empty['queued'],empty['has_more']),(0,False));uid=self.user_id()
-        with self.Session() as db:db.add(ShopItem(user_id=uid,name='later authorized',coin_price=23,enabled=True,auto_pricing=True));db.commit()
+        with self.Session() as db:db.add(ShopItem(user_id=uid,name='later authorized',coin_price=23,enabled=True,auto_pricing=True,pricing_mode='recurring'));db.commit()
         self.assertEqual(self.write('/pricing-checks').json()['queued'],1)
 
     def test_R4_home_preference_order_and_removed_archives_keep_settled_identity(self):

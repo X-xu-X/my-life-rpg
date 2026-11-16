@@ -53,6 +53,7 @@ def migrate_schema(engine) -> None:
 
     inspector = inspect(engine)
     existing_tables = set(inspector.get_table_names())
+    added: set[tuple[str, str]] = set()
 
     for table in Base.metadata.sorted_tables:
         if table.name not in existing_tables:
@@ -64,6 +65,7 @@ def migrate_schema(engine) -> None:
                 ddl = f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {col_type}'
                 with engine.begin() as conn:
                     conn.execute(text(ddl))
+                added.add((table.name, column.name))
                 print(f"[migrate] 已添加缺失列 {table.name}.{column.name} ({col_type})")
             # 标量默认值 NULL 回填（对已存在列同样执行，幂等）
             arg = getattr(column.default, "arg", None)
@@ -74,6 +76,12 @@ def migrate_schema(engine) -> None:
                         text(f'UPDATE "{table.name}" SET "{column.name}" = :v WHERE "{column.name}" IS NULL'),
                         {"v": default_val},
                     )
+    # v1.13：pricing_mode 首次加列时按旧开关回填（只在加列那一次跑，避免把用户
+    # 后来手动切回 once 的商品又改回 recurring）。
+    if ('shop_items', 'pricing_mode') in added:
+        with engine.begin() as conn:
+            conn.execute(text("UPDATE shop_items SET pricing_mode = 'recurring' WHERE auto_pricing = 1"))
+
     # create_all does not add uniqueness to old tables. New nullable identities remain NULL
     # for legacy rows; duplicates, if any, must fail safely rather than be merged or deleted.
     if engine.dialect.name == 'sqlite':

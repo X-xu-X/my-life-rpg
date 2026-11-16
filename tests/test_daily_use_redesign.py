@@ -112,7 +112,6 @@ class DailyUseTests(unittest.TestCase):
         with self.Session() as db:self.assertEqual(db.query(Event).count(),0)
 
     def test_A19_A21_auto_price_initial_integer_bounds_no_default_goods(self):
-        from app.routers.reward_quotes import bounded_price
         self.register();self.configure_model();self.adopt()
         self.assertEqual(self.client.get('/api/shop/items').json()['items'],[])
         key=str(uuid4())
@@ -122,7 +121,6 @@ class DailyUseTests(unittest.TestCase):
         self.assertEqual(response.status_code,200,response.text);self.assertEqual(response.json()['state'],'accepted')
         self.assertEqual(replay.json(),response.json());self.assertEqual(model.call_count,1)
         items=self.client.get('/api/shop/items').json()['items'];self.assertEqual(len(items),1);self.assertEqual(items[0]['coin_price'],23)
-        self.assertEqual(bounded_price(23,99),(27,[19,27]));self.assertEqual(bounded_price(31,1),(25,[25,37]));self.assertEqual(bounded_price(1,9),(1,[1,1]))
         self.assertEqual(self.client.put(f"/api/shop/items/{items[0]['id']}",json={'coin_price':1}).status_code,409)
         with patch('app.services.llm_service.llm_service.chat_json') as model:
             check=self.write('/pricing-checks',{});self.assertEqual(check.status_code,200,check.text);self.assertEqual(check.json()['queued'],0);model.assert_not_called()
@@ -227,7 +225,10 @@ class DailyUseTests(unittest.TestCase):
         from app.models import Redemption
         self.register();self.configure_model();self.adopt()
         with patch('app.services.llm_service.llm_service.chat_json',return_value={'coin_price':23,'pricing_reason':'本人期望频率','worth_note':'','is_timed':True,'minutes_estimate':30}):q=self.write('/reward-quotes',{'name':'周末娱乐','auto_check':True}).json()
-        item=q['item'];first=self.client.post(f"/api/shop/items/{item['id']}/redeem",json={'request_key':str(uuid4()),'expected_version':item['updated_at']})
+        item=q['item']
+        # v1.13：新建默认「只用这一次」，要自动重估需显式加入常用兑换券
+        self.assertEqual(self.client.patch(f"/api/shop/items/{item['id']}/pricing-mode",json={'mode':'recurring','expected_version':item['updated_at'],'acknowledge':True}).status_code,200)
+        item=next(i for i in self.client.get('/api/shop/items').json()['items'] if i['id']==item['id']);first=self.client.post(f"/api/shop/items/{item['id']}/redeem",json={'request_key':str(uuid4()),'expected_version':item['updated_at']})
         self.assertEqual(first.status_code,200,first.text)
         tomorrow=str(local_day(utc_now(),'Asia/Shanghai')+timedelta(days=1))
         with patch('app.services.trial_rules.day',return_value=tomorrow):
@@ -236,7 +237,7 @@ class DailyUseTests(unittest.TestCase):
             with patch('app.services.llm_service.llm_service.chat_json',return_value={'coin_price':99,'pricing_reason':'合成调整','worth_note':''}) as model:pricing_checks.process(self.Session,pricing_checks.claim(self.Session))
             self.assertEqual(model.call_count,1)
         checks=self.client.get('/api/pricing-checks').json()['items'];self.assertEqual(checks[0]['state'],'completed',checks)
-        changed=self.client.get('/api/shop/items').json()['items'][0];self.assertEqual(changed['coin_price'],27)
+        changed=self.client.get('/api/shop/items').json()['items'][0];self.assertEqual(changed['coin_price'],99)
         stale=self.client.post(f"/api/shop/items/{item['id']}/redeem",json={'request_key':str(uuid4()),'expected_version':item['updated_at']})
         self.assertEqual(stale.status_code,409,stale.text)
         with self.Session() as db:
@@ -247,7 +248,9 @@ class DailyUseTests(unittest.TestCase):
         from app.services import pricing_checks
         from app.services.llm_service import LLMError
         self.register();self.configure_model();self.adopt()
-        with patch('app.services.llm_service.llm_service.chat_json',return_value={'coin_price':31,'pricing_reason':'个人依据','worth_note':''}):self.write('/reward-quotes',{'name':'绘画材料','auto_check':True})
+        with patch('app.services.llm_service.llm_service.chat_json',return_value={'coin_price':31,'pricing_reason':'个人依据','worth_note':'','is_timed':False,'minutes_estimate':None}):q=self.write('/reward-quotes',{'name':'绘画材料','auto_check':True}).json()
+        item=q['item']
+        self.client.patch(f"/api/shop/items/{item['id']}/pricing-mode",json={'mode':'recurring','expected_version':item['updated_at'],'acknowledge':True})
         tomorrow=str(local_day(utc_now(),'Asia/Shanghai')+timedelta(days=1))
         with patch('app.services.trial_rules.day',return_value=tomorrow),patch('app.services.llm_service.llm_service.chat_json',side_effect=LLMError('MODEL_TIMEOUT')) as model:
             self.write('/pricing-checks',{});pricing_checks.process(self.Session,pricing_checks.claim(self.Session))

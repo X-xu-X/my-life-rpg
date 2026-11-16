@@ -1,6 +1,5 @@
 import hashlib,json
 from datetime import datetime
-from decimal import Decimal,ROUND_CEILING,ROUND_FLOOR
 from typing import Literal
 from fastapi import APIRouter,Depends,HTTPException
 from pydantic import Field
@@ -73,12 +72,6 @@ def retry_check(check_id:int,body:WriteIn,db:Session=Depends(get_db)):
     return finish(db,user,op,body,fp,row,fields(row))
 
 
-def bounded_price(current,proposed):
-    lower=max(1,int((Decimal(current)*Decimal('0.8')).to_integral_value(rounding=ROUND_CEILING)))
-    upper=max(1,int((Decimal(current)*Decimal('1.2')).to_integral_value(rounding=ROUND_FLOOR)))
-    return max(lower,min(upper,proposed)),[lower,upper]
-
-
 def apply_quote(db,user,row):
     from app.services.time_service import utc_now,local_day
     from app.services.pricing_checks import assert_lease
@@ -92,14 +85,17 @@ def apply_quote(db,user,row):
     if item:
         db.refresh(item)
         if item.updated_at.isoformat()!=row.context['item_version'] or item.repriced_on==today:raise HTTPException(409,'商品已变化或今天已经更新价格。')
-        price,bounds=bounded_price(max(1,item.coin_price),row.result['coin_price'])
-        row.result={**row.result,'model_price':row.result['coin_price'],'coin_price':price,'bounds':bounds}
+        # v1.13 F11：不再做 ±20% 截断，模型给多少就是多少；只记录旧价与涨跌幅。
+        previous=max(1,item.coin_price)
+        price=row.result['coin_price']
+        change_pct=round((price-previous)*100/previous) if previous else 0
+        row.result={**row.result,'previous_price':previous,'change_pct':change_pct}
     else:
         timed=bool(row.result.get('is_timed'))
         minutes=row.result.get('minutes_estimate')
         duration=int(minutes)*60 if timed and type(minutes) is int and 1<=minutes<=1440 else None
         item=ShopItem(user_id=user.id,name=row.payload['name'],kind='custom',reward_kind='entertainment' if duration else 'item',
-            duration_seconds=duration,
+            duration_seconds=duration,pricing_mode='once',
             price_yuan=row.payload['price_yuan'],base_coin_price=row.result['coin_price'],description=row.payload.get('description',''),auto_pricing=row.payload.get('auto_check',False))
         db.add(item);db.flush();row.item_id=item.id
     item.coin_price=row.result['coin_price'];item.pricing_reason=row.result['pricing_reason'];item.worth_note=row.result['worth_note']

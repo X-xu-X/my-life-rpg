@@ -31,11 +31,12 @@ def enqueue(db,user):
     previous=db.query(PricingCheck).filter_by(user_id=user.id,local_date=today).all()
     budget=max(0,MAX_DAILY-len(previous));ids={r.item_id for r in previous};created=[]
     attempted=dict(db.query(PricingCheck.item_id,func.max(PricingCheck.local_date)).filter_by(user_id=user.id).group_by(PricingCheck.item_id).all())
-    eligible=[item for item in db.query(ShopItem).filter_by(user_id=user.id,enabled=True,auto_pricing=True).all() if item.id not in ids and item.repriced_on!=today]
+    eligible=[item for item in db.query(ShopItem).filter_by(user_id=user.id,enabled=True,pricing_mode='recurring').all() if item.id not in ids and item.repriced_on!=today]
     # Never-attempted / least-recently-served first, including failed attempts.
     # The daily cap must not permanently favor low IDs after each midnight.
     eligible.sort(key=lambda item:(max(attempted.get(item.id,''),item.repriced_on or ''),item.id))
-    for item in eligible[:min(3,budget)]:
+    # v1.13 F12：去掉"每天只排 3 件"的帽，当天全部排队（仍受 MAX_DAILY 限制）。
+    for item in eligible[:budget]:
         row=PricingCheck(user_id=user.id,item_id=item.id,local_date=today,request_key=str(uuid4()))
         db.add(row);created.append(row)
     remaining=len(eligible)-len(created);budget_remaining=budget-len(created)
@@ -64,7 +65,7 @@ def process(factory,claimed):
             user=db.get(User,row.user_id);db.info['user_id']=user.id;zone_token=USER_ZONE.set(user.timezone)
             assert_lease(db)
             item=db.get(ShopItem,row.item_id)
-            if user.status!='active' or not item or not item.enabled or not item.auto_pricing or row.local_date!=trial_rules.day(db,user):raise HTTPException(409,'价格检查的日期或授权已变化。')
+            if user.status!='active' or not item or not item.enabled or item.pricing_mode!='recurring' or row.local_date!=trial_rules.day(db,user):raise HTTPException(409,'价格检查的日期或授权已变化。')
             from app.routers.reward_quotes import QuoteIn,quote
             result=quote(QuoteIn(request_key=row.request_key,expected_version=0,name=item.name,
                 description=item.description,price_yuan=item.price_yuan,

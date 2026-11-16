@@ -429,6 +429,8 @@ class ShopItem(Base):
     base_coin_price: Mapped[int | None] = mapped_column(BigInteger,nullable=True)
     repriced_on: Mapped[str | None] = mapped_column(String(10),nullable=True)
     auto_pricing: Mapped[bool] = mapped_column(Boolean,default=False)
+    # once=只用这一次；recurring=常用兑换券，每天可重估。auto_pricing 保留做兼容，不再读取。
+    pricing_mode: Mapped[str] = mapped_column(String(10),default='once')
     description: Mapped[str] = mapped_column(Text,default='')
     priced_at: Mapped[datetime | None] = mapped_column(DateTime,nullable=True)
     kind: Mapped[str] = mapped_column(String(10), default="custom")  # preset/custom

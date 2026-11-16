@@ -1,12 +1,11 @@
-"""Approved trial v1; deterministic prices/caps are never model-supplied money."""
+"""Approved trial v2; the model prices each action and rules only guard the value."""
 from fastapi import HTTPException
 from app.models.full_system import TrialAccount,DailyEntitlement,ActionAward
 from app.services.time_service import utc_now,local_day
 from app.services import coin_service
 
-VERSION='trial-2026-10-18-v1'
-BASE={'small':6,'medium':15,'large':25,'none':0}
-MAIN={'small':4,'medium':10,'large':15,'none':0}
+VERSION='trial-2026-11-16-v2'
+MAX_COINS=10**9
 
 def account(db,user):return db.query(TrialAccount).filter_by(user_id=user.id).first()
 
@@ -29,14 +28,13 @@ def qualify(db,user,event,mark_rule=True):
         base_seconds=config.base_minutes*60,rule_version=VERSION))
 
 def cap_used(db,user,selected):
+    """Only for display ("today earned N"), never a cap on new awards."""
     return sum(row.amount for row in db.query(ActionAward).filter_by(user_id=user.id,local_date=selected).all())
 
-def split(grade,mainline,remaining,holiday=False,effort=False):
-    if grade not in BASE:raise HTTPException(422,'模型行动档位不合法。')
-    base=BASE[grade];extra=MAIN[grade] if mainline else 0
-    bonus=(base+extra)//5 if holiday and effort else 0
-    total=min(40,max(0,remaining),base+extra+bonus)
-    return {'base':base,'mainline':extra,'holiday':bonus,'before_cap':base+extra+bonus,'amount':total,'cap_reduction':base+extra+bonus-total}
+def validate(coins,reason=''):
+    """The model sets the amount; we only reject dirty values (no tiers, no caps)."""
+    if type(coins) is not int or coins<0 or coins>MAX_COINS:raise HTTPException(422,'模型给出的金币数不合法。')
+    return coins
 
 def award(db,user,fact_id,judgment_id,breakdown,selected):
     amount=breakdown['amount']

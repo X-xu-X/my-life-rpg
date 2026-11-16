@@ -16,19 +16,24 @@ class EffortParsingTests(unittest.TestCase):
     def response(self, **extra):
         return {'facts':[{'excerpt':'合成阅读','summary':'阅读笔记','confidence':.95,'changes':[],**extra}]}
 
-    def test_only_explicit_true_can_enable_holiday_bonus(self):
+    def test_effort_metadata_never_changes_the_model_price(self):
         for value in ('学习二十分钟',None,{'minutes':20},[],0,1,'true','false'):
-            original=self.response(effort=value);snapshot=copy.deepcopy(original)
+            original=self.response(effort=value,coins=9);snapshot=copy.deepcopy(original)
             proposals,questions,warnings=fact_analysis.parse_response(original)
             self.assertFalse(proposals[0].effort)
             self.assertEqual(warnings,[{'fact_index':0,'code':'EFFORT_UNVERIFIED'}])
-            self.assertEqual(trial_rules.split('small',False,100,holiday=True,effort=proposals[0].effort)['amount'],6)
+            self.assertEqual(proposals[0].coins,9)
             self.assertEqual(original,snapshot)
-        for value,amount in ((True,7),(False,6)):
+        for value in (True,False):
             proposals,_,warnings=fact_analysis.parse_response(self.response(effort=value))
             self.assertIs(proposals[0].effort,value);self.assertEqual(warnings,[])
-            self.assertEqual(trial_rules.split('small',False,100,holiday=True,effort=proposals[0].effort)['amount'],amount)
         self.assertFalse(fact_analysis.parse_response(self.response())[0][0].effort)
+
+    def test_coins_reject_strings_and_clamp_negatives(self):
+        self.assertEqual(fact_analysis.parse_response(self.response(coins=0))[0][0].coins,0)
+        self.assertEqual(fact_analysis.parse_response(self.response(coins=-3))[0][0].coins,0)
+        with self.assertRaisesRegex(LLMError,'MODEL_FACT_FORMAT_INVALID'):
+            fact_analysis.parse_response(self.response(coins='12'))
 
     def test_bad_confidence_and_grade_remain_blocking(self):
         for extra in ({'confidence':'0.95'},{'confidence':95},{'confidence':True},{'grade':'excellent'},{'mainline':True}):
@@ -68,7 +73,8 @@ class EffortFlowTests(unittest.TestCase):
         with patch('app.routers.phase.holiday_rows',return_value=[SimpleNamespace(id=100,version=1)]):
             group=self.preview(group)
             self.assertEqual(group['preview']['total'],18)
-            self.assertTrue(all(i['breakdown']['holiday']==0 for i in group['preview']['items']))
+            # 节日不再加成：effort 非法时金额只由模型给价决定，三项各 6 币不变
+            self.assertTrue(all(i['breakdown']['coins']==6 and i['breakdown']['amount']==6 for i in group['preview']['items']))
             result=self.settle(group);self.assertEqual(result.status_code,200,result.text)
         with self.Session() as db:
             self.assertEqual(sum(a.amount for a in db.query(ActionAward)),18)

@@ -105,11 +105,12 @@ class RewardIncidentTests(unittest.TestCase):
     def broken_bundle(self):
         self.ready()
         record = self.event('完成问卷。构思方案。勇敢发布。搜集样品。心情记录。明天打算。', 'allowed')
-        items = [self.suggestion(t, confidence=.95, changes=[{'name': '任务产出', 'delta': 1, 'reason': '旧错误', 'evidence': t}])
+        items = [self.suggestion(t, coins=6, confidence=.95, changes=[{'name': '任务产出', 'delta': 1, 'reason': '旧错误', 'evidence': t}])
                  for t in ('完成问卷', '构思方案', '勇敢发布', '搜集样品')]
-        items += [self.suggestion(t, grade='none', changes=[]) for t in ('心情记录', '明天打算')]
-        zero = {k: 0 for k in ('base', 'mainline', 'holiday', 'before_cap', 'amount', 'cap_reduction')}
-        with patch.object(fact_analysis, 'normalized_changes', side_effect=lambda db, user, raw: raw), patch.object(trial_rules, 'split', return_value=zero):
+        items += [self.suggestion(t, coins=0, changes=[]) for t in ('心情记录', '明天打算')]
+        # 复现事故：模型给了价，入账却被算成 0（旧版额度截断）。
+        with patch.object(fact_analysis, 'normalized_changes', side_effect=lambda db, user, raw: raw), \
+                patch.object(trial_rules, 'validate', return_value=0):
             bundle = self.preview(self.facts(record, items))
             self.assertEqual(self.settle(bundle).status_code, 200)
         self.assertEqual(bundle['preview']['total'], 0)

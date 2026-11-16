@@ -67,7 +67,7 @@ def synthetic_json(messages,**kwargs):
     if '初始属性面板' in text or '初始金币' in text:return {'attributes':[{'name':n,'value':52,'reason':'合成问卷依据'} for n in ATTRIBUTE_DIMENSIONS],'initial_coins':120,'summary':'合成初始评估；非真实模型质量验收','economic_reference':{'basis':'本人期望频率，不设统一汇率'}}
     if '"facts"' in text:
         source=json.loads(messages[-1]['content']);content=source['original'];low='信息不足' in content
-        return {'facts':[{'excerpt':content,'summary':'合成事实建议','grade':'small','changes':[{'name':'体能','delta':1,'reason':'合成真实动作依据','evidence':content}],'confidence':.799 if low else .8 if '边界80' in content else .9,'reason':'信息不足，请补充投入' if low else '合成可核对行动','relation':'new','effort':False}],'questions':[]}
+        return {'facts':[{'excerpt':content,'summary':'合成事实建议','coins':6,'coins_reason':'合成定价依据','changes':[{'name':'体能','delta':1,'reason':'合成真实动作依据','evidence':content}],'confidence':.799 if low else .8 if '边界80' in content else .9,'reason':'信息不足，请补充投入' if low else '合成可核对行动','relation':'new','effort':False}],'questions':[]}
     if '未来娱乐约定' in text:return {'mode':'gentle','reason':'以本人当前主线与精力为参考，温和提醒。'}
     if 'suggested_seconds' in text:return {'summary':'只核对本人说明，不自动判罚','suggested_seconds':None}
     if 'highlights' in text:return {'highlights':'合成报告摘要','concerns':'不凭缺记录推断能力下降','suggestions':['按自己的节奏记录'],'tone':'平和'}

@@ -28,6 +28,32 @@ from app.services.transactions import lock_profile
 
 OPERATION = 'repair_zero_fact_awards_v1'
 
+# Frozen on purpose: this tool replays the tier rule that priced the bundles
+# created before AI pricing (trial-2026-11-16-v2). New bundles carry `coins`
+# and are replayed from their own value instead.
+LEGACY_BASE = {'small': 6, 'medium': 15, 'large': 25, 'none': 0}
+LEGACY_MAIN = {'small': 4, 'medium': 10, 'large': 15, 'none': 0}
+
+
+def legacy_split(grade, mainline, remaining, holiday=False, effort=False):
+    base = LEGACY_BASE.get(grade)
+    require(base is not None, 'UNEXPECTED_GRADE')
+    extra = LEGACY_MAIN[grade] if mainline else 0
+    bonus = (base + extra) // 5 if holiday and effort else 0
+    total = min(40, max(0, remaining), base + extra + bonus)
+    return {'base': base, 'mainline': extra, 'holiday': bonus, 'before_cap': base + extra + bonus,
+            'amount': total, 'cap_reduction': base + extra + bonus - total}
+
+
+def expected_pricing(item, remaining):
+    """旧档位包按当时规则复算；新包直接采用模型给的价。"""
+    if 'coins' not in item:
+        require(remaining >= 0, 'CAP_STATE_INVALID')
+        return legacy_split(item['grade'], False, remaining)
+    amount = trial_rules.validate(item.get('coins', 0), item.get('coins_reason', ''))
+    return {'amount': amount, 'coins': amount, 'reason': item.get('coins_reason', ''),
+            'mainline': False, 'holiday': False}
+
 
 def require(condition, message):
     if not condition:
@@ -71,7 +97,6 @@ def inspect_source(db, username, bundle_id, expected_event_id, expected_coins):
     rows, targets, seen = [], [], set()
     others = db.query(ActionAward).filter_by(user_id=user.id, local_date=original['day']).all()
     remaining = 100 - max(original.get('used', 0), sum(a.amount for a in others))
-    require(remaining >= 0, 'CAP_STATE_INVALID')
     for item in bundle.payload.get('items', []):
         prev = previews.get(item['fragment_id'], {})
         if not prev.get('eligible') or prev.get('skipped') or prev.get('booked'):
@@ -98,13 +123,14 @@ def inspect_source(db, username, bundle_id, expected_event_id, expected_coins):
         require(not db.query(CoinLedger).filter_by(user_id=user.id,
                 ref_type='reward_repair', ref_id=award.id).count(), 'REPAIR_LEDGER_EXISTS')
         require(fragment.excerpt in event.content, 'EXCERPT_NOT_IN_ORIGINAL')
-        split = trial_rules.split(item['grade'], False, remaining)
+        split = expected_pricing(item, remaining)
         row = {'item': item, 'fragment': columns(fragment), 'settlement': columns(settlement),
                'judgment': columns(judgment), 'award': columns(award), 'new_breakdown': split}
         rows.append(row)
-        if split['before_cap']:
-            require(item['grade'] == 'small', 'UNEXPECTED_GRADE')
-            require(split['amount'] == 6, 'CAP_REQUIRES_REVIEW')
+        if split['amount']:
+            if 'grade' in item:
+                require(item['grade'] == 'small', 'UNEXPECTED_GRADE')
+                require(split['amount'] == 6, 'CAP_REQUIRES_REVIEW')
             targets.append({'fact_id': fact_id, 'excerpt': fragment.excerpt,
                             'confidence': item['confidence'], 'judgment_id': judgment.id,
                             'award_id': award.id, 'breakdown': split})

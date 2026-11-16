@@ -162,7 +162,9 @@ class FullSystemTests(unittest.TestCase):
         job=self.client.get('/api/analysis-jobs/'+str(response.json()['id'])).json();self.assertEqual(job['state'],'ready',job)
         return self.client.get(f"/api/events/{event['id']}/fact-bundles").json()['items'][0]
 
-    def suggestion(self,text,**extra):return {'excerpt':text,'summary':'根据实际行为提出建议','grade':'small','changes':[{'name':'体能','delta':1,'reason':'合成事实','evidence':'用户所述'}],'confidence':1,**extra}
+    def suggestion(self,text,**extra):
+        coins=extra.pop('coins',6);reason=extra.pop('coins_reason','合成定价依据')
+        return {'excerpt':text,'summary':'根据实际行为提出建议','coins':coins,'coins_reason':reason,'changes':[{'name':'体能','delta':1,'reason':'合成事实','evidence':'用户所述'}],'confidence':1,**extra}
 
     def preview(self,bundle):
         response=self.write(f"/fact-bundles/{bundle['id']}/preview",version=bundle['version']);self.assertEqual(response.status_code,200,response.text);return response.json()
@@ -477,16 +479,16 @@ class FullSystemTests(unittest.TestCase):
     def user_id(self):
         with self.Session() as db:return db.query(User).filter_by(username='friend').one().id
 
-    def test_action_mainline_holiday_caps_and_stale_day_preview(self):
+    def test_model_priced_coins_are_awarded_without_caps(self):
         from app.services import trial_rules
-        self.assertEqual(trial_rules.split('small',False,100)['amount'],6)
-        self.assertEqual(trial_rules.split('medium',True,100)['amount'],25)
-        self.assertEqual(trial_rules.split('large',True,100,holiday=True,effort=True)['amount'],40)
+        self.assertEqual(trial_rules.validate(0),0)
+        self.assertEqual(trial_rules.validate(25),25)
         self.register();self.configure_model();self.adopt()
-        for index,expected in enumerate((25,25,25,25,0)):
-            event=self.event('阶段成果'+str(index),'allowed');group=self.facts(event,[self.suggestion(event['content'],grade='large')])
-            result=self.settle(self.preview(group));self.assertEqual(result.status_code,200,result.text);self.assertEqual(result.json()['coins_gained'],expected)
-        self.assertEqual(self.client.get('/api/trial').json()['action_used'],100)
+        for index in range(5):
+            event=self.event('阶段成果'+str(index),'allowed');group=self.facts(event,[self.suggestion(event['content'],coins=25)])
+            result=self.settle(self.preview(group));self.assertEqual(result.status_code,200,result.text);self.assertEqual(result.json()['coins_gained'],25)
+        # 5 × 25 = 125：没有每日 100 上限，也不做单次 40 截断
+        self.assertEqual(self.client.get('/api/trial').json()['action_used'],125)
 
     def test_care_legacy_mapping_is_explicit_repeatable_and_never_creates_events(self):
         self.register();day=str(local_day(utc_now(),'Asia/Shanghai'))
@@ -676,9 +678,9 @@ class FullSystemTests(unittest.TestCase):
             db.add_all([Holiday(local_date=day,region='fixture-region',name='合成节日一'),Holiday(local_date=day,region='fixture-region',name='合成节日二')]);db.commit()
         goal=self.client.post('/api/goals',json={'description':'当前学习目标','metric':'十章'}).json()
         main=self.write('/mainlines',{'goal_id':goal['id'],'active':True});self.assertEqual(main.status_code,200,main.text)
-        event=self.event('完成一段有效学习','allowed');group=self.facts(event,[self.suggestion(event['content'],grade='medium',goal_id=goal['id'],effort=True)])
+        event=self.event('完成一段有效学习','allowed');group=self.facts(event,[self.suggestion(event['content'],coins=30,goal_id=goal['id'],effort=True)])
         item=group['payload']['items'][0];group=self.write(f"/fact-bundles/{group['id']}/decision",{'fragment_id':item['fragment_id'],'decision':'keep','mainline':True},group['version']).json()
-        group=self.preview(group);split=group['preview']['items'][0]['breakdown'];self.assertEqual((split['base'],split['mainline'],split['holiday'],split['amount']),(15,10,5,30))
+        group=self.preview(group);split=group['preview']['items'][0]['breakdown'];self.assertEqual((split['coins'],split['amount'],split['mainline'],split['holiday']),(30,30,True,True))
         self.assertEqual(self.settle(group).json()['coins_gained'],30)
         key=str(uuid4());response=self.write('/holidays/claim',key=key);self.assertEqual(response.status_code,200,response.text)
         self.assertEqual(self.write('/holidays/claim',key=key).json(),response.json());self.assertEqual(self.write('/holidays/claim').status_code,409)

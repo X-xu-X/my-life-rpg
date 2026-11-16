@@ -25,9 +25,9 @@ class UsabilityRepairsTests(unittest.TestCase):
 
     def test_confirmed_zero_and_nonzero_bundles_leave_pending_new_analysis_returns(self):
         self.register(); self.configure_model(); self.adopt()
-        for changes, grade in (([], 'none'), ([{'name':'体能','delta':1,'reason':'实际练习','evidence':'练习'}], 'small')):
+        for changes, grade, coins in (([], 'none', 0), ([{'name':'体能','delta':1,'reason':'实际练习','evidence':'练习'}], 'small', 6)):
             event = self.event('实际练习'+grade, 'allowed')
-            bundle = self.facts(event, [self.suggestion(event['content'], changes=changes, grade=grade)])
+            bundle = self.facts(event, [self.suggestion(event['content'], changes=changes, coins=coins)])
             self.assertIn(event['id'], [r['event_id'] for r in self.client.get('/api/pending').json()['items']])
             bundle = self.preview(bundle)
             self.assertEqual(self.settle(bundle).status_code, 200)

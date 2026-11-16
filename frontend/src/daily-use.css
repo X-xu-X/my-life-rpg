@@ -37,3 +37,7 @@ details.card>summary{font-size:18px;font-weight:600;line-height:1.5}
  .project-filters input,.project-filters select{width:100%}
  .project-filters .btn{grid-column:1/-1;justify-self:end}
 }
+
+/* v1.13 F1：关系候选是一行浅黄提示条，没有候选时不渲染任何按钮 */
+.fact-relation{background:#fdf7e6;border:1px solid #f2e4bd;border-radius:12px;padding:10px 12px;gap:8px}
+.fact-adjust>summary{font-size:12px;color:var(--text-sub);min-height:36px;padding:8px 0;cursor:pointer}

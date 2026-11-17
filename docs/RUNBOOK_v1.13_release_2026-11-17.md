@@ -1,6 +1,6 @@
 # v1.13 上线 Runbook（首次带 schema 迁移）
 
-> **基线**：本地 HEAD `3cb5e66`（25 个未推送 commit，v1.13 + v1.13.1）
+> **基线**：本地 HEAD `1bb5741`（v1.13 + v1.13.1 共 26 个未推送 commit，含本文档）
 > **线上现状**：镜像 `3fa0de7`（v1.12），库 head `b025_daily_use`
 > **本次要迁的**：`b026_pricing_mode`（`shop_items.pricing_mode`）、`b027_suppressed_lines`（`experience_preferences.suppressed_lines`）
 > **决策**：走"路线 1"——迁移作为独立前置步骤，不改发布脚本
@@ -47,7 +47,7 @@
 
 ```bash
 cd "C:/Users/19687/Desktop/游戏人生/work_place/my-life-rpg"
-git log --oneline origin/main..HEAD | wc -l     # 应为 25
+git log --oneline origin/main..HEAD | wc -l     # 应为 26
 git -c http.proxy= -c https.proxy= push origin main
 git status -sb | head -1                         # 应为 ## main...origin/main 且无 ahead
 ```

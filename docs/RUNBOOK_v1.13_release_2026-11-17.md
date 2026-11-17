@@ -137,8 +137,8 @@ sudo -n docker exec game-of-life-db-1 psql -X -U gol_admin -d game_of_life -At \
 用**新包的 compose 文件** + **当前的 env 文件**，只跑 `migrate` 这个一次性服务（compose 里 `profiles: [ops]`，`command` 就是 `python -m alembic upgrade head`；容器入口 `entrypoint.py` 会从 `/run/secrets/app_password` 拼出 `DB_URL`，不把 DSN 写进命令行）：
 
 ```bash
-OLD_ENV=$(sudo -n ls -1 /etc/game-of-life/*.env | head -1)   # 确认只有一个，与当前 release 对应
-echo "$OLD_ENV"
+sudo -n bash -c 'ls -1 /etc/game-of-life/*.env'   # 只应有一个；用它的完整路径替换下面的 <OLD_ENV>
+OLD_ENV=/etc/game-of-life/public-<oldshort>.env
 
 sudo -n env RELEASE_ID="<RELEASE_ID>" \
   docker compose --project-name game-of-life --env-file "$OLD_ENV" \
@@ -182,7 +182,7 @@ curl -fsS https://lifexp.cn/service-status      # 旧代码仍在服务，应为
 - `pricing_mode` 分组只有 `once` 或 `recurring`，各组行数**合计等于 D1 记下的 count(*)**（说明回填没丢行）
 - `/service-status` 仍是 `ready` —— 旧代码对新列完全无感
 
-**任一条不符 → 停手，不要进入 E**，按第 7 节处置。
+**任一条不符 → 停手，不要进入 E**，按第 9 节处置。
 
 ---
 
@@ -199,7 +199,7 @@ sudo -n docker exec -i game-of-life-db-1 pg_restore --list < ~/gol-postmigrate-$
 sha256sum ~/gol-postmigrate-$SHORT-$TS.dump
 ```
 
-> 备份文件必须留在 `/home/admin` 下且名字是 `gol-*.dump`——彩排脚本和第 94 行断言都按这个规则校验。
+> 备份文件必须留在 `/home/admin` 下且名字是 `gol-*.dump`——彩排脚本和第 96 行断言都按这个规则校验。
 
 ---
 
@@ -234,13 +234,17 @@ EVIDENCE_DIR=/home/admin/lifexp-rehearsal.XXXXXX
 ## 7. 阶段 G：正式切换
 
 ```bash
-ACTIVE_ENV=$(sudo -n ls -1 /etc/game-of-life/*.env | head -1)      # 必须与当前 release 对应
+sudo -n bash -c 'ls -1 /etc/game-of-life/*.env'      # 取当前正在用的那一个
+ACTIVE_ENV=/etc/game-of-life/public-<oldshort>.env   # 与 D2 的 $OLD_ENV 是同一个文件
+
 bash "<SOURCE_DIR>/ops/update-public.sh" \
   "<SOURCE_DIR>" \
   "<40 位 SHA>" \
   "$ACTIVE_ENV" \
   "/home/admin/lifexp-rehearsal.XXXXXX/result.json"
 ```
+
+脚本第一件事就是 `sudo -n realpath -e` 校验这个路径必须是 `/etc/game-of-life/*.env`，填错或写成软链会直接退出。
 
 脚本内部会依次打出这些标记，逐个对：
 

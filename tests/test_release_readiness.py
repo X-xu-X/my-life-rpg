@@ -28,15 +28,30 @@ class ReleaseTests(unittest.TestCase):
         return self.client.put('/api/llm-config', json={'group':group,'provider_id':'deepseek',
             'model':'synthetic-model','api_key':'synthetic-provider-A-key','enabled':True, **extra})
 
+    def seeded_item(self, uid, price=7):
+        """种一件可兑换的奖励并设定金币价。
+
+        v1.13 起商店不再自动预置商品（改由 AI 主导定价），旧用例要自己种一次；
+        价格也不能再走 `PUT /shop/items`（那条入口已明确 409），直接写库更贴近
+        「一件早就在货架上的奖励」。
+        """
+        from app.services import shop_service
+        with self.Session() as db:
+            user = db.get(m.User, uid)
+            shop_service.seed_preset_items(db, user)
+            row = db.query(m.ShopItem).filter_by(user_id=uid).order_by(m.ShopItem.id).first()
+            row.coin_price = price
+            db.commit()
+            item_id = row.id
+        return next(i for i in self.client.get('/api/shop/items').json()['items'] if i['id'] == item_id)
+
     def test_frontend_real_http_redemption_chain(self):
         import socket
         import threading
         import subprocess
         import uvicorn
         uid=self.register()['id'];self.client.post('/api/onboarding/neutral',json={'acknowledge':True})
-        item=self.client.get('/api/shop/items').json()['items'][0]
-        self.client.put(f'/api/shop/items/{item["id"]}',json={'coin_price':7})
-        item=self.client.get('/api/shop/items').json()['items'][0]
+        item=self.seeded_item(uid)
         sock=socket.socket();sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
         server=uvicorn.Server(uvicorn.Config(baseline.app,lifespan='off',log_level='error'))
         thread=threading.Thread(target=lambda:server.run(sockets=[sock]),daemon=True);thread.start()
@@ -105,8 +120,15 @@ class ReleaseTests(unittest.TestCase):
         for stage in ('after-coins','after-history','before-receipt'):
             event=self.save(stage).json()
             with self.Session() as db:
+                # 这条用例测的是**旧版固定金币**那条确认链路的故障回滚。
+                # v1.10 起新事件带 economy_version，会在路由入口 409 要求走逐事实预览，
+                # 所以这里显式还原成旧事件；判定还要带上有效来源快照才过许可检查。
+                row=db.get(m.Event,event['id'])
+                row.economy_version=None
+                snapshot=[{'id':row.id,'version':row.content_version,'permission_version':row.ai_permission_version}]
                 judgment=m.AIJudgment(user_id=uid,event_id=event['id'],status='pending',confidence=1,
-                    suggested_changes=[{'name':'健康','delta':1,'reason':'synthetic','evidence':'synthetic'}])
+                    suggested_changes=[{'name':'健康','delta':1,'reason':'synthetic','evidence':'synthetic'}],
+                    source_snapshot=snapshot)
                 db.add(judgment);db.commit();jid=judgment.id;version=judgment.updated_at.isoformat()
             reward=coin_service.reward_event_confirm
             log=judge_service._log
@@ -183,9 +205,7 @@ class ReleaseTests(unittest.TestCase):
 
     def test_redemption_replay_receipt_ownership_conflict_and_fault_rollback(self):
         uid=self.register()['id'];self.client.post('/api/onboarding/neutral',json={'acknowledge':True})
-        item=self.client.get('/api/shop/items').json()['items'][0]
-        self.client.put(f'/api/shop/items/{item["id"]}',json={'coin_price':7})
-        item=self.client.get('/api/shop/items').json()['items'][0]
+        item=self.seeded_item(uid)
         body={'request_key':str(uuid4()),'expected_version':item['updated_at'],'note':'same operation'}
         path=f'/api/shop/items/{item["id"]}/redeem'
         with patch('app.services.receipts.record',side_effect=RuntimeError('fault before receipt')):

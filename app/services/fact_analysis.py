@@ -198,7 +198,7 @@ def generate(db,job,validate):
 
 def preview(db,user,bundle):
     event=source_valid(db,bundle);config=trial_rules.account(db,user);selected=trial_rules.day(db,user);used=trial_rules.cap_used(db,user,selected)
-    if bundle.provenance.get('grading_rule_version')!=trial_rules.VERSION:raise HTTPException(409,'行动判档规则已变化，请重新分析。')
+    if bundle.provenance.get('grading_rule_version')!=trial_rules.VERSION:raise HTTPException(409,'定价规则已变化，请重新分析。')
     if bundle.provenance.get('background')!=ai_context.background(db,user.id):raise HTTPException(409,'个人阶段或授权背景已变化，请重新分析。')
     from app.routers.phase import holiday_rows
     holidays=holiday_rows(db,user)

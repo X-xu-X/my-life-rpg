@@ -23,7 +23,7 @@ def read(db:Session=Depends(get_db)):
     daily=db.query(DailyEntitlement).filter_by(user_id=user.id,local_date=today).first()
     return {'config':fields(row) if row else None,'rule_version':trial_rules.VERSION,'today':today,
         'baseline_required':not db.query(UserProfile).filter_by(user_id=user.id).one().onboarding_completed,
-        'daily':fields(daily) if daily else None,'action_used':trial_rules.cap_used(db,user,today),
+        'daily':fields(daily) if daily else None,'action_used':coin_service.day_total(db,user,today),
         'rules':{'first_record':3,'strict_default':False,'rule_version':trial_rules.VERSION}}
 
 @router.put('/trial')

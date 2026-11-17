@@ -112,6 +112,31 @@ def grant(
     return new_balance
 
 
+def day_total(db: Session, user: User, day: str) -> int:
+    """当天全口径「已得」：所有正向流水之和（**只读展示**，不参与入账）。
+
+    上限取消后（v1.13 F4）这个数只用来显示「今日已得」，所以要连首记 3 币、
+    挑战奖励、成就一起算；只统手账那一块会低报（v1.13.1 P2-4）。
+    写入口仍然只有 `grant()`，这里只是查询。
+    """
+    from datetime import date as _date
+    from app.services.time_service import date_range
+    start, end = date_range(_date.fromisoformat(day), user.timezone)
+    total = (
+        db.query(func.coalesce(func.sum(CoinLedger.delta), 0))
+        .filter(
+            CoinLedger.user_id == user.id,
+            CoinLedger.delta > 0,
+            # 兑换支出本来就不进正向；启动资金不是「今天赚到的」，显示出来只会误导。
+            CoinLedger.source.notin_(('redemption', 'onboarding_bonus')),
+            CoinLedger.created_at >= start,
+            CoinLedger.created_at < end,
+        )
+        .scalar()
+    )
+    return int(total or 0)
+
+
 def ledger(db: Session, user: User, limit: int = 50) -> list[CoinLedger]:
     """金币流水，按时间倒序（最新的在前）。"""
     return (

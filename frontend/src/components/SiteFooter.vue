@@ -6,6 +6,7 @@ import { siteFiling } from '../siteFiling'
   <footer v-if="siteFiling.icpNumber" class="site-footer" aria-label="网站备案信息">
     <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">{{ siteFiling.icpNumber }}</a>
     <a v-if="siteFiling.policeNumber" class="police-filing" :href="siteFiling.policeUrl" target="_blank" rel="noopener noreferrer">
+      <!-- TODO(备案): 换官方图标，等素材（自绘的圆+五角星大概率不符合备案系统要求，拿到图片后替换本行 svg） -->
       <svg class="police-emblem" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 3.6 9.5 6h2.6l-2.1 1.7.8 2.6L8 8.9l-2.8 1.4.8-2.6L3.9 6h2.6z" fill="currentColor"/></svg>{{ siteFiling.policeNumber }}
     </a>
   </footer>

@@ -1167,6 +1167,7 @@ D 心愿表单（F7 + F6）→ E 商店定价方式（F9 + F11 + F12 + F13）→
    prompt 的 `today_coins`（喂给模型）。后两处仍走 `trial_rules.cap_used()`，于是设置页 28、分析页 25。
    两处改用 `coin_service.day_total()`，`cap_used()` 删除。**副作用（预期）**：`confirm()` 有
    「`preview` 变了就 409」的一致性校验，改口径前生成、尚未确认的草稿会要求重新预览一次（同 F4 升 `rule_version`）。
+   另补回归用例（`69974f4`）：同日 25 + 首记 3 时，`preview.used` 与 `/api/trial.action_used` 都必须是 28。
 2. **测试写死迁移 head。** `tests/test_v1131_ops.py` 原断言 `head == 'b027_suppressed_lines'`，
    加一个 `b028` 就会把正确部署判失败。改为断言链可解析、head 唯一且属于已知修订集合。
 3. **「停用降级」不是新行为，保留。** v1.12 的 `disable_item` 本来就写 `auto_pricing=False`，重新启用时也不会自己恢复，

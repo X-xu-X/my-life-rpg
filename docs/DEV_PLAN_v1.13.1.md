@@ -422,6 +422,10 @@ F11 整轮的目的就是「理由里写的数字 = 界面显示的价格」。�
 
 **改法**（`46a0085`）：两处都换成 `coin_service.day_total(db,user,day)`；`cap_used()` 全仓无引用，删除。
 
+**回归覆盖**（`69974f4`）：`tests/test_v1131_today.py` 补一条——同日发 25 币 + 首记 3 币后，
+`preview.used` 与 `/api/trial` 的 `action_used` 必须都是 28。此前全仓**没有任何用例断言过 `preview.used`**，
+这正是它漏到界面的原因。
+
 **副作用（预期，需事先知道）**：`confirm()` 有 `bundle.preview != preview(...)` 就 409 的一致性校验。改口径后，
 **改之前生成、还没确认的草稿**会在下次预览时被要求重新生成一次。与 F4 升 `rule_version` 时同样的效果，不是回归。
 

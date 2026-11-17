@@ -543,7 +543,7 @@ export function useDateGroups(items, { storageKey, getTime = (item) => item.crea
 | B-81 | 商品加了 `pricing_mode` 列却没写 alembic 迁移，云端一上线商店页 500 | 云模式不走 `migrate_schema`，只加模型不算加列 | `ae32c85` | 11-17 |
 | B-82 | 计时页按 demo 改了 CSS，界面却毫无变化 | `.timer-ring` 声明块少一个 `}`，后面整段被吞 | `8002e5b` | 11-17 |
 | B-83 | 关掉自动定价后仍每天重估，打开却没反应 | 新列 `pricing_mode` 只读、旧列 `auto_pricing` 只写，两个开关脱钩 | `700ceb3` | 11-17 |
-| B-84 | 同一个「今日已得」在设置页 28、在分析页 25 | 改口径只改了 `/api/trial`，页面真正读的是 `preview.used` | 见 §七 · 补漏 | 11-17 |
+| B-84 | 同一个「今日已得」在设置页 28、在分析页 25 | 改口径只改了 `/api/trial`，页面真正读的是 `preview.used` | `46a0085` | 11-17 |
 
 > **B-17~B-19 的来源**是一次**外部只读审计**（Codex，2026-10-08，`docs/review/CODEX_AUDIT_2026-10-08.md`）——它不是在"跑测试"时发现的，而是**拿项目自己写下的红线去逐条量代码**量出来的。这三条的共同特征是：**它们都不是功能坏了，而是"某个安全性设计只在主路径上实现了"**。这是本项目第一次系统性地做"红线 vs 实现"对照，值得单独记住。
 
@@ -2500,7 +2500,7 @@ B-78：预览是确认时的历史，实际结果是账。补发保留旧0币预
 
 **根因**：v1.13.1 的 P2-4 只改了**报障的那一个接口**。这个数字有三个出口（`/api/trial`、`preview.used`、prompt 里的 `today_coins`），改了其中一个，另外两个继续输出旧值，于是「同一个词两个数」——正是这一版要消灭的那类不一致，自己又造了一次。
 
-**修复实现**：`preview.used` 与 `today_coins` 都换成 `coin_service.day_total(db,user,day)`；`trial_rules.cap_used()` 全仓已无引用，直接删掉（保留只会留下第三个口径的隐患）。
+**修复实现**：`preview.used` 与 `today_coins` 都换成 `coin_service.day_total(db,user,day)`；`trial_rules.cap_used()` 全仓已无引用，直接删掉（保留只会留下第三个口径的隐患）。回归用例 `tests/test_v1131_today.py::test_analysis_preview_uses_the_same_total_as_settings_page` 把「两处都是 28」钉住——在此之前全仓没有一条用例断言过 `preview.used`。
 
 **副作用（预期）**：`confirm()` 有「`bundle.preview != preview(...)` 就 409」的一致性校验，所以**改口径前生成、还没确认的草稿**会在下次预览时要求重新生成一次。与 F4 升 `rule_version` 时同样的效果。
 

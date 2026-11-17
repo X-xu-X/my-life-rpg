@@ -404,3 +404,54 @@ F11 整轮的目的就是「理由里写的数字 = 界面显示的价格」。�
 本地 SQLite 副本 `migrate_schema` 正常（`auto_pricing=1 → recurring`，其余 `once`）；真实库零改动；
 `grep -rn "b025_daily_use" ops/` 为空。**带迁移的发布尚未执行，等用户点头。**
 
+---
+
+## 七、补漏（第二轮审查，2026-11-17 晚）
+
+六批提交后我又把 7 个代码 commit 读了一遍，发现三处需要收尾。本节记录**已落地的两处**和**经核实不必改的一处**。
+
+### 7.1 P2-4 只改了一半：同一个词在两个页面显示两个数
+
+`/api/trial` 的 `action_used` 已经换成 `day_total()`（全口径），但**分析页从来不用这个接口**：
+
+- `FactAnalysis.vue:57`、`EventFactAnalysis.vue:78` 读的是 `group.preview.used`
+- `preview.used` 来自 `app/services/fact_analysis.py:200` 的 `trial_rules.cap_used()`——只 `sum(ActionAward)`
+- `:138` 喂给模型的 `today_coins` 是同一个旧口径
+
+于是设置页 28、分析页 25，差额正是当日首记的 3 币。**这批要消灭的是"同一含义两个数"，结果自己又造了一个。**
+
+**改法**（`46a0085`）：两处都换成 `coin_service.day_total(db,user,day)`；`cap_used()` 全仓无引用，删除。
+
+**副作用（预期，需事先知道）**：`confirm()` 有 `bundle.preview != preview(...)` 就 409 的一致性校验。改口径后，
+**改之前生成、还没确认的草稿**会在下次预览时被要求重新生成一次。与 F4 升 `rule_version` 时同样的效果，不是回归。
+
+### 7.2 测试写死迁移 head
+
+`tests/test_v1131_ops.py:24` 原断言 `head(ROOT) == 'b027_suppressed_lines'`。加一个 `b028`，这条就会红，
+而它要保护的正是"不要每次都手改 head"。**改法**（`a46d25d`）：`assertIn(head(ROOT), known_revisions(ROOT))`
+——`head()` 本身在多头时会抛 `MULTIPLE_HEADS`，所以"唯一"仍被覆盖。
+
+### 7.3 「停用降级」保留，且它不是新行为
+
+批次 I 里 `disable_item` 额外写了 `pricing_mode='once'`，我原先标注为"改了行为"，核实后需要更正：
+
+| 版本 | 停用时写什么 | 重新启用后 |
+|---|---|---|
+| v1.12 `3fa0de7` | `enabled=False` + `auto_pricing=False` | `auto_pricing` 仍为 False，不会自己恢复 |
+| v1.13（修前） | `enabled=False` + `auto_pricing=False` | `pricing_mode` 仍是 `recurring` → 当晚重新进队列（**这才是 bug**） |
+| v1.13.1（`700ceb3`） | `enabled=False` + 两个字段一起写 | 停在 `once`，与 v1.12 表现一致 |
+
+结论：`pricing_mode='once'` 只是把 v1.12 的既有语义搬到新列，**不制造新的"降级"**。想恢复跟随行情，
+在商品里点一次「改成常用兑换券」即可，这个入口本来就在。**不改。**
+
+### 7.4 顺带核实、确认不需要动的
+
+- **`EventFactAnalysis.vue` 没有 P1-3 那个问题**：`:73` 早就只显示 `previewItem(item)?.breakdown.amount`，
+  批次 J 只动 `FactAnalysis.vue` 是对的，别"顺手统一"。
+- **前端定价接口不需要手动传 `request_key`**：`useWorkflowWrite.send()` 自动注入 `crypto.randomUUID()`，
+  且刷新后保留同一个 key（只用于重试），所以补 receipts 不会在云端变成 422。
+- **`b026` 的写法正确**：先 `add_column(server_default='once')`，再在同一次 `upgrade` 内用 `IS TRUE` 回填。
+- **新用户商店是空的**（`seed_preset_items` 在 `9a05d53` 就停止在 `list_items` 里调用，v1.12 也没有）。
+  这是既有产品状态，不属于本轮范围；要不要恢复预置或给空态入口，另议。
+
+**本节验证**：`python -m unittest discover -s tests` → 298 项 `OK (skipped=11)`；测试从 298 项起不再因加迁移而红。

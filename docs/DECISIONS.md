@@ -1153,10 +1153,21 @@ D 心愿表单（F7 + F6）→ E 商店定价方式（F9 + F11 + F12 + F13）→
 | P2-1 | 中 | 两个定价接口未走 receipts | 同 `request_key` 重复点击返回首次结果 | `2042b87` |
 | P2-2 | 中 | 两个接口返回的 `redeemed_count` 恒 0 | 补计数查询 | `2042b87` |
 | P2-3 | 中 | 409 文案还写「判档」 | 改为「定价规则已变化」 | `184cf04` |
-| P2-4 | 中 | 「今日已得」只统计手账 | 改为当日全口径（排除启动资金），新增 `coin_service.day_total()` | `184cf04` |
+| P2-4 | 中 | 「今日已得」只统计手账 | 改为当日全口径（排除启动资金），新增 `coin_service.day_total()`；**第二轮补漏**：`preview.used` 与 prompt 的 `today_coins` 同源，一并换掉，`cap_used()` 删除 | `184cf04` + `46a0085` |
 | P2-5 | 中 | 公安备案图标是自绘的 | 本轮只留 `TODO(备案)`，等官方素材 | `184cf04` |
 | P2-6 | 低 | `permission()` 已是死代码 | 删除 | `700ceb3` |
 | P3-1 | 低 | 3 个既有测试与实现脱节 | 只改测试：旧确认链路显式还原、商店预置自己种 | `a2e48d3` |
 
 **验证**：`python -m unittest discover -s tests` → 298 项，`OK (skipped=11)`，0 failure / 0 error；
 `vite build` 通过；真实库零改动（coins 55 / events 32 / attr_history 124 / coin_ledger 4 / shop_items 5）。
+
+**第二轮补漏**（2026-11-17 晚，审查这 7 个 commit 时发现，`46a0085` / `a46d25d`）：
+
+1. **P2-4 只改了报障的那一个接口。** 「今日已得」有三处出口：`/api/trial`（已改）、`preview.used`（分析页读它）、
+   prompt 的 `today_coins`（喂给模型）。后两处仍走 `trial_rules.cap_used()`，于是设置页 28、分析页 25。
+   两处改用 `coin_service.day_total()`，`cap_used()` 删除。**副作用（预期）**：`confirm()` 有
+   「`preview` 变了就 409」的一致性校验，改口径前生成、尚未确认的草稿会要求重新预览一次（同 F4 升 `rule_version`）。
+2. **测试写死迁移 head。** `tests/test_v1131_ops.py` 原断言 `head == 'b027_suppressed_lines'`，
+   加一个 `b028` 就会把正确部署判失败。改为断言链可解析、head 唯一且属于已知修订集合。
+3. **「停用降级」不是新行为，保留。** v1.12 的 `disable_item` 本来就写 `auto_pricing=False`，重新启用时也不会自己恢复，
+   所以 `pricing_mode='once'` 只是把同一语义搬到新列。想恢复跟随行情，在商品里手动切一次即可。

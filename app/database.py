@@ -80,7 +80,8 @@ def migrate_schema(engine) -> None:
     # 后来手动切回 once 的商品又改回 recurring）。
     if ('shop_items', 'pricing_mode') in added:
         with engine.begin() as conn:
-            conn.execute(text("UPDATE shop_items SET pricing_mode = 'recurring' WHERE auto_pricing = 1"))
+            # `IS TRUE` 而不是 `= 1`：PG 不允许 boolean 与 integer 比较（SQLite 宽容）。
+            conn.execute(text("UPDATE shop_items SET pricing_mode = 'recurring' WHERE auto_pricing IS TRUE"))
 
     # create_all does not add uniqueness to old tables. New nullable identities remain NULL
     # for legacy rows; duplicates, if any, must fail safely rather than be merged or deleted.

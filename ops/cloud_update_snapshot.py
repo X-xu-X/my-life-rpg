@@ -1,9 +1,11 @@
-"""Read-only b025 update proof; output counts/hashes only, never row content."""
+"""Read-only release proof; output counts/hashes only, never row content."""
 import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def compare(before, after):
@@ -14,26 +16,36 @@ def compare(before, after):
             'credential_rows_checked': after['credential_rows_checked']}
 
 
-def capture():
+def capture(require_head=True):
+    """只读快照。
+
+    `require_head=True` 时要求库里正好是本发布包的 head（切库/切镜像的前后对账用）；
+    恢复彩排只证明「备份能还原、角色能读、凭据能解密」，可以对着**迁移前**的备份跑，
+    所以传 `False`——否则每次带迁移的发布都会在彩排阶段被自己的断言拒掉。
+    """
     from sqlalchemy import text
     from app.config import settings
     from app.database import engine
     from app.models.access import LLMCredential
     from app.services.credentials import keyring, decrypt
     from ops.db_manifest import collect
+    from ops.expected_head import head as release_head, known_revisions
     from sqlalchemy.orm import Session
     if not settings.cloud or engine.dialect.name != 'postgresql':
         raise ValueError('CLOUD_POSTGRESQL_REQUIRED')
     if (engine.url.host, engine.url.database, engine.url.username) != ('db', 'game_of_life', 'gol_app'):
         raise ValueError('DATABASE_TARGET_CHANGED')
     keyring()
+    expected = release_head(ROOT)
     with engine.connect() as connection:
         with connection.begin():
             connection.exec_driver_sql('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY')
             connection.exec_driver_sql("SET LOCAL TIME ZONE 'UTC'")
             heads = sorted(connection.execute(text('SELECT version_num FROM alembic_version')).scalars())
-            if heads != ['b025_daily_use']:
-                raise ValueError('DATABASE_NOT_B025')
+            if not set(heads) <= known_revisions(ROOT):
+                raise ValueError('DATABASE_REVISION_UNKNOWN')
+            if require_head and heads != [expected]:
+                raise ValueError('DATABASE_NOT_AT_RELEASE_HEAD')
             tables = collect(connection)
             sequences = [dict(row) for row in connection.execute(text(
                 'SELECT sequencename,last_value FROM pg_sequences WHERE schemaname=current_schema() ORDER BY sequencename')).mappings()]

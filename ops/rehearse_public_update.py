@@ -2,7 +2,12 @@
 
 Runs inside the release image against a private PostgreSQL copy. Proves that the
 backup restores, the application role can read it, credentials still decrypt and
-the schema remains b025. Never writes business data and never calls a real model.
+the restored revision is one this release knows. Never writes business data and
+never calls a real model.
+
+`capture(require_head=False)`: 彩排用的是**迁移前**的备份，库里还是旧 revision，
+不能要求它等于本包的 head，否则每次带迁移的发布都会在彩排阶段被拒。
+"""
 
 The retired event-35 reward-repair assertions lived only in the 2026-10-25
 one-off compensation release; retrieve them from git history if ever needed.
@@ -26,9 +31,9 @@ def run():
 
     llm_service.chat = llm_service.chat_json = blocked
     # capture() enforces cloud PostgreSQL, host=db, database=game_of_life,
-    # username=gol_app and head=b025_daily_use. Its transaction is READ ONLY;
+    # username=gol_app and a revision this release knows. Its transaction is READ ONLY;
     # table/sequence counts and credential decryption emit no row content.
-    snapshot = capture()
+    snapshot = capture(require_head=False)
     if not snapshot['tables']:
         raise ValueError('RESTORED_TABLES_MISSING')
     return {'status': 'ISOLATED_PG_REHEARSAL_PASS', 'head': snapshot['head'],

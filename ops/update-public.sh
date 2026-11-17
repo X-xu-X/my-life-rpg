@@ -1,5 +1,15 @@
 #!/usr/bin/env bash
-# Same-schema b025 update. Does not migrate, restore, prune, or repair rewards.
+# 同 schema 更新：本脚本**不迁移**、不恢复、不清理、不补发奖励。
+#
+# 带迁移的发布怎么写（v1.13.1 起固定下来，不靠口头）：
+#   1. 迁移是**独立的前置步骤**：在停写窗口内、最终备份之后、起新镜像之前执行
+#      （`alembic upgrade head`），不进本脚本的自动流程；
+#   2. 迁移失败 → 全部停止，用备份恢复，**不起新镜像、不切流量**；
+#   3. 迁移成功但新镜像起不来 → 允许回起旧镜像（旧代码不读新列，多一列无害），
+#      但必须显式打出 `SCHEMA_AHEAD_OF_CODE`：回滚的是代码，库已经是新 schema，
+#      别让人误以为库也退回去了。
+#   库 head 与本包 head 不一致时，本脚本会在预检阶段（新镜像的 init_db）就停下，
+#   不会带着未迁移的库去切流量。
 set -euo pipefail
 umask 077
 if (( $# != 4 )); then
@@ -28,16 +38,34 @@ stopped=0
 backup_file=''
 old_compose() { dkr compose --project-name game-of-life --env-file "$old_env" -f "$old_file" "$@"; }
 new_compose() { dkr compose --project-name game-of-life --env-file "$new_env" -f "$target/deploy/compose.prod.yml" "$@"; }
+# 期望 head 由发布包内的 alembic/versions 现算，**不写死常量**
+# （写死的话每加一个迁移都要手改一遍，忘了就把一次正确的部署判成失败）。
+expected_head=$(python3 -B "$source_dir/ops/expected_head.py" "$source_dir")
+# 发布前的库 head：回滚时用它区分「库没动过」和「库已经迁到新版本」。
+database_head=$(dkr exec game-of-life-db-1 psql -X -U gol_admin -d game_of_life -At -v ON_ERROR_STOP=1 \
+  -c 'SELECT version_num FROM alembic_version' 2>/dev/null || true)
+if [[ -z "$database_head" ]]; then
+  printf 'DATABASE_HEAD_UNREADABLE: 先确认 game-of-life-db-1 正在运行。\n' >&2
+  exit 2
+fi
 failed() {
   code=$?; trap - EXIT
   if (( code != 0 )); then
     printf '\nUPDATE_STOPPED stage=%s\nEVIDENCE_DIR=%s\nFINAL_BACKUP=%s\n' "$stage" "$work" "$backup_file"
     if (( stopped == 1 )); then
       head=$(dkr exec game-of-life-db-1 psql -X -U gol_admin -d game_of_life -At -v ON_ERROR_STOP=1 -c 'SELECT version_num FROM alembic_version' 2>/dev/null || true)
-      if [[ "$head" = b025_daily_use ]]; then
+      if [[ "$head" = "$database_head" ]]; then
+        # 库还是发布前的版本：与旧镜像完全匹配，正常回滚。
         new_compose stop --timeout 210 api worker > "$work/stop-new.log" 2>&1 || true
         if old_compose up -d --no-deps --no-build --pull never --wait --wait-timeout 240 api worker caddy > "$work/recovery.log" 2>&1; then
           printf 'OLD_SERVICES_RECOVERED: existing database and volume preserved.\n'
+        else printf 'SERVICE_RECOVERY_FAILED: inspect private recovery log.\n'; fi
+      elif [[ "$head" = "$expected_head" ]]; then
+        # 库已迁到本包 head：旧代码不读新列，可以回起，但库不是旧库了，必须说清楚。
+        new_compose stop --timeout 210 api worker > "$work/stop-new.log" 2>&1 || true
+        if old_compose up -d --no-deps --no-build --pull never --wait --wait-timeout 240 api worker caddy > "$work/recovery.log" 2>&1; then
+          printf 'SCHEMA_AHEAD_OF_CODE: 代码已回滚到旧镜像，数据库仍是 %s。\n' "$head"
+          printf 'OLD_SERVICES_RECOVERED_UNDER_NEW_SCHEMA: 不要以此状态继续发布，请重新走流程或从备份隔离恢复。\n'
         else printf 'SERVICE_RECOVERY_FAILED: inspect private recovery log.\n'; fi
       else printf 'DATABASE_HEAD_CHANGED: automatic rollback refused.\n'; fi
     fi
@@ -59,12 +87,13 @@ print(m['release_id'])
 PY
 )
 [[ "$release" != "$old_release" ]]
-python3 - "$rehearsal" "$release" <<'PY'
+python3 - "$rehearsal" "$release" "$database_head" <<'PY'
 import hashlib,json,sys
 from pathlib import Path
 p=Path(sys.argv[1]);assert p.parent.parent==Path('/home/admin') and p.parent.name.startswith('lifexp-rehearsal.')
 r=json.loads(p.read_text());assert r['status']=='ISOLATED_PG_REHEARSAL_PASS' and r['release_id']==sys.argv[2]
-assert r['production_containers_unchanged'] and r['head']==['b025_daily_use']
+# 彩排还原的是「发布前」的备份，所以比对的是当前库 head，而不是本包 head。
+assert r['production_containers_unchanged'] and r['head']==[sys.argv[3]]
 backup=Path(r['backup_file']);assert backup.parent==Path('/home/admin') and backup.is_file()
 assert hashlib.sha256(backup.read_bytes()).hexdigest()==r['backup_sha256']
 print('RESTORE_REHEARSAL_VERIFIED')
@@ -109,9 +138,10 @@ test "$(dkr inspect game-of-life-api-1 --format '{{.State.Running}}')" = false
 test "$(dkr inspect game-of-life-worker-1 --format '{{.State.Running}}')" = false
 stage=before-snapshot
 new_compose run --rm --no-deps --pull never --interactive=false -T api python ops/cloud_update_snapshot.py > "$work/before.json"
-python3 - "$work/before.json" <<'PY'
+python3 - "$work/before.json" "$expected_head" <<'PY'
 import json,sys
-r=json.load(open(sys.argv[1]));assert r['head']==['b025_daily_use'] and r['tables']
+# 新镜像只能跑在本包 head 上；库没迁到位时在这里停下，不要带着旧 schema 去切流量。
+r=json.load(open(sys.argv[1]));assert r['head']==[sys.argv[2]] and r['tables']
 PY
 chmod 644 "$work/before.json"
 stage=final-backup
@@ -145,11 +175,11 @@ import json,sys
 assert json.load(open(sys.argv[1]))['status']=='ready'
 PY
 new_compose ps
-python3 - "$work" "$release" "$expected_sha" "$target" "$new_env" "$backup_file" <<'PY'
+python3 - "$work" "$release" "$expected_sha" "$target" "$new_env" "$backup_file" "$expected_head" <<'PY'
 import hashlib,json,sys
 from pathlib import Path
-work,release,sha,source,env,backup=sys.argv[1:]
-r={'status':'PUBLIC_UPDATE_READY','release_id':release,'git_head':sha,'database_head':'b025_daily_use',
+work,release,sha,source,env,backup,head=sys.argv[1:]
+r={'status':'PUBLIC_UPDATE_READY','release_id':release,'git_head':sha,'database_head':head,
    'schema_migration':'NONE','source_dir':source,'env_file':env,'evidence_dir':work,
    'final_backup':backup,'backup_sha256':hashlib.sha256(Path(backup).read_bytes()).hexdigest(),
    'backup_check':'archive listing only; full restore rehearsal separate',

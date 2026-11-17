@@ -316,3 +316,5 @@ A/B 是后端+展示，C/D 是分析页，E 是商店定价（改动最集中）
 
 **验证**：`python -m unittest discover -s tests` 全绿（既有失败项与 HEAD 基线一致，见下）；`vite build` 通过；真实库零改动（coins 55 / events 32 / attr_history 124 / coin_ledger 4）。
 **已知既有失败**：`tests/test_release_readiness.py` 的 3 项在未改动的 HEAD 基线上同样失败（确认链路与商店预置的合成用例），本轮未触碰，另立项处理。
+**后续**：P0-1 的云端迁移缺口（`pricing_mode` / `suppressed_lines`）由 `docs/DEV_PLAN_v1.13.1.md` 批次 G 补齐（`ae32c85`），同期修掉计时页 CSS、双开关脱钩等问题；3 项既有失败在批次 L 对齐（`a2e48d3`），全量测试 298 项已无失败。
+

@@ -458,4 +458,5 @@ F11 整轮的目的就是「理由里写的数字 = 界面显示的价格」。�
 - **新用户商店是空的**（`seed_preset_items` 在 `9a05d53` 就停止在 `list_items` 里调用，v1.12 也没有）。
   这是既有产品状态，不属于本轮范围；要不要恢复预置或给空态入口，另议。
 
-**本节验证**：`python -m unittest discover -s tests` → 298 项 `OK (skipped=11)`；测试从 298 项起不再因加迁移而红。
+**本节验证**：`python -m unittest discover -s tests` → **299 项 `OK (skipped=11)`**（六批收尾时 298，本节新增回归用例 1 条）；
+测试从这一版起不再因加迁移而红。

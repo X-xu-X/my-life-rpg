@@ -125,6 +125,37 @@ class PricingModeTests(unittest.TestCase):
         with patch('app.services.trial_rules.day', return_value=tomorrow):
             self.assertEqual(self.write('/pricing-checks', {}).json()['queued'], 0)
 
+    def test_rollback_does_not_touch_pricing_reason(self):
+        """v1.13.1 J-2：理由里的数字必须等于界面价格，退回只留审计。"""
+        from app.models.full_system import PricingQuote
+        self.register(); self.configure_model(); self.adopt()
+        item, _ = self.priced('常用券', coin=20)
+        self.client.patch('/api/shop/items/' + str(item['id']) + '/pricing-mode',
+                          json={'mode': 'recurring', 'expected_version': item['updated_at'], 'acknowledge': True})
+        with self.Session() as db:
+            row = db.get(ShopItem, item['id']); row.repriced_on = None; db.commit()
+        fresh = next(i for i in self.client.get('/api/shop/items').json()['items'] if i['id'] == item['id'])
+        priced = {'coin_price': 60, 'pricing_reason': '合成升价理由', 'worth_note': '', 'is_timed': False, 'minutes_estimate': None}
+        with patch('app.services.llm_service.llm_service.chat_json', return_value=priced):
+            self.write('/reward-quotes', {'name': fresh['name'], 'item_id': fresh['id'], 'item_version': fresh['updated_at']})
+        current = next(i for i in self.client.get('/api/shop/items').json()['items'] if i['id'] == item['id'])
+        reason_before = current['pricing_reason']
+        self.assertIn('合成升价理由', reason_before)
+        rolled = self.client.post('/api/shop/items/' + str(item['id']) + '/price-rollback',
+                                  json={'expected_version': current['updated_at']})
+        self.assertEqual(rolled.status_code, 200, rolled.text)
+        self.assertEqual(rolled.json()['pricing_reason'], reason_before)
+        self.assertNotIn('退回', rolled.json()['pricing_reason'])
+        again = self.client.post('/api/shop/items/' + str(item['id']) + '/price-rollback',
+                                 json={'expected_version': rolled.json()['updated_at']})
+        self.assertEqual(again.status_code, 200, again.text)
+        self.assertEqual(again.json()['pricing_reason'], reason_before)
+        with self.Session() as db:
+            rows = db.query(PricingQuote).filter_by(item_id=item['id'], state='rollback').all()
+            self.assertEqual(len(rows), 2)
+            self.assertEqual(rows[0].payload['target_price'], 20)
+            self.assertEqual(rows[0].result['coin_price'], 20)
+
     def test_rollback_restores_previous_price_and_freezes(self):
         self.register(); self.configure_model(); self.adopt()
         item, _ = self.priced('常用券', coin=20)

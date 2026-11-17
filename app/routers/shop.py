@@ -42,15 +42,27 @@ def set_pricing_mode(item_id:int,body:PricingModeIn,db:Session=Depends(get_db)):
 
 @router.post('/shop/items/{item_id}/price-rollback')
 def rollback_price(item_id:int,body:MutationIn,db:Session=Depends(get_db)):
-    """退回上一次价格并冻结自动定价（不重算历史兑换券）。"""
+    """退回上一次价格并冻结自动定价（不重算历史兑换券）。
+
+    **不改 `pricing_reason`**：理由里的数字必须和界面显示的价格一致，
+    在这里追加「退回 30 币」只会让理由留着模型原本写的 48（v1.13.1 J-2）。
+    退回本身写进 `pricing_quotes` 审计，用户界面上看不到。
+    """
+    import hashlib
+    from uuid import uuid4
     from app.models.full_system import PricingQuote
     user=get_or_create_default_user(db);lock_profile(db,user.id);item=_get_item(db,user,item_id);db.refresh(item)
     if body.expected_version is None or item.updated_at!=body.expected_version:raise HTTPException(409,'奖励已变化，请刷新。')
     last=db.query(PricingQuote).filter_by(user_id=user.id,item_id=item.id,state='accepted').order_by(PricingQuote.id.desc()).first()
     previous=(last.result or {}).get('previous_price') if last else None
     if type(previous) is not int or previous<1:raise HTTPException(409,'没有可退回的价格。')
+    before=item.coin_price;mode_before=item.pricing_mode
     item.coin_price=previous;item.pricing_mode='once';item.auto_pricing=False
-    item.pricing_reason=(item.pricing_reason or '')+f'（退回 {previous} 币并冻结自动定价）'
+    db.add(PricingQuote(user_id=user.id,item_id=item.id,state='rollback',request_key=str(uuid4()),
+        fingerprint=hashlib.sha256(f'rollback:{item.id}:{previous}'.encode()).hexdigest(),
+        payload={'previous_price':before,'target_price':previous},
+        context={'mode_before':mode_before},
+        result={'coin_price':previous,'pricing_mode':'once'}))
     db.commit();db.refresh(item)
     return _item_out(item)
 

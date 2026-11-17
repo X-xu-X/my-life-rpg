@@ -227,7 +227,7 @@ class DailyUseTests(unittest.TestCase):
         with patch('app.services.llm_service.llm_service.chat_json',return_value={'coin_price':23,'pricing_reason':'本人期望频率','worth_note':'','is_timed':True,'minutes_estimate':30}):q=self.write('/reward-quotes',{'name':'周末娱乐','auto_check':True}).json()
         item=q['item']
         # v1.13：新建默认「只用这一次」，要自动重估需显式加入常用兑换券
-        self.assertEqual(self.client.patch(f"/api/shop/items/{item['id']}/pricing-mode",json={'mode':'recurring','expected_version':item['updated_at'],'acknowledge':True}).status_code,200)
+        self.assertEqual(self.client.patch(f"/api/shop/items/{item['id']}/pricing-mode",json={'request_key':str(uuid4()),'mode':'recurring','expected_version':item['updated_at'],'acknowledge':True}).status_code,200)
         item=next(i for i in self.client.get('/api/shop/items').json()['items'] if i['id']==item['id']);first=self.client.post(f"/api/shop/items/{item['id']}/redeem",json={'request_key':str(uuid4()),'expected_version':item['updated_at']})
         self.assertEqual(first.status_code,200,first.text)
         tomorrow=str(local_day(utc_now(),'Asia/Shanghai')+timedelta(days=1))
@@ -250,7 +250,7 @@ class DailyUseTests(unittest.TestCase):
         self.register();self.configure_model();self.adopt()
         with patch('app.services.llm_service.llm_service.chat_json',return_value={'coin_price':31,'pricing_reason':'个人依据','worth_note':'','is_timed':False,'minutes_estimate':None}):q=self.write('/reward-quotes',{'name':'绘画材料','auto_check':True}).json()
         item=q['item']
-        self.client.patch(f"/api/shop/items/{item['id']}/pricing-mode",json={'mode':'recurring','expected_version':item['updated_at'],'acknowledge':True})
+        self.client.patch(f"/api/shop/items/{item['id']}/pricing-mode",json={'request_key':str(uuid4()),'mode':'recurring','expected_version':item['updated_at'],'acknowledge':True})
         tomorrow=str(local_day(utc_now(),'Asia/Shanghai')+timedelta(days=1))
         with patch('app.services.trial_rules.day',return_value=tomorrow),patch('app.services.llm_service.llm_service.chat_json',side_effect=LLMError('MODEL_TIMEOUT')) as model:
             self.write('/pricing-checks',{});pricing_checks.process(self.Session,pricing_checks.claim(self.Session))

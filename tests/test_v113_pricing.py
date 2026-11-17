@@ -55,7 +55,7 @@ class PricingModeTests(unittest.TestCase):
         once, _ = self.priced('一次性', coin=20)
         recurring, _ = self.priced('常用券', coin=20)
         response = self.client.patch('/api/shop/items/' + str(recurring['id']) + '/pricing-mode',
-                                     json={'mode': 'recurring', 'expected_version': recurring['updated_at'], 'acknowledge': True})
+                                     json={'request_key': str(uuid4()), 'mode': 'recurring', 'expected_version': recurring['updated_at'], 'acknowledge': True})
         self.assertEqual(response.status_code, 200, response.text)
         self.assertEqual(response.json()['pricing_mode'], 'recurring')
         tomorrow = str(local_day(utc_now(), 'Asia/Shanghai') + timedelta(days=1))
@@ -92,10 +92,10 @@ class PricingModeTests(unittest.TestCase):
         self.register(); self.configure_model(); self.adopt()
         item, _ = self.priced('画纸', coin=23)
         path = '/api/shop/items/' + str(item['id']) + '/pricing-mode'
-        to_recurring = self.client.patch(path, json={'mode': 'recurring', 'expected_version': item['updated_at'], 'acknowledge': True})
+        to_recurring = self.client.patch(path, json={'request_key': str(uuid4()), 'mode': 'recurring', 'expected_version': item['updated_at'], 'acknowledge': True})
         self.assertEqual(to_recurring.status_code, 200, to_recurring.text)
         self.assertEqual((to_recurring.json()['pricing_mode'], to_recurring.json()['auto_pricing']), ('recurring', True))
-        to_once = self.client.patch(path, json={'mode': 'once', 'expected_version': to_recurring.json()['updated_at'], 'acknowledge': True})
+        to_once = self.client.patch(path, json={'request_key': str(uuid4()), 'mode': 'once', 'expected_version': to_recurring.json()['updated_at'], 'acknowledge': True})
         self.assertEqual(to_once.status_code, 200, to_once.text)
         self.assertEqual((to_once.json()['pricing_mode'], to_once.json()['auto_pricing']), ('once', False))
 
@@ -112,7 +112,7 @@ class PricingModeTests(unittest.TestCase):
         self.register(); self.configure_model(); self.adopt()
         item, _ = self.priced('画纸', coin=23)
         recurring = self.client.patch('/api/shop/items/' + str(item['id']) + '/pricing-mode',
-                                      json={'mode': 'recurring', 'expected_version': item['updated_at'], 'acknowledge': True})
+                                      json={'request_key': str(uuid4()), 'mode': 'recurring', 'expected_version': item['updated_at'], 'acknowledge': True})
         self.assertEqual(recurring.status_code, 200, recurring.text)
         removed = self.client.request('DELETE', '/api/shop/items/' + str(item['id']), json={'request_key': str(uuid4()), 'expected_version': recurring.json()['updated_at']})
         self.assertEqual(removed.status_code, 200, removed.text)
@@ -131,7 +131,7 @@ class PricingModeTests(unittest.TestCase):
         self.register(); self.configure_model(); self.adopt()
         item, _ = self.priced('常用券', coin=20)
         self.client.patch('/api/shop/items/' + str(item['id']) + '/pricing-mode',
-                          json={'mode': 'recurring', 'expected_version': item['updated_at'], 'acknowledge': True})
+                          json={'request_key': str(uuid4()), 'mode': 'recurring', 'expected_version': item['updated_at'], 'acknowledge': True})
         with self.Session() as db:
             row = db.get(ShopItem, item['id']); row.repriced_on = None; db.commit()
         fresh = next(i for i in self.client.get('/api/shop/items').json()['items'] if i['id'] == item['id'])
@@ -142,12 +142,12 @@ class PricingModeTests(unittest.TestCase):
         reason_before = current['pricing_reason']
         self.assertIn('合成升价理由', reason_before)
         rolled = self.client.post('/api/shop/items/' + str(item['id']) + '/price-rollback',
-                                  json={'expected_version': current['updated_at']})
+                                  json={'request_key': str(uuid4()), 'expected_version': current['updated_at']})
         self.assertEqual(rolled.status_code, 200, rolled.text)
         self.assertEqual(rolled.json()['pricing_reason'], reason_before)
         self.assertNotIn('退回', rolled.json()['pricing_reason'])
         again = self.client.post('/api/shop/items/' + str(item['id']) + '/price-rollback',
-                                 json={'expected_version': rolled.json()['updated_at']})
+                                 json={'request_key': str(uuid4()), 'expected_version': rolled.json()['updated_at']})
         self.assertEqual(again.status_code, 200, again.text)
         self.assertEqual(again.json()['pricing_reason'], reason_before)
         with self.Session() as db:
@@ -156,11 +156,53 @@ class PricingModeTests(unittest.TestCase):
             self.assertEqual(rows[0].payload['target_price'], 20)
             self.assertEqual(rows[0].result['coin_price'], 20)
 
+    def test_pricing_endpoints_replay_same_request_key(self):
+        """v1.13.1 P2-1：同一 request_key 连点两次返回首次结果，不再 409。"""
+        self.register(); self.configure_model(); self.adopt()
+        item, _ = self.priced('画纸', coin=23)
+        body = {'request_key': str(uuid4()), 'mode': 'recurring',
+                'expected_version': item['updated_at'], 'acknowledge': True}
+        first = self.client.patch('/api/shop/items/' + str(item['id']) + '/pricing-mode', json=body)
+        self.assertEqual(first.status_code, 200, first.text)
+        again = self.client.patch('/api/shop/items/' + str(item['id']) + '/pricing-mode', json=body)
+        self.assertEqual(again.status_code, 200, again.text)
+        self.assertEqual(again.json(), first.json())
+
+        with self.Session() as db:
+            row = db.get(ShopItem, item['id']); row.repriced_on = None; db.commit()
+        fresh = next(i for i in self.client.get('/api/shop/items').json()['items'] if i['id'] == item['id'])
+        priced = {'coin_price': 60, 'pricing_reason': '合成升价', 'worth_note': '', 'is_timed': False, 'minutes_estimate': None}
+        with patch('app.services.llm_service.llm_service.chat_json', return_value=priced):
+            self.write('/reward-quotes', {'name': fresh['name'], 'item_id': fresh['id'], 'item_version': fresh['updated_at']})
+        current = next(i for i in self.client.get('/api/shop/items').json()['items'] if i['id'] == item['id'])
+        rollback = {'request_key': str(uuid4()), 'expected_version': current['updated_at']}
+        first_rollback = self.client.post('/api/shop/items/' + str(item['id']) + '/price-rollback', json=rollback)
+        self.assertEqual(first_rollback.status_code, 200, first_rollback.text)
+        same = self.client.post('/api/shop/items/' + str(item['id']) + '/price-rollback', json=rollback)
+        self.assertEqual(same.status_code, 200, same.text)
+        self.assertEqual(same.json(), first_rollback.json())
+
+    def test_pricing_endpoints_report_redeemed_count(self):
+        """v1.13.1 P2-2：切组/退回返回的 redeemed_count 不能恒为 0。"""
+        self.register(); self.configure_model(); self.adopt()
+        self.client.post('/api/onboarding/neutral', json={'acknowledge': True})
+        item, _ = self.priced('画纸', coin=7)
+        redeemed = self.client.post('/api/shop/items/' + str(item['id']) + '/redeem',
+                                    json={'request_key': str(uuid4()), 'expected_version': item['updated_at']})
+        self.assertEqual(redeemed.status_code, 200, redeemed.text)
+        fresh = next(i for i in self.client.get('/api/shop/items').json()['items'] if i['id'] == item['id'])
+        self.assertEqual(fresh['redeemed_count'], 1)
+        switched = self.client.patch('/api/shop/items/' + str(item['id']) + '/pricing-mode',
+                                     json={'request_key': str(uuid4()), 'mode': 'recurring',
+                                           'expected_version': fresh['updated_at'], 'acknowledge': True})
+        self.assertEqual(switched.status_code, 200, switched.text)
+        self.assertEqual(switched.json()['redeemed_count'], 1)
+
     def test_rollback_restores_previous_price_and_freezes(self):
         self.register(); self.configure_model(); self.adopt()
         item, _ = self.priced('常用券', coin=20)
         self.client.patch('/api/shop/items/' + str(item['id']) + '/pricing-mode',
-                          json={'mode': 'recurring', 'expected_version': item['updated_at'], 'acknowledge': True})
+                          json={'request_key': str(uuid4()), 'mode': 'recurring', 'expected_version': item['updated_at'], 'acknowledge': True})
         with self.Session() as db:
             row = db.get(ShopItem, item['id']); row.repriced_on = None; db.commit()
         fresh = next(i for i in self.client.get('/api/shop/items').json()['items'] if i['id'] == item['id'])
@@ -169,7 +211,7 @@ class PricingModeTests(unittest.TestCase):
             self.write('/reward-quotes', {'name': fresh['name'], 'item_id': fresh['id'], 'item_version': fresh['updated_at']})
         current = next(i for i in self.client.get('/api/shop/items').json()['items'] if i['id'] == item['id'])
         self.assertEqual(current['coin_price'], 60)
-        rolled = self.client.post('/api/shop/items/' + str(item['id']) + '/price-rollback', json={'expected_version': current['updated_at']})
+        rolled = self.client.post('/api/shop/items/' + str(item['id']) + '/price-rollback', json={'request_key': str(uuid4()), 'expected_version': current['updated_at']})
         self.assertEqual(rolled.status_code, 200, rolled.text)
         self.assertEqual(rolled.json()['coin_price'], 20)
         self.assertEqual(rolled.json()['pricing_mode'], 'once')

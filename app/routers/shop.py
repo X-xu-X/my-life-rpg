@@ -29,15 +29,20 @@ class PricingModeIn(MutationIn):
 
 @router.patch('/shop/items/{item_id}/pricing-mode')
 def set_pricing_mode(item_id:int,body:PricingModeIn,db:Session=Depends(get_db)):
-    """v1.13 F12：定价结果出来后二选一——只用这一次 / 加入常用兑换券。"""
+    """v1.13 F12：定价结果出来后二选一——只用这一次 / 加入常用兑换券。
+
+    与同类写接口一致走回执：同一 `request_key` 重复点击返回首次结果，不再 409。
+    """
     user=get_or_create_default_user(db);lock_profile(db,user.id);item=_get_item(db,user,item_id);db.refresh(item)
+    op=f'pricing-mode:{item_id}';fp,prior=receipts.replay(db,user.id,op,body)
+    if prior is not None:return prior
     if body.expected_version is None or item.updated_at!=body.expected_version:raise HTTPException(409,'奖励已变化，请刷新。')
     if not body.acknowledge:raise HTTPException(422,'请先确认这种定价方式。')
     item.pricing_mode=body.mode
     # 旧列保留兼容：读取方若仍看 auto_pricing，语义与 pricing_mode 一致
     item.auto_pricing=body.mode=='recurring'
-    db.commit();db.refresh(item)
-    return _item_out(item)
+    db.flush();result=_item_out(item,_redeemed_count(db,user,item.id))
+    receipts.record(db,user.id,op,body,fp,item.id,jsonable_encoder(result));db.commit();return result
 
 
 @router.post('/shop/items/{item_id}/price-rollback')
@@ -52,6 +57,8 @@ def rollback_price(item_id:int,body:MutationIn,db:Session=Depends(get_db)):
     from uuid import uuid4
     from app.models.full_system import PricingQuote
     user=get_or_create_default_user(db);lock_profile(db,user.id);item=_get_item(db,user,item_id);db.refresh(item)
+    op=f'price-rollback:{item_id}';fp,prior=receipts.replay(db,user.id,op,body)
+    if prior is not None:return prior
     if body.expected_version is None or item.updated_at!=body.expected_version:raise HTTPException(409,'奖励已变化，请刷新。')
     last=db.query(PricingQuote).filter_by(user_id=user.id,item_id=item.id,state='accepted').order_by(PricingQuote.id.desc()).first()
     previous=(last.result or {}).get('previous_price') if last else None
@@ -63,8 +70,13 @@ def rollback_price(item_id:int,body:MutationIn,db:Session=Depends(get_db)):
         payload={'previous_price':before,'target_price':previous},
         context={'mode_before':mode_before},
         result={'coin_price':previous,'pricing_mode':'once'}))
-    db.commit();db.refresh(item)
-    return _item_out(item)
+    db.flush();result=_item_out(item,_redeemed_count(db,user,item.id))
+    receipts.record(db,user.id,op,body,fp,item.id,jsonable_encoder(result));db.commit();return result
+
+
+def _redeemed_count(db: Session, user, item_id: int) -> int:
+    """这张券已兑换过几次。定价方式接口也要带上，否则切组后界面会短暂误判。"""
+    return db.query(func.count(Redemption.id)).filter_by(user_id=user.id, shop_item_id=item_id).scalar() or 0
 
 
 def _item_out(it: ShopItem, redeemed_count: int = 0) -> dict:

@@ -96,7 +96,10 @@ def apply_quote(db,user,row):
         duration=int(minutes)*60 if timed and type(minutes) is int and 1<=minutes<=1440 else None
         item=ShopItem(user_id=user.id,name=row.payload['name'],kind='custom',reward_kind='entertainment' if duration else 'item',
             duration_seconds=duration,pricing_mode='once',
-            price_yuan=row.payload['price_yuan'],base_coin_price=row.result['coin_price'],description=row.payload.get('description',''),auto_pricing=row.payload.get('auto_check',False))
+            price_yuan=row.payload['price_yuan'],base_coin_price=row.result['coin_price'],description=row.payload.get('description',''),
+            # 新建一律「只用这一次」：同一行已写死 pricing_mode='once'，旧列必须跟着一致，
+            # 否则会得到「once 但 auto_pricing=True」的自相矛盾状态（v1.13.1 P1-1）。
+            auto_pricing=False)
         db.add(item);db.flush();row.item_id=item.id
     item.coin_price=row.result['coin_price'];item.pricing_reason=row.result['pricing_reason'];item.worth_note=row.result['worth_note']
     item.priced_at=utc_now();item.repriced_on=today

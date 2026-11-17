@@ -20,9 +20,6 @@ router = APIRouter()
 
 
 from app.services.receipts import MutationIn
-class AutomaticPricingIn(MutationIn):
-    enabled:bool
-    acknowledge:bool=False
 
 
 class PricingModeIn(MutationIn):
@@ -56,17 +53,6 @@ def rollback_price(item_id:int,body:MutationIn,db:Session=Depends(get_db)):
     item.pricing_reason=(item.pricing_reason or '')+f'（退回 {previous} 币并冻结自动定价）'
     db.commit();db.refresh(item)
     return _item_out(item)
-
-
-@router.post('/shop/items/{item_id}/automatic-pricing')
-def pricing_permission(item_id:int,body:AutomaticPricingIn,db:Session=Depends(get_db)):
-    user=get_or_create_default_user(db);lock_profile(db,user.id);item=_get_item(db,user,item_id);db.refresh(item)
-    op=f'automatic-pricing:{item_id}';fp,prior=receipts.replay(db,user.id,op,body)
-    if prior is not None:return prior
-    if item.updated_at!=body.expected_version:raise HTTPException(409,'奖励已变化，请刷新。')
-    if body.enabled and not body.acknowledge:raise HTTPException(422,'请明确同意有限自动检查会使用本人模型额度。')
-    item.auto_pricing=body.enabled;db.flush();result=_item_out(item)
-    receipts.record(db,user.id,op,body,fp,item.id,jsonable_encoder(result));db.commit();return result
 
 
 def _item_out(it: ShopItem, redeemed_count: int = 0) -> dict:
@@ -171,6 +157,9 @@ def disable_item(item_id: int, body: MutationIn | None = None, db: Session = Dep
         if prior is not None:return prior
         if body.expected_version!=it.updated_at:raise HTTPException(409,'奖励已变化，请刷新后再移除。')
     it.enabled = False
+    # 界面承诺「停止自动价格检查」，恢复后又可以重新启用；两个字段一起写，
+    # 否则 pricing_mode 仍是 recurring，恢复当晚会重新进入重估队列（v1.13.1 P1-1）。
+    it.pricing_mode = 'once'
     it.auto_pricing = False
     result={"status": "disabled", "item_id": item_id}
     if body is not None:receipts.record(db,user.id,op,body,fp,it.id,result)

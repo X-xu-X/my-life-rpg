@@ -31,7 +31,6 @@ async function price(){cache();const name=form.value.name;const price=Number(for
 async function saveDuration(item){const minutes=Math.round(Number(durations.value[item.id]));if(!Number.isFinite(minutes)||minutes<1||minutes>1440){error.value='预计时长请填 1~1440 分钟。';return}await act('/shop/items/'+item.id,{duration_minutes:minutes},'PUT')}
 async function recover(){const p=writes.pending.value;if(p)await act(p.path,p.body,p.method)}
 async function redeem(){const item=choice.value;if(!item)return;const result=await act('/shop/items/'+item.id+'/redeem',{expected_version:item.updated_at});if(result){choice.value=null;notice.value='兑换成功；这张券按购买价格与时长保留。'}else if(items.value.find(i=>i.id===item.id)?.updated_at!==item.updated_at)choice.value=null}
-async function permission(item){const result=await act('/shop/items/'+item.id+'/automatic-pricing',{expected_version:item.updated_at,enabled:!item.auto_pricing,acknowledge:!item.auto_pricing});if(result)await check()}
 function latestQuote(item){return quotes.value.find(q=>q.item_id===item.id&&q.state==='accepted'&&q.result&&Object.prototype.hasOwnProperty.call(q.result,'previous_price'))}
 function priceDelta(item){const q=latestQuote(item);if(!q||!q.result.change_pct)return '';return q.result.change_pct>0?'↑'+q.result.change_pct+'%':'↓'+Math.abs(q.result.change_pct)+'%'}
 function priceHistory(item){const q=latestQuote(item);return q?q.result.previous_price+' → '+item.coin_price:''}

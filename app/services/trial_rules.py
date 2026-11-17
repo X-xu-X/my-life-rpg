@@ -27,10 +27,6 @@ def qualify(db,user,event,mark_rule=True):
     db.add(DailyEntitlement(user_id=user.id,local_date=selected,timezone=zone_for(db,user),first_event_id=event.id,
         base_seconds=config.base_minutes*60,rule_version=VERSION))
 
-def cap_used(db,user,selected):
-    """Only for display ("today earned N"), never a cap on new awards."""
-    return sum(row.amount for row in db.query(ActionAward).filter_by(user_id=user.id,local_date=selected).all())
-
 def validate(coins,reason=''):
     """The model sets the amount; we only reject dirty values (no tiers, no caps)."""
     if type(coins) is not int or coins<0 or coins>MAX_COINS:raise HTTPException(422,'模型给出的金币数不合法。')

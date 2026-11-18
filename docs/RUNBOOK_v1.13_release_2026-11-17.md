@@ -64,32 +64,81 @@ gh run watch <RUN_ID> --repo X-xu-X/my-life-rpg
 
 **检查点**：run 的 `conclusion` 为 `success`，`head_sha` 等于第 A1 步 push 后的 `git rev-parse HEAD`（记下这个 **40 位 SHA**，后面 G 阶段要用）。
 
-### A3 下载
+### A3 下载（**必须在 24 小时内**）
 
-制品名 `lifexp-linux-amd64-<sha>`，约 300MB+。产物里的 zip 就是后面要上传的包。
+> **制品只保留 1 天。** `.github/workflows/build-deployment-bundle.yml:134` 写死了 `retention-days: 1`。
+> 昨天晚上那次构建（run `44088146731`）页面报 `Failed to generate URL to download artifact`，
+> 不是网络问题，是**制品在 24 小时后被删了**——查 `gh api .../runs/<id>/artifacts` 返回 `total_count: 0`，
+> 而那次运行的 `Upload the private deployment bundle` 步骤本身是 success。
+>
+> 为什么是 1 天：单包 310MB，私有仓 Actions 存储免费额度 500MB。留多天会两个包并存直接超配额，
+> 后续上传就会失败。所以**别把 retention 调大**，改法只有一个：构建完当天就下载。
 
-**检查点**：本地 `SHA256SUMS` 校验通过（`sha256sum -c SHA256SUMS`）。
+```bash
+cd "C:/Users/19687/Desktop/游戏人生/work_place"
+mkdir -p _deploy-<short>
+env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY \
+  gh run download <RUN_ID> --repo X-xu-X/my-life-rpg \
+  --name "lifexp-linux-amd64-<40 位 SHA>" --dir "_deploy-<short>"
+```
+
+下载下来的是一个**目录**（不是 zip 里的 zip），里面应当有：
+
+```
+BUILD_RECEIPT.json
+SHA256SUMS
+images-<release>.tar.gz
+images-<release>.manifest.jsonl
+images-<release>.tar.sha256
+rr-<...>.manifest.json
+<release>.zip
+IMAGE_STORE_COMPAT.json  PRODUCTION_CONTAINERD_VERIFY.json
+```
+
+**检查点**：
+
+```bash
+cd _deploy-<short> && sha256sum -c SHA256SUMS
+```
+
+不通过就重下，别带着错包上传。
+
+> **`gh run download` 可能长时间没有任何输出**（它不打印进度，且会先缓存整包再解压）。如果超过几分钟目录还是空的，
+> 别再等，改用直链自己取：
+> ```bash
+> TOKEN=$(env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY gh auth token)
+> curl -L -H "Authorization: Bearer $TOKEN" \
+>   "https://api.github.com/repos/X-xu-X/my-life-rpg/actions/artifacts/<ARTIFACT_ID>/zip" \
+>   -o artifact.zip
+> ```
+> 实测单连接只有 ~40KB/s（走代理还更慢，~26KB/s），310MB 要两小时。**按字节分 8 段并发**可以到 ~320KB/s，
+> 约 17 分钟：每段 `curl -L -r <start>-<end>`，下完按顺序 `cat part.00 part.01 ... > artifact.zip`。
+> 段内失败就重取一次 `Location`（签名 URL 有时效），再续。合并后 `unzip -t artifact.zip` 验证完整性。
 
 ---
 
 ## 2. 阶段 B：上传与装载
 
 ```bash
-# 本地
-scp lifexp-linux-amd64-<sha>.zip admin@lifexp.cn:~/upload-<short>/
+# 本地：把整个目录传上去，外加 receive-local.sh
+scp -r _deploy-<short>/* admin@lifexp.cn:~/upload-<short>/
+scp receive-local.sh admin@lifexp.cn:~/
 ```
+
+> `receive-local.sh` 不在仓库里，是上次发布时留在本地的（`_deploy-a53f14e2/receive-local.sh`）。
+> 它和 `ops/receive-update.sh` 的校验链完全一致，只把"从 GitHub 下载"换成"用本地上传的目录"，末尾打印 `IMAGES_READY`。
 
 ```bash
 # 服务器
-mkdir -p ~/upload-<short> && cd ~/upload-<short>
-unzip -q lifexp-linux-amd64-<sha>.zip
-ls          # 应有 BUILD_RECEIPT.json SHA256SUMS images-*.tar.gz images-*.manifest.jsonl *.zip
-sha256sum -c SHA256SUMS
+bash ~/receive-local.sh ~/upload-<short> <40 位 SHA>
 ```
 
-装载镜像用你上次那套本地接收流程（解压目录里执行，产出 `IMAGES_READY`）。**记下两个值，后面每一步都要用**：
+它做的事依次是：把上传的文件移进 `~/lifexp-<short>.XXXXXX/` → `sha256sum -c SHA256SUMS` → 校验 `BUILD_RECEIPT.json` 的 `git_head`/`release_id` → 解 `<release>.zip` 到 `source/` → `verify_package.py` → 解压镜像 tar 并 `image_identity verify-archive` → `docker load` → `image_identity verify`。
+
+**记下它最后打印的两个值，后面每一步都要用**：
 
 ```
+IMAGES_READY
 SOURCE_DIR=/home/admin/lifexp-<short>.XXXXXX/source
 RELEASE_ID=rr-<...>
 ```

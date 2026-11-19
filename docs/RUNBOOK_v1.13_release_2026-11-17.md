@@ -186,8 +186,22 @@ sudo -n docker exec game-of-life-db-1 psql -X -U gol_admin -d game_of_life -At \
 用**新包的 compose 文件** + **当前的 env 文件**，只跑 `migrate` 这个一次性服务（compose 里 `profiles: [ops]`，`command` 就是 `python -m alembic upgrade head`；容器入口 `entrypoint.py` 会从 `/run/secrets/app_password` 拼出 `DB_URL`，不把 DSN 写进命令行）：
 
 ```bash
-sudo -n bash -c 'ls -1 /etc/game-of-life/*.env'   # 只应有一个；用它的完整路径替换下面的 <OLD_ENV>
+sudo -n bash -c 'ls -1 /etc/game-of-life/*.env'
 OLD_ENV=/etc/game-of-life/public-<oldshort>.env
+```
+
+> **这里不会只有一个 env 文件。** `update-public.sh:34` 写的是 `new_env=/etc/game-of-life/public-$short.env`（`short=${SHA:0:8}`），
+> 发一版留一个，累积下来有六七个（2026-11-19 实测 7 个）。要用的是**当前在跑的那个 release** 对应的：
+> 先 `sudo -n docker inspect game-of-life-api-1 --format '{{.Config.Image}}'` 拿到 `game-of-life-api:rr-<日期>-<short>-<hash>`，
+> 中间那段 `<short>` 就是文件名里的字符。
+>
+> 另外 `sudo -n ls -l /etc/game-of-life/*.env` 会报 `No such file or directory`——`*` 是**当前用户 shell 先展开**的，
+> 而该目录是 700；要写成 `sudo -n bash -c 'ls -l /etc/game-of-life/*.env'` 让 root 去展开。
+>
+> 不手抄路径的写法：`sudo -n bash -c '. /etc/game-of-life/public-<short>.env; echo "$SECRETS_DIR"; ls -l "$SECRETS_DIR"'`，
+> 应看到 `admin-password`、`app-password`、`credential-keys.json` 三个文件。
+
+```bash
 
 sudo -n env RELEASE_ID="<RELEASE_ID>" \
   docker compose --project-name game-of-life --env-file "$OLD_ENV" \
@@ -205,6 +219,36 @@ Running upgrade  b026_pricing_mode -> b027_suppressed_lines
 ```
 
 如果 compose 报 `service "migrate" is not enabled`（profiles 挡了），在 `run` 前加全局参数 `--profile ops`：`docker compose --profile ops run ...`，其余不变。
+
+### D2-补：b027 报 `DuplicateColumn` 时怎么办
+
+>b 实测发生过一次（见第 12 节）。`b027` 假设"云端从 b025 建表起就漏了 `suppressed_lines`"，
+> 但这列可能早已存在（模型里有，某次 `create_all` 顺手建上了），只是 `alembic_version` 没跟着推进。
+>
+> 因为 `alembic/env.py` 没有 `transaction_per_migration`，`upgrade head` 是**一个事务**：
+> b026 加列 + 回填会随 b027 的失败**一起回滚**，库回到 b025，不留半成品。
+>
+> 处置分两步，不重出包：
+>
+> ```bash
+> # 1) 只跑到 b026（用 run 覆盖 command）
+> sudo -n env RELEASE_ID="<RELEASE_ID>" docker compose --project-name game-of-life \
+>   --env-file "<OLD_ENV>" -f "<SOURCE_DIR>/deploy/compose.prod.yml" \
+>   run --rm --no-deps --pull never --interactive=false -T \
+>   -e PGOPTIONS="-c lock_timeout=5000 -c statement_timeout=60000" \
+>   migrate python -m alembic upgrade b026_pricing_mode
+> #    校验：head=b026_pricing_mode，且 pricing_mode 分组行数合计 = D1 的 count(*)
+>
+> # 2) 先确认目标结构现成，再登记
+> #    psql 查 information_schema：suppressed_lines 必须是 json/json/YES
+> sudo -n env RELEASE_ID="<RELEASE_ID>" docker compose --project-name game-of-life \
+>   --env-file "<OLD_ENV>" -f "<SOURCE_DIR>/deploy/compose.prod.yml" \
+>   run --rm --no-deps --pull never --interactive=false -T \
+>   migrate python -m alembic stamp b027_suppressed_lines
+> ```
+>
+> **`stamp` 只在"类型、可空性逐项对得上"时才等价于真跑一遍 `add_column`**；类型是 `jsonb` 或 `text` 就不能这么办，
+> 要先单独评估。顺序也不能反：`stamp` 不执行 DDL。`b026`/`b027` 的 `downgrade()` 都直接 `raise`，回退只能从备份隔离恢复。
 
 `lock_timeout` 是为了万一有长事务占着 `shop_items` 时**干净地失败**而不是把后面所有请求堵住；5 秒退出来再重试即可。
 
@@ -364,3 +408,55 @@ sudo -n docker logs --since 10m game-of-life-api-1 2>&1 | grep -iE "error|Undefi
 - 不改 `ops/` 里的 head 断言（已由 `expected_head.py` 现算，不再是硬编码常量）
 - 不恢复商店预置商品（`seed_preset_items` 在 `9a05d53` 就停止在 `list_items` 里调用，属既有产品状态）
 - 不做服务端每夜定时定价（仍靠打开商店页触发 `pricingSweep.js`）
+
+---
+
+## 12. 2026-11-19 首发现场实录（实际路径与本文件假设的偏差）
+
+首发没按理想路径一次跑完，两处偏差都已解决，留给下次参照。
+
+### 12.1 已完成的步骤与关键值
+
+| 步 | 状态 | 关键值 |
+|---|---|---|
+| A 推送出包 | ✅ | 包对应 `dadd42ed`，制品 id `14438770552`（`retention-days:1`，当天取） |
+| B 接收装载 | ✅ | `SOURCE_DIR=/home/admin/lifexp-dadd42ed.oFcjU5/source`、`RELEASE_ID=rr-20261010-dadd42ed-3c0de1066873` |
+| C 迁移前备份 | — | 实际未单独做（D 失败自动回滚，旧代码全程未受影响） |
+| D 迁移 | ✅（分两步） | b026 正常；b027 撞 `DuplicateColumn` → `upgrade b026_pricing_mode` 后 `stamp b027_suppressed_lines`，head 终态 `b027_suppressed_lines` |
+| E 迁移后备份 | ✅ | `~/gol-postmigrate-dadd42ed-20261119T003636Z.dump`（578 KB，`sha256 ddbf3062…`，head=b027） |
+| F 彩排 | ❌ 第 1 次 | `REHEARSAL_STOPPED stage=restore-health-proof`，镜像内 `ops/rehearse_public_update.py` 语法错误（B-85） |
+
+D 阶段校验实测：`shop_items` 共 10 条，回填后 `once 5 / recurring 5`；`/service-status` 全程 `ready`。
+
+### 12.2 偏差一：b027 的列早已存在
+
+`b027` 的注释假设云端缺 `experience_preferences.suppressed_lines`，实测**该列已在**（`json`/`json`/`NULL` 可空，与 `sa.JSON()`、`nullable=True` 逐项一致）。处置见「D2-补」。
+
+**教训**：迁移的注释不能当成事实来源，**迁移前先查 `information_schema`**，别默认"版本号落后 = 结构也落后"。
+
+### 12.3 偏差二：重新出包（B-85）
+
+彩排失败根因是文件本身不可解析，不是环境问题。服务器上打补丁**不可行**：
+
+- `update-public.sh:78`/`:110` 会跑 `verify_package.py`，按 `RELEASE_MANIFEST.json` 逐个核哈希 → 改源文件必失败，除非改清单（等于伪造）
+- 探针跑的是**镜像内**的 `ops/rehearse_public_update.py`，而镜像 ID 被 `image_identity.py` 绑死在 `IMAGE_STORE_COMPAT.json` 上
+
+所以必须重新出包。修法：删掉多余的 `"""`（`d6d329d`）+ 流水线加编译门（`7bbcd55`）。
+
+**重新出包后只需重走 B → F → G**，C/D/E 全部不用重做：
+
+- 库已经是 `b027`，`update-public.sh:132` 的 preflight 要求"库 head == 本包 head"，新包 head 仍是 `b027` ✅
+- `update-public.sh:96` 要求"彩排备份 head == 脚本启动时读到的库 head"，E 那份备份正是 `b027` ✅
+
+**唯一要注意**：新包出来后 `RELEASE_ID` 会变（新 SHA），`SOURCE_DIR` 也会变，之前记的值全部作废；E 阶段那份备份**继续有效**，彩排直接用同一个 dump 文件。
+
+### 12.4 收尾清理
+
+彩排每次会留下一个 `lifexp-proof-<xxxx>-pg` 数据卷（容器和网络会自动删）。确认 PASS 后清掉即可：
+
+```bash
+sudo -n docker volume ls --filter label=lifexp.scope=isolated-rehearsal
+sudo -n docker volume rm lifexp-proof-<xxxx>-pg
+```
+
+另外 `/home/admin/lifexp-rehearsal.<xxxx>` 证据目录会保留（刻意留档），里面是 `result.json` 和 PG 日志，几十 KB，可以攒着。

@@ -479,7 +479,7 @@ export function useDateGroups(items, { storageKey, getTime = (item) => item.crea
 >
 > **五栏格式**：**现象**（用户/测试看到什么）→ **定位过程**（怎么找到的，证据是什么）→ **根因**（本质原因）→ **修复实现**（改哪个文件哪个函数、代码形态）→ **防复发**（怎么保证不再犯）。
 >
-> **收录范围**：**52 条**（B-81~B-83 见文末 v1.13.1 三条）。B-01~B-19 保留原档；B-20~B-46 补充 v1.11、发布复审、部署及私有试用。能核实的修复给出提交或交付文件；现场诊断和未实施意见明确标状态，**没有对应代码提交就不编造 hash**。同一根因涉及多项验收时合并建档，不把反馈数量等同于已修复数量。
+> **收录范围**：**53 条**（B-81~B-85 见文末 v1.13.1 五条）。B-01~B-19 保留原档；B-20~B-46 补充 v1.11、发布复审、部署及私有试用。能核实的修复给出提交或交付文件；现场诊断和未实施意见明确标状态，**没有对应代码提交就不编造 hash**。同一根因涉及多项验收时合并建档，不把反馈数量等同于已修复数量。
 > **用法**：出问题时先查索引表找同类现象 → 看对应条目的"定位过程"学怎么查 → 对照"防复发"检查是否还有其他地方犯同样的错。
 
 ### 索引表
@@ -544,6 +544,7 @@ export function useDateGroups(items, { storageKey, getTime = (item) => item.crea
 | B-82 | 计时页按 demo 改了 CSS，界面却毫无变化 | `.timer-ring` 声明块少一个 `}`，后面整段被吞 | `8002e5b` | 11-17 |
 | B-83 | 关掉自动定价后仍每天重估，打开却没反应 | 新列 `pricing_mode` 只读、旧列 `auto_pricing` 只写，两个开关脱钩 | `700ceb3` | 11-17 |
 | B-84 | 同一个「今日已得」在设置页 28、在分析页 25 | 改口径只改了 `/api/trial`，页面真正读的是 `preview.used` | `46a0085` | 11-17 |
+| B-85 | 服务器彩排报 SyntaxError，可包校验、镜像构建、身份校验全绿 | 改 docstring 时把 `"""` 提前闭合，文件早已不可解析，而流水线只校验哈希 | `d6d329d` | 11-19 |
 
 > **B-17~B-19 的来源**是一次**外部只读审计**（Codex，2026-10-08，`docs/review/CODEX_AUDIT_2026-10-08.md`）——它不是在"跑测试"时发现的，而是**拿项目自己写下的红线去逐条量代码**量出来的。这三条的共同特征是：**它们都不是功能坏了，而是"某个安全性设计只在主路径上实现了"**。这是本项目第一次系统性地做"红线 vs 实现"对照，值得单独记住。
 
@@ -2505,3 +2506,25 @@ B-78：预览是确认时的历史，实际结果是账。补发保留旧0币预
 **副作用（预期）**：`confirm()` 有「`bundle.preview != preview(...)` 就 409」的一致性校验，所以**改口径前生成、还没确认的草稿**会在下次预览时要求重新生成一次。与 F4 升 `rule_version` 时同样的效果。
 
 **防复发**：改「某个数字的口径」时，先按**字段名**在整个仓库 grep 一遍所有出口（接口、preview、prompt 注入都算），不要只改当前页面报上来的那一条。同一个词出现在两处，就必须来自同一个函数。
+
+<a id="b85"></a>
+
+### B-85 · 彩排探针报 SyntaxError，包与镜像校验却全绿
+
+**现象**：v1.13 首次带迁移的发布，前面每一步都过——`receive-local.sh` 打出 `IMAGES_READY`、四个镜像 `docker load` 成功、`image_identity verify` 打印 `PASS`、迁移也做完了；到彩排最后一步探针直接崩：
+
+```
+File "/app/ops/rehearse_public_update.py", line 14
+    """
+    ^
+SyntaxError: unterminated triple-quoted string literal (detected at line 54)
+REHEARSAL_STOPPED stage=restore-health-proof exit=1
+```
+
+**定位过程**：先在本地读同一个文件，肉眼就看出结构不对——第 1~10 行的 docstring 已经在第 10 行 `"""` 收尾，第 12~13 行是**裸文本**，第 14 行又是一个孤立的 `"""`，等于开了一个永不闭合的字符串。再 `git log -- ops/rehearse_public_update.py` 定位到 `ae32c85`（v1.13.1 批次 G），`git show ae32c85` 里那条 diff 在 docstring **内部**插了 `"""`，把后半段说明挤到了字符串外。最后用 `compile()` 遍历全仓 787 个 `.py`，确认只有这一处不可解析。
+
+**根因**：**"文件完整性"不等于"可执行性"**。发布链路上有三道校验——`sha256sum -c SHA256SUMS`、`verify_package.py` 按清单核每个文件的哈希、`image_identity.py` 核镜像 ID——三道全部只看字节有没有变，没有一道问过"这段 Python 能不能被解析"。而 `ops/rehearse_public_update.py` 恰恰是**只有到服务器彩排那一步才会第一次被执行**的文件，所以它在本地、在 CI、在镜像构建期间都是"沉默的"。
+
+**修复实现**：删掉第 10 行多余的 `"""`，让"retired assertions 留 git 历史"那段回到同一个 docstring 内（`d6d329d`，一行删除）。同时在出包流水线加一步 `Compile-check every Python source file`（`7bbcd55`）：遍历仓库所有 `.py`，用内存 `compile(text, path, 'exec')` 逐个解析，跳过 `.git`/`node_modules`/`build`/`dist`/`.venv`；**故意不落 `__pycache__`**，否则紧接着的 `git diff HEAD --exit-code` 断言会被未跟踪文件搅乱（严格说 diff 不看未跟踪文件，但打包清单会看）。
+
+**防复发**：凡是"发出去才第一次被执行"的文件——`ops/` 下的探针与迁移脚本、`deploy/entrypoint.py`、`alembic/versions/*`——都必须进 CI 的 compile 门；改 docstring 也算改代码，不能只看 `git diff` 顺眼就提交。判断一个门有没有用，就问一句：**它能拦住"哈希全对但跑不起来"吗？**

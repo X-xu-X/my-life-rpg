@@ -23,6 +23,34 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Compile-check every Python source file
+        shell: bash
+        run: |
+          set -euo pipefail
+          # 哈希校验只能证明"文件没被改过"，证明不了"文件能被解析"。
+          # v1.13.1 的 ops/rehearse_public_update.py 就是带着未闭合的三引号通过了
+          # 打包、镜像构建和 verify_package，直到服务器彩排才报 SyntaxError。
+          # 用内存 compile() 而不落 __pycache__，避免污染下面的 git diff --exit-code。
+          python3 - <<'PY'
+          import pathlib
+          import sys
+          skip = {'.git', 'node_modules', 'build', 'dist', '.venv'}
+          bad = []
+          for path in sorted(pathlib.Path('.').rglob('*.py')):
+              if skip & set(path.parts):
+                  continue
+              try:
+                  compile(path.read_text(encoding='utf-8'), str(path), 'exec')
+              except SyntaxError as exc:
+                  bad.append(f'{path}:{exc.lineno}: {exc.msg}')
+              except UnicodeDecodeError as exc:
+                  bad.append(f'{path}: not utf-8 ({exc.reason})')
+          if bad:
+              print('\n'.join(bad))
+              sys.exit(1)
+          print('COMPILE_OK')
+          PY
+
       - name: Test the image identity protocol
         shell: bash
         run: |

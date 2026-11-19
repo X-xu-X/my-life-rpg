@@ -7,7 +7,6 @@ never calls a real model.
 
 `capture(require_head=False)`: 彩排用的是**迁移前**的备份，库里还是旧 revision，
 不能要求它等于本包的 head，否则每次带迁移的发布都会在彩排阶段被拒。
-"""
 
 The retired event-35 reward-repair assertions lived only in the 2026-10-25
 one-off compensation release; retrieve them from git history if ever needed.
